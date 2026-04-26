@@ -1,0 +1,26 @@
+max_seq_length: 2048
+
+# Default NanoChat tokenizer (Qwen2 base)
+tokenizer_path: "Qwen/Qwen2-0.5B"
+
+budgets:
+  summary:
+    user_tokens: 1400
+    assistant_tokens: 384
+    head_ratio: 0.7
+  qa:
+    user_tokens: 1300
+    assistant_tokens: 256
+  ner:
+    user_tokens: 800
+    assistant_tokens: 256
+  re:
+    user_tokens: 900
+    assistant_tokens: 256
+  sentiment:
+    user_tokens: 512
+    assistant_tokens: 16
+
+merge_guard:
+  max_total_tokens: 2048
+  reserve_tokens: 128
