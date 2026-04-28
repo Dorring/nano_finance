@@ -32,7 +32,7 @@ def parse_args():
                         help="显存使用率阈值（0~1），低于此值视为空闲，默认 0.1 (10%%)")
     parser.add_argument("--target_ratio", type=float, default=0.83,
                         help="目标占用比例（0~1），默认 0.83 (83%%)")
-    parser.add_argument("--interval", type=int, default=180,
+    parser.add_argument("--interval", type=int, default=100,
                         help="检查间隔（秒），默认 180 (3 分钟)")
     parser.add_argument("--gpu_count", type=int, default=8,
                         help="期望的 GPU 数量，用于校验，默认 8")

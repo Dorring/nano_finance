@@ -14,9 +14,7 @@ wandb/
 
 
 # 排除大型数据文件夹
-finance-data-process/data/raw/
-finance-data-process/data/interim/
-finance-data-process/data/processed/
+finance-data-process/data
 
 
 # 排除缓存和日志

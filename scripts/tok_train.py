@@ -8,7 +8,25 @@ In the style of GPT-4 tokenizer.
 执行一个快速的健全性检查，确保分词器可以正确编码和解码文本。
 计算每个 token 对应的 UTF-8 字节数，并将结果保存，这对于后续计算 "bits per byte" 的评估指标非常重要。
 记录训练参数和分词器相关的统计数据到报告系统。
+"""
 
+"""
+日期：2026-04
+作者：QH
+描述：训练一个新的分词器，类似于 GPT-4 的 tokenizer。分词器将从通用英文数据集、通用中文数据集、中文金融数据集（通过 parquets_iter_batched 函数提供）中学习，并将训练好的分词器保存到磁盘。训练过程中会限制最大字符数和每个文档的最大字符数，以控制内存使用。训练完成后，还会计算每个 token 的字节数，并将这些信息保存以供后续评估使用。
+路径说明：
+- /mnt/disk/mxf/.cache/nanochat/base_data_climbmix : 通用英文数据集
+- /home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Chinese_data : 通用中文数据集
+- /home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Financial_data : 中文金融数据集
+数据抽取说明：
+英文通用抽取： ~500 MB（随便拿 2 个 Parquet 分片）
+中文通用抽取： ~500 MB（拿 2-3 个 SkyPile/Wiki 分片）
+中文金融抽取： ~500 MB（拿 1 个高浓度金融分片）
+对应函数修改：
+- parquets_iter_batched(split="train")：修改为从上述三个数据源中抽取文本数据，并进行适当的混合，以确保分词器能够学习到多样化的语言特征。可以通过参数控制每个数据源的抽取比例，例如 40% 英文通用、30% 中文通用、30% 中文金融。
+- RustBPETokenizer.train_from_iterator(text_iter, args.vocab_size)：保持不变，继续使用 RustBPETokenizer 进行训练。
+- 其他部分保持不变，继续计算 token 字节数并保存相关统计数据。
+- 训练完成后，分词器将能够更好地处理混合中英文文本，特别是在金融领域的应用场景中表现更佳。减少后续CPT调整。
 """
 import os
 import time
