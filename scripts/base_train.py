@@ -10,7 +10,11 @@ torchrun --nproc_per_node=8 -m scripts.base_train
 If you are only on CPU/Macbook, you'll want to train a much much smaller LLM. Example:
 python -m scripts.base_train --depth=4 --max-seq-len=512 --device-batch-size=1 --eval-tokens=512 --core-metric-every=-1 --total-batch-size=512 --num-iterations=20
 """
-
+"""
+日期：2026-04-29 22:00:00
+作者：QH
+描述：检查修改训练脚本以适配新的数据。 检查是否支持修改后的数据
+"""
 import os
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 import gc
@@ -26,7 +30,7 @@ import torch
 import torch.distributed as dist
 
 from nanochat.gpt import GPT, GPTConfig, Linear
-from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit, tokenizing_distributed_data_loader_with_state_bos_bestfit
+from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit, tokenizing_distributed_data_loader_with_state_bos_bestfit, mixed_tokenizing_dataloader
 from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized
 from nanochat.tokenizer import get_tokenizer, get_token_bytes
 from nanochat.checkpoint_manager import save_checkpoint, load_checkpoint
@@ -327,8 +331,19 @@ if scaler is not None:
 
 # -----------------------------------------------------------------------------
 # Initialize the DataLoaders for train/val
+# paths:
+data_dirs_with_weights = [
+    ("/mnt/disk/mxf/.cache/nanochat/base_data_climbmix", 2),
+    ("/home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Chinese_data", 2),
+    ("/home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Financial_git/金融领域语料库", 1)
+]
 dataloader_resume_state_dict = None if not resuming else meta_data["dataloader_state_dict"]
-train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="train", device=device, resume_state_dict=dataloader_resume_state_dict)
+
+train_loader = mixed_tokenizing_dataloader(
+    tokenizer, args.device_batch_size, args.max_seq_len, split="train",
+    data_dirs_with_weights=data_dirs_with_weights,
+    device=device, resume_state_dict=dataloader_resume_state_dict
+)
 build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="val", device=device)
 x, y, dataloader_state_dict = next(train_loader) # kick off load of the very first batch of data
 
@@ -563,8 +578,15 @@ while True:
         eta_str = f" | eta: {eta_seconds/60:.1f}m"
     else:
         eta_str = ""
-    epoch = f"{dataloader_state_dict['epoch']} pq: {dataloader_state_dict['pq_idx']} rg: {dataloader_state_dict['rg_idx']}"
-    print0(f"step {step:05d}/{num_iterations:05d} ({pct_done:.2f}%) | loss: {debiased_smooth_loss:.6f} | lrm: {lrm:.2f} | dt: {dt * 1000:.2f}ms | tok/sec: {tok_per_sec:,} | bf16_mfu: {mfu:.2f} | epoch: {epoch} | total time: {total_training_time/60:.2f}m{eta_str}")
+        
+    epoch_str = f"ep:{dataloader_state_dict.get('epoch', 1)} pq:{dataloader_state_dict.get('pq_idx', 0)} rg:{dataloader_state_dict.get('rg_idx', 0)}"
+    if "states" in dataloader_state_dict:
+        # Multi-source log parsing
+        src_idx = dataloader_state_dict.get("source_idx", 0)
+        c_state = dataloader_state_dict["states"][src_idx]
+        epoch_str = f"S{src_idx} ep:{c_state.get('epoch', 1)} pq:{c_state.get('pq_idx', 0)} rg:{c_state.get('rg_idx', 0)}"
+        
+    print0(f"step {step:05d}/{num_iterations:05d} ({pct_done:.2f}%) | loss: {debiased_smooth_loss:.6f} | lrm: {lrm:.2f} | dt: {dt * 1000:.2f}ms | tok/sec: {tok_per_sec:,} | bf16_mfu: {mfu:.2f} | {epoch_str} | total time: {total_training_time/60:.2f}m{eta_str}")
     if step % 100 == 0:
         log_data = {
             "step": step,
@@ -575,7 +597,7 @@ while True:
             "train/dt": dt,
             "train/tok_per_sec": tok_per_sec,
             "train/mfu": mfu,
-            "train/epoch": epoch,
+            "train/epoch": epoch_str,
         }
         wandb_run.log(log_data)
 

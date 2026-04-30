@@ -29,6 +29,16 @@ Herald Korea Times
 **모든 쟁점에 대해 ‘무엇이 쟁점인지’, ‘누가 무엇을 주장하는지’, ‘사실은 무엇인지’**를 명확히 전달하는 데 집중합니다.
 """.strip()
 
+# 中文通用测试文本 (测试双语底盘能力)
+chinese_general_text = r"""
+在人工智能的飞速发展下，大语言模型正在重塑千行百业。从自然语言处理到计算机视觉，多模态大模型的涌现让机器具备了更接近人类的感知与认知能力。开源社区的力量极大地推动了这一进程，使得更多中小企业与个人开发者能够参与到前沿技术的快速迭代中。
+""".strip()
+
+# 中文金融测试文本 (测试垂直领域极限压缩率！)
+chinese_finance_text = r"""
+根据本集团2025年半年度财报披露，归属于母公司所有者的净利润同比增长25.4%，达到人民币15.6亿元。期内，受宏观经济波动及汇率影响，非经常性损益占比有所上升。管理层表示，未来将继续优化资产负债表结构，严格控制摊余成本法计量的金融资产风险，并大幅提升整体的净资产收益率（ROE）。
+""".strip()
+
 # Random piece of code
 code_text = r"""
 class BasicTokenizer(Tokenizer):
@@ -151,6 +161,8 @@ val_text = "\n".join(val_docs)
 
 all_text = [
     ("news", news_text),
+    ("zh-gen", chinese_general_text),  # 新增：中文通用
+    ("zh-fin", chinese_finance_text),  # 新增：中文金融
     ("korean", korean_text),
     ("code", code_text),
     ("math", math_text),

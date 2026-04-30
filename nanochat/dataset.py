@@ -6,6 +6,16 @@ This file contains utilities for:
 
 For details of how the dataset was prepared, see `repackage_data_reference.py`.
 """
+"""
+时间：2026-04-29 22:00:00
+作者：QH
+描述：修改脚本为读取指定预训练的数据
+路径说明：
+- /mnt/disk/mxf/.cache/nanochat/base_data_climbmix : 通用英文数据集
+- /home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Chinese_data : 通用中文数据集
+- /home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Financial_data : 中文金融数据集
+
+"""
 
 import os
 import argparse

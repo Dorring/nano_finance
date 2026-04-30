@@ -31,6 +31,9 @@ In the style of GPT-4 tokenizer.
 import os
 import time
 import argparse
+import random
+import glob
+import pyarrow.parquet as pq
 import torch
 from nanochat.tokenizer import RustBPETokenizer
 from nanochat.common import get_base_dir
@@ -42,7 +45,7 @@ from nanochat.dataset import parquets_iter_batched
 parser = argparse.ArgumentParser(description='Train a BPE tokenizer')
 parser.add_argument('--max-chars', type=int, default=2_000_000_000, help='Maximum characters to train on (default: 10B)')#训练时读取的最大字符数，默认 20 亿字符，约合 20 GB 的文本数据。
 parser.add_argument('--doc-cap', type=int, default=10_000, help='Maximum characters per document (default: 10,000)')# 每个文档的最大字符数，默认 10,000 字符。超过这个长度的文档会被截断。这是为了防止极长的文档占用过多内存。
-parser.add_argument('--vocab-size', type=int, default=32768, help='Vocabulary size (default: 32768 = 2^15)')# 词表大小，默认 32768（即 2 的 15 次方）。这是分词器将要学习的 token 数量。较大的词表可以更好地表示文本，但也会增加模型的复杂度和训练时间。GPT-4 的 tokenizer 词表大小也是 32768。
+parser.add_argument('--vocab-size', type=int, default=65000, help='Base vocab size (default: 65000, leaving space for special tokens)')# 词表大小，默认 65000。这是分词器将要学习的 token 数量。较大的词表可以更好地表示文本，并为后续追加特殊符预留空间。
 args = parser.parse_args()  
 print(f"max_chars: {args.max_chars:,}")
 print(f"doc_cap: {args.doc_cap:,}")
@@ -51,22 +54,75 @@ print(f"vocab_size: {args.vocab_size:,}")
 # -----------------------------------------------------------------------------
 # Text iterator
 
+def get_parquet_iterator(directory, num_files, text_col='text'):
+    """获取指定目录下一定数量的 Parquet 文件的文本迭代器"""
+    files = glob.glob(os.path.join(directory, "*.parquet"))
+    # 安全采样：确保采样数量不会超过现有文件总数
+    sample_size = min(num_files, len(files))
+    if sample_size > 0:
+        files = random.sample(files, sample_size)
+    
+    for f in files:
+        try:
+            parquet_file = pq.ParquetFile(f)
+            for batch in parquet_file.iter_batches(columns=[text_col]):
+                for text in batch[text_col].to_pylist():
+                    if text:
+                        yield text
+        except Exception as e:
+            print(f"Error reading {f}: {e}")
+
 def text_iterator():
     """
-    1) Flatten the batches into a single iterator
-    2) Crop every document to args.doc_cap characters
-    3) Break when we've seen args.max_chars characters
+    按照要求的比例混合三个数据源：
+    - 英文通用 (40%, 权重 2)
+    - 中文通用 (40%, 权重 2)
+    - 中文金融 (20%, 权重 1)
+    即 2:2:1 的配比
     """
+    # 指定路径（根据你的注释）
+    en_dir = "/mnt/disk/mxf/.cache/nanochat/base_data_climbmix"
+    zh_dir = "/home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Chinese_data"
+    fin_dir = "/home/mxf/projects/Qhhhhhhaaa/nanochat/finance-data-process/data/pre-data/Financial_data"
+
+    # 初始化三个数据源的迭代器
+    en_iter = get_parquet_iterator(en_dir, num_files=2)
+    zh_iter = get_parquet_iterator(zh_dir, num_files=2)
+    fin_iter = get_parquet_iterator(fin_dir, num_files=1)
+
+    iters = [en_iter, zh_iter, fin_iter]
+    # 调整为 2/2/1 的配比 (EN:ZH:FIN)
+    weights = [2, 2, 1]
+    population = [0, 1, 2]
+    
     nchars = 0
-    for batch in parquets_iter_batched(split="train"):
-        for doc in batch:
-            doc_text = doc
+    while True:
+        if not population:
+            print(f"All data sources exhausted. Total characters read: {nchars:,}")
+            return
+
+        # 按照权重随机选择一个数据源
+        choice = random.choices(population, weights=weights, k=1)[0]
+        try:
+            doc_text = next(iters[choice])
+            
+            # 对超长文档进行截断
             if len(doc_text) > args.doc_cap:
                 doc_text = doc_text[:args.doc_cap]
+                
             nchars += len(doc_text)
             yield doc_text
+            
+            # 如果到达最大训练字符数，停止迭代
             if nchars > args.max_chars:
+                print(f"Reached max characters: {nchars:,}")
                 return
+                
+        except StopIteration:
+            # 如果某个数据源耗尽了，从采样池和权重中剔除它
+            idx = population.index(choice)
+            weights.pop(idx)
+            population.pop(idx)
 text_iter = text_iterator()
 
 # -----------------------------------------------------------------------------

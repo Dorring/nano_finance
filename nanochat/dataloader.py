@@ -28,7 +28,7 @@ import pyarrow.parquet as pq
 from nanochat.common import get_dist_info
 from nanochat.dataset import list_parquet_files
 
-def _document_batches(split, resume_state_dict, tokenizer_batch_size):
+def _document_batches(split, resume_state_dict, tokenizer_batch_size, data_dir=None):
     """
     Infinite iterator over document batches (list of text strings) from parquet files.
 
@@ -45,8 +45,8 @@ DDP 分片规则	假设总共有 ddp_world_size 个进程（比如 8 卡 = 8 进
     """
     ddp, ddp_rank, ddp_local_rank, ddp_world_size = get_dist_info()
 
-    warn_on_legacy = ddp_rank == 0 and split == "train" # rank 0 on train split will warn on legacy
-    parquet_paths = list_parquet_files(warn_on_legacy=warn_on_legacy)
+    warn_on_legacy = ddp_rank == 0 and split == "train" and data_dir is None # rank 0 on train split will warn on legacy
+    parquet_paths = list_parquet_files(data_dir=data_dir, warn_on_legacy=warn_on_legacy)
     assert len(parquet_paths) != 0, "No dataset parquet files found, did you run dataset.py?"
     parquet_paths = parquet_paths[:-1] if split == "train" else parquet_paths[-1:]
 
@@ -86,6 +86,7 @@ DDP 分片规则	假设总共有 ddp_world_size 个进程（比如 8 卡 = 8 进
 
 def tokenizing_distributed_data_loader_with_state_bos_bestfit(
     tokenizer, B, T, split,
+    data_dir=None,
     tokenizer_threads=4, tokenizer_batch_size=128,
     device="cuda", resume_state_dict=None,
     buffer_size=1000
@@ -112,7 +113,7 @@ def tokenizing_distributed_data_loader_with_state_bos_bestfit(
     assert split in ["train", "val"], "split must be 'train' or 'val'"
 
     row_capacity = T + 1
-    batches = _document_batches(split, resume_state_dict, tokenizer_batch_size)
+    batches = _document_batches(split, resume_state_dict, tokenizer_batch_size, data_dir=data_dir)
     bos_token = tokenizer.get_bos_token_id()
     doc_buffer = []
     pq_idx, rg_idx, epoch = 0, 0, 1
@@ -185,3 +186,86 @@ def tokenizing_distributed_data_loader_bos_bestfit(*args, **kwargs):
     """Helper that omits state_dict from yields."""
     for inputs, targets, state_dict in tokenizing_distributed_data_loader_with_state_bos_bestfit(*args, **kwargs):
         yield inputs, targets
+
+
+def mixed_tokenizing_dataloader(
+    tokenizer, B, T, split,
+    data_dirs_with_weights,
+    tokenizer_threads=4, tokenizer_batch_size=128,
+    device="cuda", resume_state_dict=None,
+    buffer_size=1000
+):
+    """
+    A multi-source dataloader wrapper that multiplexes multiple data_dirs
+    using a provided weighting (e.g., [2, 2, 1]).
+    Handles resume tracking perfectly across all streams by returning
+    a composite nested state dict.
+    
+    data_dirs_with_weights: List of tuples [(data_dir, weight), ...]
+    """
+    # Parse ratios to build the sampling schedule sequence
+    # E.g. [("english", 2), ("chinese", 2), ("finance", 1)] -> [0, 0, 1, 1, 2]
+    schedule = []
+    for stream_idx, (path, weight) in enumerate(data_dirs_with_weights):
+        schedule.extend([stream_idx] * weight)
+    
+    # Resume configuration
+    if resume_state_dict is None:
+        resume_states = [None] * len(data_dirs_with_weights)
+        cycle_idx = 0
+    else:
+        resume_states = resume_state_dict.get("states", [None] * len(data_dirs_with_weights))
+        cycle_idx = resume_state_dict.get("cycle_idx", 0)
+
+    # Initialize all internal dataloaders
+    loaders = []
+    for stream_idx, (path, _) in enumerate(data_dirs_with_weights):
+        loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(
+            tokenizer=tokenizer, B=B, T=T, split=split,
+            data_dir=path,
+            tokenizer_threads=tokenizer_threads,
+            tokenizer_batch_size=tokenizer_batch_size,
+            device=device,
+            resume_state_dict=resume_states[stream_idx],
+            buffer_size=buffer_size
+        )
+        loaders.append(loader)
+
+    # Maintain an internal representation of the states to yield out
+    # Instead of fetching state_dict on every iteration (which requires iterating that generator),
+    # we update the corresponding sub-state when we sample from it.
+    current_states = [{"pq_idx": 0, "rg_idx": 0, "epoch": 1} for _ in loaders]
+    
+    # We need to initialize the states if we are resuming (but starting from right stream offsets)
+    if resume_state_dict is not None:
+        current_states = resume_states.copy()
+
+    while True:
+        # Pick the appropriate dataloader based on the current schedule step
+        stream_idx = schedule[cycle_idx]
+        
+        # Sample one batch from the selected dataloader
+        inputs, targets, state = next(loaders[stream_idx])
+        
+        # Update the internal state for the selected stream
+        current_states[stream_idx] = state
+        
+        # Advance the schedule
+        next_cycle_idx = (cycle_idx + 1) % len(schedule)
+        
+        # Yield the nested state dictionary
+        composite_state = {
+            "states": current_states.copy(),
+            "cycle_idx": next_cycle_idx,
+            # We provide dummy top-level keys for backward compatibility with 
+            # logging code that defaults to assuming a single dataloader.
+            # In base_train.py we will update the print statement, but having these helps.
+            "pq_idx": state["pq_idx"],
+            "rg_idx": state["rg_idx"],
+            "epoch": state["epoch"],
+            "source_idx": stream_idx
+        }
+        
+        yield inputs, targets, composite_state
+        
+        cycle_idx = next_cycle_idx
