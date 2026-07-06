@@ -1,0 +1,225 @@
+import sqlite3
+import json
+import re
+import jieba_fast as jieba
+from collections import defaultdict
+from typing import List, Dict
+from .chunk_id import ensure_scoped_chunk_id, make_chunk_id
+
+DB_PATH = "rag_bm25.db"
+
+
+class SqliteBM25Retriever:
+    """
+    基于 SQLite FTS5 + jieba_fast 的轻量化稀疏检索器。
+
+    替代原 rank-bm25 内存方案，优势：
+    - 数据持久化到 SQLite，进程重启无需重建索引
+    - WAL 模式支持高并发读写不阻塞
+    - jieba_fast 中文分词替代空格分词，中文检索精度大幅提升
+    - 内存占用极低，适合 2C2G 等资源受限环境
+    """
+
+    def __init__(self, db_path: str = DB_PATH):
+        self.db_path = db_path
+        self._init_db()
+
+    SCHEMA_VERSION = 2
+
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chunk_store (
+                    doc_id TEXT PRIMARY KEY,
+                    content TEXT,
+                    metadata_json TEXT,
+                    user_id INTEGER,
+                    doc_name TEXT
+                );
+            """)
+
+            # Migration: add doc_name column if missing (idempotent)
+            cols = [row[1] for row in cursor.execute("PRAGMA table_info(chunk_store)").fetchall()]
+            if "doc_name" not in cols:
+                cursor.execute("ALTER TABLE chunk_store ADD COLUMN doc_name TEXT")
+                for row in cursor.execute("SELECT doc_id, metadata_json FROM chunk_store WHERE doc_name IS NULL").fetchall():
+                    try:
+                        meta = json.loads(row[1])
+                        dn = meta.get("doc_name", "")
+                        cursor.execute("UPDATE chunk_store SET doc_name = ? WHERE doc_id = ?", (dn, row[0]))
+                    except Exception:
+                        pass
+
+            # Migrate FTS5: if old content-backed table exists, drop and recreate
+            try:
+                cfg = cursor.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='fts_index'"
+                ).fetchone()
+                if cfg and "content='chunk_store'" in (cfg[0] or ""):
+                    cursor.execute("DROP TABLE fts_index")
+            except Exception:
+                pass
+
+            cursor.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS fts_index USING fts5(
+                    content,
+                    doc_id UNINDEXED,
+                    tokenize='unicode61'
+                );
+            """)
+            conn.commit()
+
+    def _clean_query(self, query: str) -> str:
+        tokenized = " ".join(jieba.cut_for_search(query.lower()))
+        tokenized = re.sub(r'[^\w\s]', ' ', tokenized)
+        return tokenized.strip()
+
+    def add_chunks(self, chunks: List[Dict], user_id: int = None):
+        if user_id is None:
+            raise ValueError("user_id is required for add_chunks")
+        with sqlite3.connect(self.db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            for c in chunks:
+                raw_id = c.get("metadata", {}).get("doc_id") or c.get("id")
+                content = c["content"]
+                metadata = c.get("metadata", {})
+                doc_name = metadata.get("doc_name", "")
+
+                # Enforce tenant-scoped ID at storage boundary
+                doc_id = ensure_scoped_chunk_id(raw_id, user_id, doc_name)
+
+                tokenized_content = " ".join(jieba.cut_for_search(content.lower()))
+
+                cursor.execute(
+                    "INSERT OR REPLACE INTO chunk_store(doc_id, content, metadata_json, user_id, doc_name) VALUES (?, ?, ?, ?, ?);",
+                    (doc_id, content, json.dumps(metadata, ensure_ascii=False), user_id, doc_name)
+                )
+                rowid = cursor.lastrowid
+
+                cursor.execute(
+                    "INSERT INTO fts_index(content, doc_id) VALUES (?, ?);",
+                    (tokenized_content, doc_id)
+                )
+            conn.commit()
+
+    def search(self, query: str, k: int = 10, doc_name: str = None, user_id: int = None) -> List[Dict]:
+        """
+        SQLite FTS5 稀疏检索。
+        修复：增加 doc_name 和 user_id 过滤，防止跨文档/跨用户数据泄露。
+        """
+        clean_query = self._clean_query(query)
+        if not clean_query.strip():
+            return []
+
+        try:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                cursor = conn.cursor()
+
+                # 基础 SQL
+                sql = """
+                    SELECT c.doc_id, c.content, c.metadata_json, bm25(fts_index) as score
+                    FROM fts_index f
+                    JOIN chunk_store c ON f.doc_id = c.doc_id
+                    WHERE fts_index MATCH ?
+                """
+                params = [clean_query]
+
+                if user_id is None:
+                    return []
+                sql += " AND c.user_id = ?"
+                params.append(user_id)
+
+                # Use exact doc_name column match (no LIKE injection risk)
+                if doc_name:
+                    sql += " AND c.doc_name = ?"
+                    params.append(doc_name)
+
+                sql += " ORDER BY score ASC LIMIT ?;"
+                params.append(k)
+
+                cursor.execute(sql, tuple(params))
+                rows = cursor.fetchall()
+
+        except sqlite3.OperationalError as e:
+            print(f"BM25 search error: {e}")
+            return []
+
+        results = []
+        for row in rows:
+            results.append({
+                "doc_id": row[0],
+                "content": row[1],
+                "metadata": json.loads(row[2]),
+                "score": -float(row[3]) # BM25 score in FTS5 is negative, so we negate it
+            })
+        return results
+
+    def delete_doc(self, doc_name: str, user_id: int):
+        if user_id is None:
+            raise ValueError("user_id is required for delete_doc")
+        with sqlite3.connect(self.db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            doc_ids = [r[0] for r in cursor.execute(
+                "SELECT doc_id FROM chunk_store WHERE doc_name = ? AND user_id = ?",
+                (doc_name, user_id)
+            ).fetchall()]
+            if doc_ids:
+                placeholders = ",".join("?" * len(doc_ids))
+                cursor.execute(f"DELETE FROM chunk_store WHERE doc_id IN ({placeholders})", doc_ids)
+                cursor.execute(f"DELETE FROM fts_index WHERE doc_id IN ({placeholders})", doc_ids)
+            conn.commit()
+
+
+    def delete_all_for_user(self, user_id: int):
+        """删除指定用户的所有 BM25 索引条目。"""
+        if user_id is None:
+            raise ValueError("user_id is required for delete_all_for_user")
+        with sqlite3.connect(self.db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            doc_ids = [r[0] for r in cursor.execute(
+                "SELECT doc_id FROM chunk_store WHERE user_id = ?", (user_id,)
+            ).fetchall()]
+            if doc_ids:
+                placeholders = ",".join("?" * len(doc_ids))
+                cursor.execute(f"DELETE FROM chunk_store WHERE doc_id IN ({placeholders})", doc_ids)
+                cursor.execute(f"DELETE FROM fts_index WHERE doc_id IN ({placeholders})", doc_ids)
+            conn.commit()
+
+
+def rrf(ranked_lists, k: int = 60):
+    """
+    使用倒数排名融合算法合并多个排序列表。
+
+    Args:
+        ranked_lists: 包含多个排序列表的列表，每个排序列表包含字典元素，
+                      字典需具有"doc_id"和"score"键。
+        k: RRF算法的常数，用于控制排名的权重，默认为60。
+
+    Returns:
+        List: 按融合得分降序排列的文档信息列表，每个字典包含原始文档信息及新增的"fused_score"键。
+    """
+    fused_scores = defaultdict(float)
+    doc_map = {}
+
+    for ranked_list in ranked_lists:
+        for rank, item in enumerate(ranked_list):
+            doc_id = item["doc_id"]
+            fused_scores[doc_id] += 1 / (k + rank + 1)
+
+            if doc_id not in doc_map:
+                doc_map[doc_id] = item
+
+    sorted_ids = sorted(
+        fused_scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return [
+        {**doc_map[doc_id], "fused_score": score}
+        for doc_id, score in sorted_ids
+    ]

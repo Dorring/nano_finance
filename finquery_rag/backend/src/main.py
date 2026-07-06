@@ -1,0 +1,487 @@
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from openai import OpenAI
+import json
+
+from .services.auth import create_access_token, get_current_user, get_current_user_optional, get_password_hash, verify_password
+from .services.ingest import process_pdf
+from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats, clear_all_for_user
+from .services.rag_engine import RAGEngine
+from .models.schemas import *  #全部 Pydantic 模型
+from .models.user import User #User ORM 模型
+from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
+from sqlalchemy.orm import Session #SQLAlchemy 会话管理
+
+from datetime import timedelta, datetime
+import os
+import shutil
+import tempfile
+from dotenv import load_dotenv
+
+# Create database tables (if relying on this instead of alembic for initial dev)
+#创建数据库表（如果不使用 alembic 进行迁移的话）
+Base.metadata.create_all(bind=engine)
+
+# Disable tokenizer parallelism to avoid fork warnings
+# 禁用分词器并行化以避免 fork 警告
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Initialize FastAPI
+# 初始化 FastAPI 应用
+app = FastAPI(
+    title="FinQuery API",
+    description="Multi-Document Financial Q&A System with User Management",
+    version="3.0.0"
+)
+
+# Get allowed origins from environment variable
+# 从环境变量获取允许的跨域请求来源
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
+# Add CORS middleware
+# 添加跨域中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 加载环境变量（必须在读取环境变量之前）
+load_dotenv()
+
+# Initialize LLM clients
+# 在线对话：通过 FRP 穿透访问学校 GPU 服务器上的 nanochat OpenAI 兼容适配层
+llm_client = OpenAI(
+    base_url=os.getenv("LLM_API_BASE_URL", "http://127.0.0.1:8500/v1"),
+    api_key=os.getenv("LLM_API_KEY", "not-needed-for-local")
+)
+llm_model_name = os.getenv("LLM_MODEL_NAME", "nanochat")
+
+rag_engine: RAGEngine | None = None
+
+def get_rag_engine():
+    """
+    延迟初始化 RAG 引擎。
+    当需要使用时才进行实例化，以节省系统资源。
+
+    Returns:
+        RAGEngine: 初始化后的 RAGEngine 实例。
+    """
+    global rag_engine
+    if rag_engine is None:
+        rag_engine = RAGEngine(llm_client, model_name=llm_model_name, use_hybrid=True)
+    return rag_engine
+
+######################### API Endpoints #########################
+
+# <---------------------- GET requests ---------------------->
+@app.get("/")
+async def root():
+    """
+    健康检查端点。
+    用于验证服务是否正常运行。
+
+    Returns:
+        dict: 包含服务状态、名称和版本号的字典。
+    """
+    return {
+        "status": "healthy",
+        "service": "FinQuery Multi-Document API",
+        "version": "2.0.0"
+    }
+
+@app.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """
+    获取当前登录用户的信息。
+    通过 JWT 依赖注入直接获取 User 对象，无需额外查询数据库。
+
+    Args:
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        dict: 包含用户邮箱和账户创建时间的字典。
+    """
+    return {
+        "email": current_user.email,
+        "created_at": current_user.created_at
+    }
+
+@app.get("/documents", response_model=DocumentsListResponse)
+async def list_documents(current_user: User = Depends(get_current_user)):
+    """
+    列出当前用户上传的所有文档。
+    如果向量数据库目录不存在，则返回空列表。
+
+    Args:
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        DocumentsListResponse: 包含文档信息列表和文档总数的响应模型。
+    """
+    if not os.path.exists("./chroma_db"):
+        return DocumentsListResponse(documents=[], total_documents=0)
+
+    docs = list_all_documents(current_user.id)
+
+    return DocumentsListResponse(
+        documents=[DocumentInfo(**doc) for doc in docs],
+        total_documents=len(docs)
+    )
+
+@app.get("/documents/{doc_name}")
+async def get_document_stats(doc_name: str, current_user: User = Depends(get_current_user)):
+    """
+    获取特定文档的统计信息。
+    根据文档名称和用户 ID 查询对应向量库集合的统计信息。
+
+    Args:
+        doc_name (str): 文档名称。
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        dict: 包含文档统计信息的字典（如块数量等）。
+
+    Raises:
+        HTTPException: 如果指定文档不存在，抛出 404 异常。
+    """
+    stats = get_collection_stats(doc_name, current_user.id)
+
+    if not stats["exists"]:
+        raise HTTPException(404, f"Document '{doc_name}' not found")
+
+    return stats
+
+
+# <---------------------- POST requests ---------------------->
+@app.post("/register", response_model=Token)
+async def register(user: UserRegister, db: Session = Depends(get_db)):
+    """
+    注册新用户。
+    检查邮箱是否已被注册，若未注册则对密码进行哈希处理并存入数据库，随后生成并返回 JWT。
+
+    Args:
+        user (UserRegister): 用户注册请求体，包含邮箱和密码。
+        db (Session): SQLAlchemy 数据库会话，通过依赖注入获取。
+
+    Returns:
+        dict: 包含访问令牌、令牌类型和用户邮箱的字典。
+
+    Raises:
+        HTTPException: 如果邮箱已被注册，抛出 400 异常。
+    """
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user:
+        raise HTTPException(400, "Email already registered")
+
+    hashed_password = get_password_hash(user.password)
+    new_user = User(
+        email=user.email,
+        hashed_password=hashed_password,
+        created_at=datetime.utcnow()
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    access_token = create_access_token(
+        data={"sub": str(new_user.id)},
+        expires_delta=timedelta(minutes=30)
+    )
+
+    print(f"✓ New user registered: {new_user.email} (ID: {new_user.id})")
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "email": new_user.email
+    }
+
+@app.post("/login", response_model=Token)
+async def login(user: UserLogin, db: Session = Depends(get_db)):
+    """
+    用户登录。
+    验证邮箱和密码，如果验证成功则生成并返回 JWT。
+
+    Args:
+        user (UserLogin): 用户登录请求体，包含邮箱和密码。
+        db (Session): SQLAlchemy 数据库会话，通过依赖注入获取。
+
+    Returns:
+        dict: 包含访问令牌、令牌类型和用户邮箱的字典。
+
+    Raises:
+        HTTPException: 如果邮箱不存在或密码错误，抛出 401 异常。
+    """
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user:
+        raise HTTPException(401, "Invalid email or password")
+
+    if not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(401, "Invalid email or password")
+
+    access_token = create_access_token(
+        data={"sub": str(db_user.id)},
+        expires_delta=timedelta(minutes=30)
+    )
+
+    print(f"✓ User logged in: {db_user.email} (ID: {db_user.id})")
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "email": db_user.email
+    }
+
+@app.post("/upload", response_model=UploadResponse)
+async def upload_document(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """
+    上传并处理 PDF 文档。
+    仅支持 PDF 格式。文件会被临时保存，提取文本块后存入当前用户专属的向量集合中，最后删除临时文件并同步稀疏索引。
+
+    Args:
+        file (UploadFile): 上传的文件对象，默认通过表单数据获取。
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        UploadResponse: 包含文件名、处理消息、页数及向量化结果的响应模型。
+
+    Raises:
+        HTTPException: 如果文件非 PDF 格式抛出 400 异常；如果 PDF 未提取到内容抛出 400 异常；处理过程中发生其他错误抛出 500 异常。
+    """
+    # Validate file type
+    # 验证文件类型
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    safe_filename = os.path.basename(file.filename)
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    temp_dir = tempfile.mkdtemp()
+    temp_path = os.path.join(temp_dir, safe_filename)
+
+    # Save file temporarily and process it
+    # 临时保存文件并进行处理
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # process pdf (表格增强使用 NVIDIA API，无需传入 llm_client)
+        # 处理 pdf 文件，提取文本块和页数
+        chunks, no_of_pages = process_pdf(temp_path, user_id=current_user.id)
+
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No content extracted from PDF")
+
+        # add to specific collection for current user
+        # 将文本块添加到当前用户的特定集合中
+        result = add_documents(chunks, file.filename, current_user.id, no_of_pages)
+
+        # sync chunks to SQLite FTS5 for sparse retrieval
+        # 将文本块同步写入 SQLite FTS5 稀疏检索索引
+        engine = get_rag_engine()
+        engine.bm25_retriever.add_chunks(chunks, current_user.id)
+
+        # Cleanup
+        # 清理临时文件
+        os.remove(temp_path)
+        os.rmdir(temp_dir)
+
+        print(f"✓ Document uploaded: {file.filename} (user: {current_user.id})")
+
+        return UploadResponse(
+            filename = file.filename,
+            message=f"Successfully processed {file.filename}",
+            pages=no_of_pages,
+            **result
+        )
+
+    except HTTPException:
+        # Re-raise client errors (400) without wrapping in 500
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        if os.path.isdir(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        if os.path.isdir(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+@app.post("/query", response_model=QueryResponse)
+async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
+    """
+    对一个或多个文档进行提问。
+    调用 RAG 引擎执行检索增强生成（RAG）流水线，返回生成的答案及相关来源信息。
+
+    Args:
+        request (QueryRequest): 查询请求体，包含问题、文档名称列表及检索结果数量。
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        QueryResponse: 包含答案、来源、原问题及检索文档信息的响应模型。
+
+    Raises:
+        HTTPException: 如果查询过程中发生错误，抛出 500 异常。
+    """
+    try:
+        engine = get_rag_engine()
+
+        # Run RAG pipeline
+        # 运行 RAG 流水线
+        result = await engine.query(
+            question=request.question,
+            doc_names=request.document_names,
+            n_results=request.n_results,
+            user_id=current_user.id
+        )
+
+        return QueryResponse(
+            answer=result["answer"],
+            sources=result["sources"],
+            question=request.question,
+            searched_docs=result["searched_docs"]
+        )
+
+    except Exception as e:
+        raise HTTPException(500, f"Query error: {str(e)}")
+
+
+@app.post("/query/stream")
+async def query_documents_stream(request: QueryRequest, current_user: User = Depends(get_current_user)):
+    """
+    使用服务器发送事件（SSE）流式传输查询响应。
+    大语言模型生成的 Token 将实时逐个推送给客户端。
+
+    Args:
+        request (QueryRequest): 查询请求体，包含问题、文档名称列表及检索结果数量。
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        StreamingResponse: 基于 SSE 协议的流式响应，媒体类型为 text/event-stream。
+    """
+
+    async def generate():
+        """
+        内部异步生成器函数。
+        负责处理会话性问题判断、文档检索、上下文构建以及流式输出 LLM 响应 Token 和来源信息。
+        """
+        engine = get_rag_engine()
+
+        # Check if conversational query (no RAG needed)
+        # 检查是否为会话性问题（无需 RAG 检索）
+        conversational = engine._handle_conversational_query(request.question)
+        if conversational:
+            yield f"data: {json.dumps({'type': 'token', 'content': conversational})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': []})}\n\n"
+            return
+
+        # Get document names
+        # 获取文档名称列表
+        doc_names = request.document_names
+        if doc_names is None:
+            all_docs = list_all_documents(current_user.id)
+            doc_names = [doc["name"] for doc in all_docs]
+
+        if not doc_names:
+            yield f"data: {json.dumps({'type': 'token', 'content': 'No documents found. Please upload documents first.'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': []})}\n\n"
+            return
+
+        # Retrieve chunks
+        # 检索文本块
+        if len(doc_names) == 1:
+            chunks = engine.retrieve_single_document(doc_names[0], request.question, current_user.id, request.n_results)
+        else:
+            chunks = await engine.retrieve_multiple_documents(doc_names, request.question, current_user.id, request.n_results)
+
+        # Build context
+        # 构建上下文
+        context, sources = engine.build_context(chunks)
+
+        # Stream LLM response
+        # 流式输出 LLM 响应
+        for token in engine.generate_answer_stream(context, request.question):
+            yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+
+        # Send sources at the end
+        # 在结束时发送来源信息
+        yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+# <---------------------- DELETE requests ---------------------->
+@app.delete("/documents/{doc_name}")
+async def delete_document(doc_name: str, current_user: User = Depends(get_current_user)):
+    """
+    删除特定文档及其对应的向量集合。
+    同时会清理该文档在 BM25 索引中的数据。
+
+    Args:
+        doc_name (str): 要删除的文档名称。
+        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
+
+    Returns:
+        dict: 包含成功删除消息的字典。
+
+    Raises:
+        HTTPException: 如果指定文档不存在，抛出 404 异常。
+    """
+    success = delete_document_collection(doc_name, current_user.id)
+
+    if not success:
+        raise HTTPException(404, f"Document '{doc_name}' not found")
+
+    # Clear from SQLite FTS5 index
+    # 从 SQLite FTS5 索引中清除
+    engine = get_rag_engine()
+    engine.bm25_retriever.delete_doc(doc_name, current_user.id)
+    print(f"✓ Deleted {doc_name} from BM25 index (user: {current_user.id})")
+
+    return {"message": f"Document '{doc_name}' deleted successfully"}
+
+@app.delete("/documents")
+async def clear_all_documents(current_user: User = Depends(get_current_user)):
+    """
+    清除当前登录用户的所有文档（不再清除全局数据）。
+    分别从向量库和 BM25 索引中删除该用户的全部数据。
+
+    Returns:
+        dict: 包含成功清除消息的字典。
+
+    Raises:
+        HTTPException: 如果清除过程中发生错误，抛出 500 异常。
+    """
+    errors = []
+    # Delete current user's vectors from ChromaDB
+    dense_ok = delete_document_collection(None, current_user.id)
+    if not dense_ok:
+        errors.append("Dense index deletion failed")
+
+    # Delete current user's BM25 index entries
+    try:
+        engine = get_rag_engine()
+        engine.bm25_retriever.delete_all_for_user(current_user.id)
+    except Exception as e:
+        errors.append(f"BM25 deletion failed: {e}")
+
+    if errors:
+        raise HTTPException(500, f"Partial failure: {'; '.join(errors)}")
+
+    return {"message": f"All documents cleared for user {current_user.id}"}
