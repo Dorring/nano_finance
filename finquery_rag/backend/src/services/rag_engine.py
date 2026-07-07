@@ -224,6 +224,67 @@ class RAGEngine:
 5. Answer in prose, never use markdown table syntax
 6. Be concise and precise."""
 
+    def _validate_answer(self, answer: str, sources: list) -> str:
+        """
+        Phase 3: Post-generation answer validation and cleanup.
+        - Strips whitespace and model artifacts
+        - Returns refusal message if answer is empty or near-empty
+        - Truncates overly long answers to max_new_tokens * 4 chars
+        """
+        if not answer:
+            return "I couldn't generate a valid answer. Please try rephrasing your question."
+
+        # Strip model artifacts and excessive whitespace
+        answer = answer.strip()
+        for artifact in ["<|end|>", "</s>", "[END]", "[/INST]"]:
+            answer = answer.replace(artifact, "")
+        answer = answer.strip()
+
+        # Near-empty after cleanup
+        if len(answer) < 10:
+            return "I couldn't generate a meaningful answer. Please try rephrasing your question."
+
+        # Truncate overly long answers (safety cap)
+        max_chars = self.max_new_tokens * 4
+        if len(answer) > max_chars:
+            answer = answer[:max_chars].rsplit(" ", 1)[0] + "..."
+
+        return answer
+
+    def _check_context_sufficiency(self, chunks: list) -> tuple:
+        """
+        Phase 3: Check if retrieved context is sufficient for a reliable answer.
+        Returns (is_sufficient: bool, best_score: float, avg_score: float).
+        """
+        if not chunks:
+            return False, 0.0, 0.0
+
+        scores = [c.get("score", 0) for c in chunks]
+        best_score = max(scores)
+        avg_score = sum(scores) / len(scores)
+
+        # Context is insufficient if the best retrieval score is very low
+        SUFFICIENCY_THRESHOLD = 0.15
+        is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
+
+        return is_sufficient, best_score, avg_score
+
+    def _compute_confidence(self, chunks: list) -> float:
+        """
+        Phase 3: Compute answer confidence based on retrieval quality.
+        Returns a float between 0.0 and 1.0.
+        """
+        if not chunks:
+            return 0.0
+
+        scores = [c.get("score", 0) for c in chunks]
+        best = max(scores)
+        avg = sum(scores) / len(scores)
+
+        # Confidence = weighted blend of best and average score
+        confidence = 0.7 * best + 0.3 * avg
+        return min(1.0, max(0.0, confidence))
+
     async def generate_answer(self, context: str, query: str) -> str:
         """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
         if not context:
@@ -246,7 +307,8 @@ class RAGEngine:
                     max_tokens=self.max_new_tokens
                 )
             )
-            return response.choices[0].message.content
+            raw_answer = response.choices[0].message.content
+            return self._validate_answer(raw_answer, [])
         except Exception as e:
             return f"Error generating answer: {str(e)}"
 
@@ -316,6 +378,10 @@ class RAGEngine:
         else:
             chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
 
+        # Phase 3: Check context sufficiency
+        is_sufficient, best_score, avg_score = self._check_context_sufficiency(chunks)
+        confidence = self._compute_confidence(chunks)
+
         # 2. Build context (with dedup and score threshold)
         context, sources = self.build_context(chunks)
 
@@ -342,7 +408,9 @@ class RAGEngine:
             "answer": answer,
             "sources": sources,
             "context": context,
-            "searched_docs": doc_names
+            "searched_docs": doc_names,
+            "confidence": confidence,
+            "context_sufficient": is_sufficient,
         }
 
     def _handle_conversational_query(self, query: str) -> str | None:
