@@ -1,3 +1,6 @@
+from .trace import TraceLogger
+import time
+
 import asyncio
 from .vector_store import query_collection, list_all_documents
 from .retrieval import SqliteBM25Retriever, rrf
@@ -56,6 +59,8 @@ class RAGEngine:
         self.max_new_tokens = max_new_tokens or self.DEFAULT_MAX_NEW_TOKENS
 
         self.bm25_retriever = SqliteBM25Retriever(db_path=bm25_db_path)
+        self.trace_logger = TraceLogger(sample_rate=1.0, redact_content=True)
+        self.min_score_threshold = 0.0  # chunks below this score are discarded
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -124,19 +129,31 @@ class RAGEngine:
 
         return all_results[:n_results]
 
-    def build_context(self, chunks: list) -> tuple[str, list]:
-        """
-        将检索到的文本块转换为上下文字符串，并提取干净的来源信息。
-        适配 2048 上下文：safe_limit 更紧凑，截断策略更激进。
-        """
+    def build_context(self, chunks: list) -> tuple:
+        """Build context from retrieved chunks with dedup, score threshold, and token budget."""
+        if not chunks:
+            return "", []
+
+        # Phase 2: deduplicate chunks by content
+        seen_content = set()
+        deduped = []
+        for chunk in chunks:
+            content_key = chunk["content"][:100]  # first 100 chars as dedup key
+            if content_key not in seen_content:
+                seen_content.add(content_key)
+                deduped.append(chunk)
+        chunks = deduped
+
+        # Phase 2: filter by minimum score threshold
+        if self.min_score_threshold > 0:
+            chunks = [c for c in chunks if c.get("score", 0) >= self.min_score_threshold]
+
         if not chunks:
             return "", []
 
         context_parts = []
         sources = []
         current_tokens = 0
-
-        # 为 system prompt + 用户问题 + 生成回答 + 特殊 token 预留空间
         safe_limit = self.max_context_tokens - 200
 
         for i, chunk in enumerate(chunks, 1):
@@ -145,24 +162,29 @@ class RAGEngine:
             chunk_type = chunk["metadata"].get("type")
             page = chunk["metadata"].get("page")
 
-            filename = doc_id.split("::")[0]
+            # Parse filename from scoped chunk ID
+            if "::" in doc_id:
+                parts = doc_id.split("::")[0]
+                # Remove user_N_ prefix if present
+                if parts.startswith("user_"):
+                    parts = "_".join(parts.split("_")[2:])
+                filename = parts
+            else:
+                filename = doc_id
 
             if chunk_type == "table":
-                table_num = chunk['metadata'].get('table_num', '')
-                source_ref = f"{filename}, p{page}(T{table_num})"
+                table_num = chunk["metadata"].get("table_num", "")
+                source_ref = "%s, p%s(T%s)" % (filename, page, table_num)
             else:
-                source_ref = f"{filename}, p{page}"
+                source_ref = "%s, p%s" % (filename, page)
 
-            # 精简 source 标注格式以节省 token
-            chunk_text = f"[{source_ref}]\n{content}"
+            chunk_text = "[%s]\n%s" % (source_ref, content)
 
-            # 计算 Token 数
             if self.tokenizer:
                 chunk_tokens = len(self.tokenizer.encode(chunk_text))
             else:
                 chunk_tokens = len(chunk_text) / 3
 
-            # 截断策略：超出限制时部分保留
             if current_tokens + chunk_tokens > safe_limit:
                 remaining_tokens = safe_limit - current_tokens
                 if remaining_tokens > 80:
@@ -171,26 +193,19 @@ class RAGEngine:
                         truncated_content = self.tokenizer.decode(truncated_tokens) + "\n[...]"
                     else:
                         truncated_content = content[:int(remaining_tokens * 3)] + "\n[...]"
-
-                    chunk_text = f"[{source_ref}]\n{truncated_content}"
+                    chunk_text = "[%s]\n%s" % (source_ref, truncated_content)
                     context_parts.append(chunk_text)
                     sources.append({
-                        "filename": filename,
-                        "page": page,
-                        "type": chunk_type,
-                        "score": chunk.get("score", 0)
+                        "filename": filename, "page": page,
+                        "type": chunk_type, "score": chunk.get("score", 0),
                     })
-
-                print(f"⚠️ Context truncation: Reached max tokens ({self.max_context_tokens}). Stopped at chunk {i}.")
                 break
 
             context_parts.append(chunk_text)
             current_tokens += chunk_tokens
             sources.append({
-                "filename": filename,
-                "page": page,
-                "type": chunk_type,
-                "score": chunk.get("score", 0)
+                "filename": filename, "page": page,
+                "type": chunk_type, "score": chunk.get("score", 0),
             })
 
         context_str = "\n\n---\n\n".join(context_parts)
@@ -268,7 +283,12 @@ class RAGEngine:
 
     async def query(self, question: str, doc_names: list[str] | None = None, user_id: int = None, n_results: int = 3) -> dict:
         """查询一个或多个文档的统一入口方法（全异步）。默认 top-k=3 适配短上下文。"""
-        # 会话意图识别前置拦截
+        t0 = time.time()
+        trace_data = {
+            "tenant_id": user_id,
+            "query_original": question,
+        }
+
         conversational_response = self._handle_conversational_query(question)
         if conversational_response:
             return {
@@ -296,11 +316,27 @@ class RAGEngine:
         else:
             chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
 
-        # 2. Build context
+        # 2. Build context (with dedup and score threshold)
         context, sources = self.build_context(chunks)
 
-        # 3. Generate answer (异步调用)
+        # 3. Generate answer
         answer = await self.generate_answer(context, question)
+
+        # 4. Log trace
+        elapsed_ms = (time.time() - t0) * 1000
+        trace_data.update({
+            "filter_conditions": {"doc_names": doc_names},
+            "candidates": [{"doc_id": c.get("doc_id", ""), "score": c.get("score", 0)} for c in chunks],
+            "final_context": context,
+            "answer": answer,
+            "sources": sources,
+            "model_name": self.model_name,
+            "latency_ms": elapsed_ms,
+        })
+        try:
+            self.trace_logger.log(**trace_data)
+        except Exception:
+            pass  # tracing must never break the query path
 
         return {
             "answer": answer,
