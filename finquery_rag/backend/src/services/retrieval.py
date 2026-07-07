@@ -94,11 +94,13 @@ class SqliteBM25Retriever:
 
                 tokenized_content = " ".join(jieba.cut_for_search(content.lower()))
 
+                # Delete old FTS rows before upsert to prevent duplicate/stale entries
+                cursor.execute("DELETE FROM fts_index WHERE doc_id = ?;", (doc_id,))
+
                 cursor.execute(
                     "INSERT OR REPLACE INTO chunk_store(doc_id, content, metadata_json, user_id, doc_name) VALUES (?, ?, ?, ?, ?);",
                     (doc_id, content, json.dumps(metadata, ensure_ascii=False), user_id, doc_name)
                 )
-                rowid = cursor.lastrowid
 
                 cursor.execute(
                     "INSERT INTO fts_index(content, doc_id) VALUES (?, ?);",

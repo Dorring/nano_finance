@@ -255,6 +255,10 @@ class RAGEngine:
         """
         Phase 3: Check if retrieved context is sufficient for a reliable answer.
         Returns (is_sufficient: bool, best_score: float, avg_score: float).
+
+        Scores are mode-dependent:
+        - Dense-only (cosine): 0-1 range, threshold 0.15
+        - Hybrid/RRF fused_score: ~0.01-0.05 range, threshold 0.008
         """
         if not chunks:
             return False, 0.0, 0.0
@@ -263,10 +267,17 @@ class RAGEngine:
         best_score = max(scores)
         avg_score = sum(scores) / len(scores)
 
-        # Context is insufficient if the best retrieval score is very low
-        SUFFICIENCY_THRESHOLD = 0.15
-        is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
+        # Detect score scale: RRF fused_scores are typically < 0.05
+        # Dense cosine scores are typically 0-1
+        max_possible_rrf = 0.05
+        if best_score < max_possible_rrf:
+            # RRF mode — use calibrated threshold
+            SUFFICIENCY_THRESHOLD = 0.008
+        else:
+            # Dense mode — use original threshold
+            SUFFICIENCY_THRESHOLD = 0.15
 
+        is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
         return is_sufficient, best_score, avg_score
 
     def _compute_confidence(self, chunks: list) -> float:
@@ -417,7 +428,8 @@ class RAGEngine:
                 "answer": conversational_response,
                 "sources": [],
                 "context": None,
-                "searched_docs": []
+                "searched_docs": [],
+                "context_sufficient": True
             }
             if conversation_history:
                 result["rewritten_question"] = question
@@ -432,7 +444,8 @@ class RAGEngine:
                 "answer": "No documents found in database. Please upload documents first.",
                 "sources": [],
                 "context": None,
-                "searched_docs": []
+                "searched_docs": [],
+                "context_sufficient": True
             }
             if conversation_history:
                 result["rewritten_question"] = question
@@ -451,8 +464,11 @@ class RAGEngine:
         # 2. Build context (with dedup and score threshold)
         context, sources = self.build_context(chunks)
 
-        # 3. Generate answer
-        answer = await self.generate_answer(context, question)
+        # 3. Generate answer (skip LLM if context is insufficient)
+        if not is_sufficient:
+            answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+        else:
+            answer = await self.generate_answer(context, question)
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000

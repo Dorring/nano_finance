@@ -87,11 +87,13 @@ def mock_collection():
             "distances": [[0.1 for _ in matched]],
         }
 
-    def _get(include=None, where=None):
+    def _get(include=None, where=None, limit=None):
         ids = []; metas = []
         for i, m in enumerate(store["metadatas"]):
             if _match(m, where):
                 ids.append(store["ids"][i]); metas.append(m)
+        if limit is not None:
+            ids = ids[:limit]; metas = metas[:limit]
         return {"ids": ids, "metadatas": metas}
 
     def _delete(where=None):

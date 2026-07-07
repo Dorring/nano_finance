@@ -31,3 +31,4 @@ git diff --check: EXIT: 0
 ## Known Risks
 - Phase 0 uses standalone BM25 table; Phase 1 document registry will need to coordinate deletes
 - No structured tracing yet (deferred to Phase 1)
+- **Audit Round 3 note:** `cb7b640` is a combined baseline commit that includes the entire finquery_rag application plus Phase 0 safety fixes. It was accepted as-is for the initial safety baseline; subsequent commits are incremental. The commit also contains Markdown trailing whitespace that would need rewrite if strict per-commit cleanliness is enforced.

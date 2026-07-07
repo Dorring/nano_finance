@@ -18,7 +18,10 @@ class SessionManager:
     SCHEMA_VERSION = 1
     DEFAULT_MAX_HISTORY = 8  # max message pairs to keep
 
-    def __init__(self, db_path: str = "sessions.db", max_history: int = None):
+    def __init__(self, db_path: str = None, max_history: int = None):
+        import os
+        if db_path is None:
+            db_path = os.getenv("SESSIONS_DB_PATH", "sessions.db")
         self.db_path = db_path
         self.max_history = max_history or self.DEFAULT_MAX_HISTORY
         self._local = threading.local()

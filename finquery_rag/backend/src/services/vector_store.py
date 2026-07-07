@@ -244,13 +244,14 @@ def list_all_documents(user_id: int = None) -> List[Dict]:
 def delete_document_collection(doc_name: str, user_id: int) -> bool:
     """
     删除特定文档的所有向量数据。user_id 必须提供，不允许跨租户删除。
+    修复：删除前先检查是否存在匹配数据，0 条匹配返回 False。
 
     Args:
-        doc_name (str): 要删除的文档文件名。
+        doc_name (str): 要删除的文档文件名。为 None 时删除该用户全部数据。
         user_id (int): 用户ID，必填。
 
     Returns:
-        bool: 删除成功返回 True。
+        bool: 删除成功且有数据被删除返回 True，无匹配数据返回 False。
 
     Raises:
         ValueError: user_id 为 None 时抛出。
@@ -264,6 +265,10 @@ def delete_document_collection(doc_name: str, user_id: int) -> bool:
         where_filter["doc_name"] = doc_name
 
     try:
+        # Check existence before delete (fixes 404 semantics)
+        existing = collection.get(where=where_filter, limit=1)
+        if not existing or not existing.get("ids"):
+            return False
         collection.delete(where=where_filter)
         return True
     except Exception as e:

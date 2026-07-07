@@ -296,7 +296,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
         # Register document in lifecycle registry
         doc_id = uuid.uuid4().hex
         document_registry.register(
-            doc_id, current_user.id, file.filename, fh, status="parsing"
+            doc_id, current_user.id, safe_filename, fh, status="parsing"
         )
 
         # process pdf
@@ -324,11 +324,17 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
         document_registry.mark_indexing(doc_id)
 
         # add to vector store
-        result = add_documents(chunks, file.filename, current_user.id, no_of_pages)
+        result = add_documents(chunks, safe_filename, current_user.id, no_of_pages)
 
-        # sync to BM25
-        engine = get_rag_engine()
-        engine.bm25_retriever.add_chunks(chunks, current_user.id)
+        # sync to BM25 (rollback dense on failure)
+        try:
+            engine = get_rag_engine()
+            engine.bm25_retriever.add_chunks(chunks, current_user.id)
+        except Exception as bm25_err:
+            # Rollback ChromaDB dense data for this doc
+            delete_document_collection(safe_filename, current_user.id)
+            document_registry.mark_failed(doc_id, f"BM25 write failed, dense rolled back: {bm25_err}")
+            raise HTTPException(status_code=500, detail=f"Indexing error: {bm25_err}")
 
         # Mark ready in registry
         document_registry.mark_ready(doc_id, len(chunks), ch)
@@ -336,7 +342,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
         os.remove(temp_path)
         os.rmdir(temp_dir)
 
-        print("\u2713 Document uploaded: %s (user: %s, doc_id: %s)" % (file.filename, current_user.id, doc_id))
+        print("\u2713 Document uploaded: %s (user: %s, doc_id: %s)" % (safe_filename, current_user.id, doc_id))
 
         return UploadResponse(
             filename=file.filename,
@@ -412,37 +418,38 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
         raise HTTPException(500, f"Query error: {str(e)}")
 
 
+
 @app.post("/query/stream")
 async def query_documents_stream(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
     使用服务器发送事件（SSE）流式传输查询响应。
-    大语言模型生成的 Token 将实时逐个推送给客户端。
+    统一共享 /query 的改写、充分性判断和 session 行为。
 
     Args:
-        request (QueryRequest): 查询请求体，包含问题、文档名称列表及检索结果数量。
-        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
-
-    Returns:
-        StreamingResponse: 基于 SSE 协议的流式响应，媒体类型为 text/event-stream。
+        request (QueryRequest): 查询请求体。
+        current_user (User): 当前登录用户。
     """
-
     async def generate():
-        """
-        内部异步生成器函数。
-        负责处理会话性问题判断、文档检索、上下文构建以及流式输出 LLM 响应 Token 和来源信息。
-        """
         engine = get_rag_engine()
 
-        # Check if conversational query (no RAG needed)
-        # 检查是否为会话性问题（无需 RAG 检索）
-        conversational = engine._handle_conversational_query(request.question)
+        # Phase 4: Load conversation history and rewrite query
+        question = request.question
+        conversation_history = None
+        if request.session_id:
+            conversation_history = session_manager.get_recent_messages(
+                request.session_id, current_user.id
+            )
+        if conversation_history:
+            question = await engine._rewrite_query_with_context(question, conversation_history)
+
+        # Phase 3: Check if conversational (no RAG needed)
+        conversational = engine._handle_conversational_query(question)
         if conversational:
             yield f"data: {json.dumps({'type': 'token', 'content': conversational})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': []})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True})}\n\n"
             return
 
         # Get document names
-        # 获取文档名称列表
         doc_names = request.document_names
         if doc_names is None:
             all_docs = list_all_documents(current_user.id)
@@ -453,25 +460,42 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             yield f"data: {json.dumps({'type': 'done', 'sources': []})}\n\n"
             return
 
-        # Retrieve chunks
-        # 检索文本块
+        # Phase 3: Retrieve chunks and check sufficiency
         if len(doc_names) == 1:
-            chunks = engine.retrieve_single_document(doc_names[0], request.question, current_user.id, request.n_results)
+            chunks = engine.retrieve_single_document(doc_names[0], question, current_user.id, request.n_results)
         else:
-            chunks = await engine.retrieve_multiple_documents(doc_names, request.question, current_user.id, request.n_results)
+            chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
 
-        # Build context
-        # 构建上下文
+        is_sufficient, best_score, avg_score = engine._check_context_sufficiency(chunks)
+
+        # Phase 3: Build context
         context, sources = engine.build_context(chunks)
 
+        # Phase 3: If context is insufficient, return refusal without calling LLM
+        if not is_sufficient:
+            refusal = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+            if request.session_id:
+                session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+                session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
+            yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': False})}\n\n"
+            return
+
+        # Phase 4: Save user question to session
+        if request.session_id:
+            session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+
         # Stream LLM response
-        # 流式输出 LLM 响应
-        for token in engine.generate_answer_stream(context, request.question):
+        full_answer = ""
+        for token in engine.generate_answer_stream(context, question):
+            full_answer += token
             yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
 
-        # Send sources at the end
-        # 在结束时发送来源信息
-        yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+        # Phase 4: Save assistant answer to session
+        if request.session_id:
+            session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
+
+        yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': True})}\n\n"
 
     return StreamingResponse(
         generate(),
@@ -481,7 +505,6 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             "Connection": "keep-alive",
         }
     )
-
 
 # <---------------------- Session endpoints (Phase 4) ---------------------->
 
@@ -533,6 +556,10 @@ async def delete_document(doc_name: str, current_user: User = Depends(get_curren
     engine.bm25_retriever.delete_doc(doc_name, current_user.id)
     print(f"✓ Deleted {doc_name} from BM25 index (user: {current_user.id})")
 
+    # Sync document registry (remove orphaned entry)
+    document_registry.delete(current_user.id, doc_name)
+    print(f"✓ Deleted {doc_name} from document registry (user: {current_user.id})")
+
     return {"message": f"Document '{doc_name}' deleted successfully"}
 
 @app.delete("/documents")
@@ -559,6 +586,12 @@ async def clear_all_documents(current_user: User = Depends(get_current_user)):
         engine.bm25_retriever.delete_all_for_user(current_user.id)
     except Exception as e:
         errors.append(f"BM25 deletion failed: {e}")
+
+    # Sync document registry (clear orphaned entries)
+    try:
+        document_registry.delete_all_for_tenant(current_user.id)
+    except Exception as e:
+        errors.append(f"Registry sync failed: {e}")
 
     if errors:
         raise HTTPException(500, f"Partial failure: {'; '.join(errors)}")
