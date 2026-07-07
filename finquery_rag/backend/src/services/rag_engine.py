@@ -285,6 +285,60 @@ class RAGEngine:
         confidence = 0.7 * best + 0.3 * avg
         return min(1.0, max(0.0, confidence))
 
+    async def _rewrite_query_with_context(self, question: str, conversation_history: list) -> str:
+        """
+        Phase 4: Rewrite a follow-up question into a standalone query using conversation context.
+
+        Uses a lightweight prompt to the LLM to resolve pronouns and implicit references.
+        Returns the original question if rewriting fails or history is empty.
+
+        Args:
+            question: The current user question (may be a follow-up)
+            conversation_history: List of {"role": ..., "content": ...} dicts
+
+        Returns:
+            Standalone version of the question, or original if rewriting fails
+        """
+        if not conversation_history or len(conversation_history) < 2:
+            return question  # no context to rewrite with
+
+        # Build a compact conversation summary from recent messages
+        # Limit to last 4 messages (2 pairs) to stay within token budget
+        recent = conversation_history[-4:]
+        history_parts = []
+        for msg in recent:
+            role = "User" if msg["role"] == "user" else "Assistant"
+            # Truncate long messages to 200 chars to save tokens
+            content = msg["content"][:200]
+            history_parts.append(f"{role}: {content}")
+        history_text = "\n".join(history_parts)
+
+        rewrite_prompt = (
+            f"Given this conversation:\n{history_text}\n\n"
+            f"Rewrite the following question as a standalone question "
+            f"that can be understood without the conversation context. "
+            f"Only output the rewritten question, nothing else.\n\n"
+            f"Question: {question}"
+        )
+
+        try:
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.llm_client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[{"role": "user", "content": rewrite_prompt}],
+                    temperature=0,
+                    max_tokens=100,
+                )
+            )
+            rewritten = response.choices[0].message.content
+            if rewritten and len(rewritten.strip()) > 5:
+                return rewritten.strip()
+            return question
+        except Exception:
+            return question  # graceful fallback: use original question
+
     async def generate_answer(self, context: str, query: str) -> str:
         """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
         if not context:
@@ -343,7 +397,7 @@ class RAGEngine:
         except Exception as e:
             yield f"Error generating answer: {str(e)}"
 
-    async def query(self, question: str, doc_names: list[str] | None = None, user_id: int = None, n_results: int = 3) -> dict:
+    async def query(self, question: str, doc_names: list[str] | None = None, user_id: int = None, n_results: int = 3, conversation_history: list = None) -> dict:
         """查询一个或多个文档的统一入口方法（全异步）。默认 top-k=3 适配短上下文。"""
         t0 = time.time()
         trace_data = {
@@ -351,26 +405,38 @@ class RAGEngine:
             "query_original": question,
         }
 
+        # Phase 4: Rewrite follow-up question using conversation context
+        original_question = question
+        if conversation_history:
+            question = await self._rewrite_query_with_context(question, conversation_history)
+            trace_data["query_rewritten"] = question
+
         conversational_response = self._handle_conversational_query(question)
         if conversational_response:
-            return {
+            result = {
                 "answer": conversational_response,
                 "sources": [],
                 "context": None,
                 "searched_docs": []
             }
+            if conversation_history:
+                result["rewritten_question"] = question
+            return result
 
         if doc_names is None:
             all_docs = list_all_documents(user_id)
             doc_names = [doc["name"] for doc in all_docs]
 
         if not doc_names:
-            return {
+            result = {
                 "answer": "No documents found in database. Please upload documents first.",
                 "sources": [],
                 "context": None,
                 "searched_docs": []
             }
+            if conversation_history:
+                result["rewritten_question"] = question
+            return result
 
         # 1. Retrieve relevant chunks
         if len(doc_names) == 1:
@@ -411,6 +477,7 @@ class RAGEngine:
             "searched_docs": doc_names,
             "confidence": confidence,
             "context_sufficient": is_sufficient,
+            "rewritten_question": question if conversation_history else None,
         }
 
     def _handle_conversational_query(self, query: str) -> str | None:

@@ -9,6 +9,7 @@ from .services.ingest import process_pdf
 from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats, clear_all_for_user
 from .services.rag_engine import RAGEngine
 from .services.document_registry import DocumentRegistry
+from .services.session_manager import SessionManager
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session #SQLAlchemy 会话管理
 
 from datetime import timedelta, datetime
 import os
+import uuid
 import shutil
 import tempfile
 from dotenv import load_dotenv
@@ -66,6 +68,7 @@ llm_model_name = os.getenv("LLM_MODEL_NAME", "nanochat")
 
 rag_engine: RAGEngine | None = None
 document_registry = DocumentRegistry()
+session_manager = SessionManager()
 
 def get_rag_engine():
     """
@@ -291,7 +294,6 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             )
 
         # Register document in lifecycle registry
-        import uuid
         doc_id = uuid.uuid4().hex
         document_registry.register(
             doc_id, current_user.id, file.filename, fh, status="parsing"
@@ -369,35 +371,41 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
 async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
     对一个或多个文档进行提问。
-    调用 RAG 引擎执行检索增强生成（RAG）流水线，返回生成的答案及相关来源信息。
-
-    Args:
-        request (QueryRequest): 查询请求体，包含问题、文档名称列表及检索结果数量。
-        current_user (User): 当前登录用户，通过 JWT 依赖注入获取。
-
-    Returns:
-        QueryResponse: 包含答案、来源、原问题及检索文档信息的响应模型。
-
-    Raises:
-        HTTPException: 如果查询过程中发生错误，抛出 500 异常。
+    支持会话记忆：传入 session_id 将自动加载历史消息用于问题改写。
+    历史回答不会作为金融事实进入检索上下文。
     """
     try:
         engine = get_rag_engine()
 
+        # Phase 4: Load conversation history for query rewriting
+        conversation_history = None
+        if request.session_id:
+            conversation_history = session_manager.get_recent_messages(
+                request.session_id, current_user.id
+            )
+
         # Run RAG pipeline
-        # 运行 RAG 流水线
         result = await engine.query(
             question=request.question,
             doc_names=request.document_names,
             n_results=request.n_results,
-            user_id=current_user.id
+            user_id=current_user.id,
+            conversation_history=conversation_history,
         )
+
+        # Phase 4: Save messages to session
+        rewritten = result.get("rewritten_question")
+        if request.session_id:
+            session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+            session_manager.add_message(request.session_id, current_user.id, "assistant", result["answer"])
 
         return QueryResponse(
             answer=result["answer"],
             sources=result["sources"],
             question=request.question,
-            searched_docs=result["searched_docs"]
+            searched_docs=result["searched_docs"],
+            session_id=request.session_id,
+            rewritten_question=rewritten,
         )
 
     except Exception as e:
@@ -473,6 +481,28 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             "Connection": "keep-alive",
         }
     )
+
+
+# <---------------------- Session endpoints (Phase 4) ---------------------->
+
+@app.post("/sessions/clear")
+async def clear_session(request: QueryRequest, current_user: User = Depends(get_current_user)):
+    """
+    清除指定会话的历史消息。
+    """
+    if not request.session_id:
+        raise HTTPException(400, "session_id is required")
+    cleared = session_manager.clear_session(request.session_id, current_user.id)
+    return {"message": "Session cleared", "session_id": request.session_id, "cleared": cleared}
+
+@app.get("/sessions/{session_id}")
+async def get_session_history(session_id: str, current_user: User = Depends(get_current_user)):
+    """
+    获取指定会话的历史消息（用于前端恢复对话）。
+    """
+    messages = session_manager.get_recent_messages(session_id, current_user.id)
+    count = session_manager.get_session_count(session_id, current_user.id)
+    return {"session_id": session_id, "messages": messages, "total_messages": count}
 
 
 # <---------------------- DELETE requests ---------------------->

@@ -11,6 +11,8 @@ class QueryRequest(BaseModel):
     # 指定要搜索的文档名称列表。如果为None，则搜索所有文档
     n_results: int = Field(default=5, ge=1, le=20)
     # 返回的结果数量，默认为5，取值范围在1到20之间
+    session_id: str | None = Field(None, description="Session ID for conversation memory. If null, no history is used.")
+    # 会话ID，用于多轮对话记忆。如果为None则不使用历史上下文
 
 class QueryResponse(BaseModel):
     """
@@ -24,6 +26,10 @@ class QueryResponse(BaseModel):
     # 原始查询的问题
     searched_docs: list[str]
     # 实际参与搜索的文档名称列表
+    session_id: str | None = None
+    # 会话ID（Phase 4）
+    rewritten_question: str | None = None
+    # 改写后的独立问题（Phase 4，仅当使用了历史上下文时有值）
 
 class UploadResponse(BaseModel):
     """
