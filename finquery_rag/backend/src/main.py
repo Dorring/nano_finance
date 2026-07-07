@@ -8,6 +8,7 @@ from .services.auth import create_access_token, get_current_user, get_current_us
 from .services.ingest import process_pdf
 from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats, clear_all_for_user
 from .services.rag_engine import RAGEngine
+from .services.document_registry import DocumentRegistry
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -64,6 +65,7 @@ llm_client = OpenAI(
 llm_model_name = os.getenv("LLM_MODEL_NAME", "nanochat")
 
 rag_engine: RAGEngine | None = None
+document_registry = DocumentRegistry()
 
 def get_rag_engine():
     """
@@ -272,49 +274,96 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # process pdf (表格增强使用 NVIDIA API，无需传入 llm_client)
-        # 处理 pdf 文件，提取文本块和页数
+        # Phase 1: compute file hash and check for duplicate
+        with open(temp_path, "rb") as f:
+            file_bytes = f.read()
+        fh = DocumentRegistry.file_hash(file_bytes)
+        existing = document_registry.find_by_file_hash(current_user.id, fh)
+        if existing:
+            os.remove(temp_path)
+            os.rmdir(temp_dir)
+            return UploadResponse(
+                filename=file.filename,
+                message="Duplicate file skipped (already indexed)",
+                pages=existing["page_count"],
+                collection_name="",
+                total_docs=existing["chunk_count"],
+            )
+
+        # Register document in lifecycle registry
+        import uuid
+        doc_id = uuid.uuid4().hex
+        document_registry.register(
+            doc_id, current_user.id, file.filename, fh, status="parsing"
+        )
+
+        # process pdf
         chunks, no_of_pages = process_pdf(temp_path, user_id=current_user.id)
 
         if not chunks:
+            document_registry.mark_failed(doc_id, "No content extracted from PDF")
             raise HTTPException(status_code=400, detail="No content extracted from PDF")
 
-        # add to specific collection for current user
-        # 将文本块添加到当前用户的特定集合中
+        # Phase 1: content hash dedup
+        ch = DocumentRegistry.content_hash(chunks)
+        content_existing = document_registry.find_by_content_hash(current_user.id, ch)
+        if content_existing and content_existing["document_id"] != doc_id:
+            document_registry.mark_failed(doc_id, "Duplicate content (same as %s)" % content_existing["filename"])
+            os.remove(temp_path)
+            os.rmdir(temp_dir)
+            return UploadResponse(
+                filename=file.filename,
+                message="Duplicate content skipped (matches %s)" % content_existing["filename"],
+                pages=content_existing["page_count"],
+                collection_name="",
+                total_docs=content_existing["chunk_count"],
+            )
+
+        document_registry.mark_indexing(doc_id)
+
+        # add to vector store
         result = add_documents(chunks, file.filename, current_user.id, no_of_pages)
 
-        # sync chunks to SQLite FTS5 for sparse retrieval
-        # 将文本块同步写入 SQLite FTS5 稀疏检索索引
+        # sync to BM25
         engine = get_rag_engine()
         engine.bm25_retriever.add_chunks(chunks, current_user.id)
 
-        # Cleanup
-        # 清理临时文件
+        # Mark ready in registry
+        document_registry.mark_ready(doc_id, len(chunks), ch)
+
         os.remove(temp_path)
         os.rmdir(temp_dir)
 
-        print(f"✓ Document uploaded: {file.filename} (user: {current_user.id})")
+        print("\u2713 Document uploaded: %s (user: %s, doc_id: %s)" % (file.filename, current_user.id, doc_id))
 
         return UploadResponse(
-            filename = file.filename,
-            message=f"Successfully processed {file.filename}",
+            filename=file.filename,
+            message="Successfully processed %s" % file.filename,
             pages=no_of_pages,
-            **result
+            **result,
         )
 
     except HTTPException:
-        # Re-raise client errors (400) without wrapping in 500
+        # Mark failed in registry if doc_id exists
+        try:
+            document_registry.mark_failed(doc_id, "Client error")
+        except Exception:
+            pass
         if os.path.exists(temp_path):
             os.remove(temp_path)
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     except Exception as e:
+        try:
+            document_registry.mark_failed(doc_id, str(e))
+        except Exception:
+            pass
         if os.path.exists(temp_path):
             os.remove(temp_path)
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Processing error: %s" % str(e))
 
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
