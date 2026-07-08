@@ -115,6 +115,7 @@ class EvaluationCase:
     expected_numbers: tuple[str, ...] = ()
     expected_no_answer: bool = False
     expected_calculations: tuple[ExpectedCalculation, ...] = ()
+    expected_intent: str | None = None
     document_names: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -146,6 +147,9 @@ class EvaluationCase:
                 ExpectedCalculation.from_dict(item)
                 for item in data.get("expected_calculations", [])
             ),
+            expected_intent=(
+                str(data["expected_intent"]) if data.get("expected_intent") else None
+            ),
             document_names=tuple(str(item) for item in data.get("document_names", [])),
             tags=tuple(str(item) for item in data.get("tags", [])),
             metadata=dict(data.get("metadata", {})),
@@ -168,6 +172,7 @@ class EvaluationCase:
             "expected_numbers": list(self.expected_numbers),
             "expected_no_answer": self.expected_no_answer,
             "expected_calculations": [calc.to_dict() for calc in self.expected_calculations],
+            "expected_intent": self.expected_intent,
             "tags": list(self.tags),
             "metadata": self.metadata,
         }
@@ -182,6 +187,8 @@ class Prediction:
     sources: tuple[dict[str, Any], ...] = ()
     retrieved_chunks: tuple[dict[str, Any], ...] = ()
     calculations: tuple[dict[str, Any], ...] = ()
+    intent: str | None = None
+    intent_confidence: float | None = None
     latency_ms: float | None = None
 
     @classmethod
@@ -195,6 +202,8 @@ class Prediction:
             sources=tuple(dict(item) for item in data.get("sources", [])),
             retrieved_chunks=tuple(dict(item) for item in data.get("retrieved_chunks", [])),
             calculations=tuple(dict(item) for item in data.get("calculations", [])),
+            intent=str(data["intent"]) if data.get("intent") else None,
+            intent_confidence=_optional_float(data.get("intent_confidence")),
             latency_ms=_optional_float(data.get("latency_ms")),
         )
 
@@ -231,6 +240,7 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         answer,
         prediction.calculations,
     )
+    intent_accuracy = _intent_score(case.expected_intent, prediction.intent)
 
     required_scores = []
     if case.expected_sources:
@@ -245,6 +255,8 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         required_scores.append(calculation_score)
     if prediction.calculations:
         required_scores.append(answer_calculation_consistency)
+    if case.expected_intent:
+        required_scores.append(intent_accuracy)
 
     passed = bool(required_scores) and all(score >= 1.0 for score in required_scores)
     if not required_scores:
@@ -262,6 +274,10 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         "no_answer_accuracy": no_answer_score,
         "calculation_accuracy": calculation_score,
         "answer_calculation_consistency": answer_calculation_consistency,
+        "intent_accuracy": intent_accuracy,
+        "expected_intent": case.expected_intent,
+        "predicted_intent": prediction.intent,
+        "intent_confidence": prediction.intent_confidence,
         "latency_ms": prediction.latency_ms,
         "tags": list(case.tags),
     }
@@ -305,6 +321,7 @@ def evaluate_predictions(
             "answer_calculation_consistency": _avg(
                 score["answer_calculation_consistency"] for score in case_scores
             ),
+            "intent_accuracy": _avg(score["intent_accuracy"] for score in case_scores),
             "p95_latency_ms": _percentile(latencies, 95),
         },
         "missing_case_ids": missing,
@@ -335,6 +352,7 @@ def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
         expected_answer_contains=(),
         expected_numbers=tuple(_extract_numbers(trace.get("answer") or "")),
         expected_no_answer=_looks_like_no_answer(trace.get("answer") or ""),
+        expected_intent=str(trace.get("intent")) if trace.get("intent") else None,
         tags=("trace_replay",),
         metadata={
             "trace_id": trace_id,
@@ -378,6 +396,7 @@ def compare_reports(
         "no_answer_accuracy",
         "calculation_accuracy",
         "answer_calculation_consistency",
+        "intent_accuracy",
     ]
 
     metrics = {}
@@ -449,6 +468,12 @@ def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return rows
 
 
+
+
+def _intent_score(expected_intent: str | None, predicted_intent: str | None) -> float:
+    if not expected_intent:
+        return 1.0
+    return 1.0 if predicted_intent == expected_intent else 0.0
 
 
 def _answer_calculation_consistency(answer: str, calculations: tuple[dict[str, Any], ...]) -> float:

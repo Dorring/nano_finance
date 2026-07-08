@@ -321,3 +321,66 @@ def test_evaluate_predictions_includes_answer_calculation_consistency():
     report = evaluate_predictions(cases, predictions)
 
     assert report["summary"]["answer_calculation_consistency"] == 1.0
+
+
+
+def test_score_prediction_validates_expected_intent():
+    case = EvaluationCase.from_dict({
+        "id": "intent1",
+        "question": "What was revenue?",
+        "expected_intent": "document_qa",
+    })
+    good = Prediction.from_dict({
+        "id": "intent1",
+        "answer": "Revenue was $10M.",
+        "intent": "document_qa",
+        "intent_confidence": 0.82,
+    })
+    bad = Prediction.from_dict({
+        "id": "intent1",
+        "answer": "Revenue was $10M.",
+        "intent": "conversation",
+    })
+
+    assert score_prediction(case, good)["passed"] is True
+    bad_score = score_prediction(case, bad)
+    assert bad_score["passed"] is False
+    assert bad_score["intent_accuracy"] == 0.0
+    assert bad_score["expected_intent"] == "document_qa"
+    assert bad_score["predicted_intent"] == "conversation"
+
+
+def test_evaluate_predictions_includes_intent_accuracy():
+    cases = [
+        EvaluationCase.from_dict({
+            "id": "intent1",
+            "question": "Calculate growth",
+            "expected_intent": "financial_calculation",
+        })
+    ]
+    predictions = {
+        "intent1": Prediction.from_dict({
+            "id": "intent1",
+            "answer": "Growth was 20%.",
+            "intent": "financial_calculation",
+        })
+    }
+
+    report = evaluate_predictions(cases, predictions)
+
+    assert report["summary"]["intent_accuracy"] == 1.0
+
+
+def test_trace_to_replay_case_keeps_intent_when_available():
+    case = trace_to_replay_case({
+        "trace_id": "t-intent",
+        "tenant_id": 1,
+        "query_original": "What was revenue?",
+        "filter_conditions": "{}",
+        "sources_json": "[]",
+        "answer": "Revenue was $10M.",
+        "intent": "document_qa",
+    })
+
+    assert case.expected_intent == "document_qa"
+    assert case.to_dict()["expected_intent"] == "document_qa"
