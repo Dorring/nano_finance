@@ -34,3 +34,10 @@ For real evaluation:
 2. Run `python -m src.eval_cli run --cases <cases.jsonl> --out <predictions.jsonl> --user-id <id>`.
 3. Score the predictions.
 4. Compare candidate reports against a checked baseline before merging retrieval or prompt changes.
+
+
+## Calculation consistency
+
+When a prediction includes `calculations`, the eval scorer also checks whether
+percentage claims in `answer` are consistent with those deterministic
+calculation outputs. The aggregate metric is `answer_calculation_consistency`.
