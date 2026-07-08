@@ -36,3 +36,20 @@ python -m src.eval_cli run --cases <cases.jsonl> --out <candidate.jsonl> --user-
 python -m src.eval_cli score --cases <cases.jsonl> --predictions <candidate.jsonl> --out <candidate_report.json>
 python -m src.eval_cli compare --baseline <baseline_report.json> --candidate <candidate_report.json>
 ```
+
+## Health and readiness probes
+
+The backend exposes two unauthenticated operational probes:
+
+```bash
+curl http://127.0.0.1:8000/healthz
+curl http://127.0.0.1:8000/readyz
+```
+
+- `/healthz` is a lightweight liveness check for process availability.
+- `/readyz` returns a non-secret RAG dependency snapshot and uses HTTP 503
+  when required local stores are unavailable or runtime configuration is
+  invalid.
+
+`/readyz` is intentionally cheap: it does not call the LLM, does not request
+embeddings, and does not read tenant document content.
