@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from openai import OpenAI
 import json
 
@@ -10,6 +10,7 @@ from .services.vector_store import add_documents, list_all_documents, delete_doc
 from .services.rag_engine import RAGEngine
 from .services.document_registry import DocumentRegistry
 from .services.session_manager import SessionManager
+from .services.health import collect_health_snapshot
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -107,6 +108,25 @@ async def root():
         "service": "FinQuery Multi-Document API",
         "version": "2.0.0"
     }
+
+@app.get("/healthz")
+async def healthz():
+    """Lightweight liveness probe."""
+    return {
+        "status": "healthy",
+        "service": "FinQuery Multi-Document API",
+        "version": app.version,
+    }
+
+@app.get("/readyz")
+async def readyz():
+    """Readiness probe with non-secret RAG dependency diagnostics."""
+    snapshot = collect_health_snapshot(
+        document_registry=document_registry,
+        session_manager=session_manager,
+    )
+    status_code = 200 if snapshot["ready"] else 503
+    return JSONResponse(status_code=status_code, content=snapshot)
 
 @app.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
