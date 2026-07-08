@@ -27,6 +27,8 @@ class FakeRAGEngine:
             "searched_docs": doc_names or ["q3.pdf"],
             "confidence": 0.9,
             "context_sufficient": True,
+            "retrieved_chunks": [{"doc_id": "q3.pdf::1", "filename": "q3.pdf", "page": 2}],
+            "retrieval_debug": {"reranker": "heuristic", "candidate_count": 4, "returned_count": 1},
         }
 
 
@@ -49,6 +51,8 @@ def test_run_case_calls_rag_engine_with_case_filters():
     assert prediction["id"] == "c1"
     assert prediction["answer"] == "Revenue was $10M."
     assert prediction["sources"][0]["filename"] == "q3.pdf"
+    assert prediction["retrieved_chunks"][0]["doc_id"] == "q3.pdf::1"
+    assert prediction["retrieval_debug"]["reranker"] == "heuristic"
     assert prediction["latency_ms"] >= 0
 
 

@@ -139,3 +139,47 @@ def test_rag_engine_reranker_respects_top_k():
         assert result[0]["doc_id"] == "c"
     finally:
         cleanup(path)
+
+
+def test_rag_engine_retrieval_debug_tracks_candidate_counts():
+    engine, path = make_engine(reranker_name="heuristic", retrieval_candidate_multiplier=3)
+    try:
+        chunks = [
+            chunk("a", "alpha", 0.1),
+            chunk("b", "beta", 0.1),
+            chunk("c", "gamma", 0.1),
+        ]
+        engine._apply_reranker("gamma", chunks, top_k=1)
+        assert engine._last_retrieval_debug == {
+            "reranker": "heuristic",
+            "reranker_enabled": True,
+            "candidate_count": 3,
+            "returned_count": 1,
+            "candidate_multiplier": 3,
+        }
+    finally:
+        cleanup(path)
+
+
+def test_rag_engine_summarizes_retrieved_chunks_without_content():
+    chunks = [{
+        "doc_id": "user_1_q3.pdf::1",
+        "content": "sensitive body",
+        "metadata": {"doc_name": "q3.pdf", "page": 2, "type": "text"},
+        "score": 0.4,
+        "rerank_score": 0.8,
+        "reranker": "heuristic",
+    }]
+
+    summary = RAGEngine._summarize_retrieved_chunks(chunks)
+
+    assert summary == [{
+        "doc_id": "user_1_q3.pdf::1",
+        "filename": "q3.pdf",
+        "page": 2,
+        "type": "text",
+        "score": 0.4,
+        "rerank_score": 0.8,
+        "reranker": "heuristic",
+    }]
+    assert "content" not in summary[0]

@@ -42,7 +42,8 @@ class RAGEngine:
                  max_context_tokens: int = None,
                  max_new_tokens: int = None,
                  bm25_db_path: str = "rag_bm25.db",
-                 reranker_name: str | None = None):
+                 reranker_name: str | None = None,
+                 retrieval_candidate_multiplier: int = 2):
         """
         RAGEngine 类的初始化方法。
 
@@ -54,6 +55,7 @@ class RAGEngine:
             max_new_tokens (int): 模型单次最大生成 Token 数，默认 512。
             bm25_db_path (str): SQLite FTS5 稀疏检索数据库路径，默认 "rag_bm25.db"。
             reranker_name (str | None): Optional reranker name. None disables reranking.
+            retrieval_candidate_multiplier (int): Candidate expansion factor for hybrid retrieval.
         """
         self.llm_client = llm_client
         self.model_name = model_name
@@ -65,6 +67,8 @@ class RAGEngine:
         self.trace_logger = TraceLogger(sample_rate=1.0, redact_content=True)
         self.min_score_threshold = 0.0  # chunks below this score are discarded
         self.reranker = build_reranker(reranker_name)
+        self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
+        self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -90,11 +94,45 @@ class RAGEngine:
                 chunk["score"] = 0
         return chunks
 
+    def _make_retrieval_debug(self, candidate_count: int, returned_count: int) -> dict:
+        """Small metadata payload used by eval/replay to audit retrieval changes."""
+        return {
+            "reranker": self.reranker.name if self.reranker else None,
+            "reranker_enabled": self.reranker is not None,
+            "candidate_count": candidate_count,
+            "returned_count": returned_count,
+            "candidate_multiplier": self.retrieval_candidate_multiplier,
+        }
+
     def _apply_reranker(self, query: str, chunks: list, top_k: int) -> list:
         """Apply optional reranker while preserving default retrieval behavior."""
+        candidate_count = len(chunks)
         if not self.reranker:
-            return chunks[:top_k]
-        return self.reranker.rerank(query, chunks, top_k=top_k)
+            selected = chunks[:top_k]
+        else:
+            selected = self.reranker.rerank(query, chunks, top_k=top_k)
+        self._last_retrieval_debug = self._make_retrieval_debug(
+            candidate_count,
+            len(selected),
+        )
+        return selected
+
+    @staticmethod
+    def _summarize_retrieved_chunks(chunks: list) -> list:
+        """Return eval-safe retrieval metadata without copying chunk content."""
+        summary = []
+        for chunk in chunks:
+            meta = chunk.get("metadata", {}) or {}
+            summary.append({
+                "doc_id": chunk.get("doc_id", ""),
+                "filename": meta.get("doc_name"),
+                "page": meta.get("page"),
+                "type": meta.get("type"),
+                "score": chunk.get("score", 0),
+                "rerank_score": chunk.get("rerank_score"),
+                "reranker": chunk.get("reranker"),
+            })
+        return summary
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
@@ -104,12 +142,13 @@ class RAGEngine:
             return self._apply_reranker(query, results, n_results)
 
         # Hybrid search
-        dense_results = query_collection(query_text=query, doc_name=doc_name, n_results=n_results * 2, user_id=user_id)
+        candidate_k = n_results * self.retrieval_candidate_multiplier
+        dense_results = query_collection(query_text=query, doc_name=doc_name, n_results=candidate_k, user_id=user_id)
 
         bm25_retriever = self._get_bm25_retriever(doc_name, user_id)
         if bm25_retriever:
             print(f"✓ BM25 retrieved for '{doc_name}'")
-            sparse_results = bm25_retriever.search(query, k=n_results * 2, doc_name=doc_name, user_id=user_id)
+            sparse_results = bm25_retriever.search(query, k=candidate_k, doc_name=doc_name, user_id=user_id)
             fused = rrf([dense_results, sparse_results])
             results = self._normalize_scores(fused)
             return self._apply_reranker(query, results, n_results)
@@ -485,7 +524,15 @@ class RAGEngine:
         elapsed_ms = (time.time() - t0) * 1000
         trace_data.update({
             "filter_conditions": {"doc_names": doc_names},
-            "candidates": [{"doc_id": c.get("doc_id", ""), "score": c.get("score", 0)} for c in chunks],
+            "candidates": [
+                {
+                    "doc_id": c.get("doc_id", ""),
+                    "score": c.get("score", 0),
+                    "rerank_score": c.get("rerank_score"),
+                    "reranker": c.get("reranker"),
+                }
+                for c in chunks
+            ],
             "final_context": context,
             "answer": answer,
             "sources": sources,
@@ -505,6 +552,8 @@ class RAGEngine:
             "confidence": confidence,
             "context_sufficient": is_sufficient,
             "rewritten_question": question if conversation_history else None,
+            "retrieved_chunks": self._summarize_retrieved_chunks(chunks),
+            "retrieval_debug": dict(self._last_retrieval_debug),
         }
 
     def _handle_conversational_query(self, query: str) -> str | None:
