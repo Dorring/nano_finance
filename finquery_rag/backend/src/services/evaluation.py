@@ -281,6 +281,85 @@ def export_replay_cases_from_traces(
     return cases
 
 
+
+def compare_reports(
+    baseline: dict[str, Any],
+    candidate: dict[str, Any],
+    regression_tolerance: float = 0.0,
+) -> dict[str, Any]:
+    """Compare two evaluation reports and flag metric regressions.
+
+    The comparison is intentionally deterministic and schema-stable so it can
+    be used as a CI quality gate once project-specific thresholds are defined.
+    """
+    baseline_summary = baseline.get("summary", {})
+    candidate_summary = candidate.get("summary", {})
+    metric_names = [
+        "pass_rate",
+        "citation_precision",
+        "citation_recall",
+        "retrieval_precision",
+        "retrieval_recall",
+        "answer_contains",
+        "number_accuracy",
+        "no_answer_accuracy",
+    ]
+
+    metrics = {}
+    regressions = []
+    for name in metric_names:
+        base_value = _optional_float(baseline_summary.get(name)) or 0.0
+        cand_value = _optional_float(candidate_summary.get(name)) or 0.0
+        delta = cand_value - base_value
+        metrics[name] = {
+            "baseline": base_value,
+            "candidate": cand_value,
+            "delta": delta,
+        }
+        if delta < -regression_tolerance:
+            regressions.append(name)
+
+    latency_delta = None
+    base_latency = _optional_float(baseline_summary.get("p95_latency_ms"))
+    cand_latency = _optional_float(candidate_summary.get("p95_latency_ms"))
+    if base_latency is not None and cand_latency is not None:
+        latency_delta = cand_latency - base_latency
+
+    baseline_cases = {
+        item["id"]: item
+        for item in baseline.get("cases", [])
+        if "id" in item
+    }
+    candidate_cases = {
+        item["id"]: item
+        for item in candidate.get("cases", [])
+        if "id" in item
+    }
+    newly_failed = sorted(
+        case_id
+        for case_id, base_case in baseline_cases.items()
+        if base_case.get("passed") is True
+        and candidate_cases.get(case_id, {}).get("passed") is False
+    )
+    newly_passed = sorted(
+        case_id
+        for case_id, cand_case in candidate_cases.items()
+        if cand_case.get("passed") is True
+        and baseline_cases.get(case_id, {}).get("passed") is False
+    )
+
+    return {
+        "passed": not regressions and not newly_failed,
+        "regression_tolerance": regression_tolerance,
+        "metric_deltas": metrics,
+        "regressions": regressions,
+        "newly_failed": newly_failed,
+        "newly_passed": newly_passed,
+        "p95_latency_delta_ms": latency_delta,
+        "baseline_missing_predictions": baseline_summary.get("missing_predictions", 0),
+        "candidate_missing_predictions": candidate_summary.get("missing_predictions", 0),
+    }
+
 def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     rows = []
     with Path(path).open("r", encoding="utf-8") as fh:
