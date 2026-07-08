@@ -1,0 +1,2 @@
+{"id":"smoke_revenue","answer":"Revenue was $10M in Q3.","sources":[{"filename":"q3.pdf","page":2}],"retrieved_chunks":[{"filename":"q3.pdf","page":2}],"latency_ms":12}
+{"id":"smoke_no_answer","answer":"I couldn't find relevant information in the documents to answer this question.","sources":[],"retrieved_chunks":[],"latency_ms":8}
