@@ -6,12 +6,22 @@ It scores saved predictions and can convert trace records into replay cases.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import json
 import math
 import re
 from statistics import mean
 from typing import Any, Iterable
+
+from .financial_tools import (
+    convert_scale,
+    format_ratio_percent,
+    growth_rate,
+    percentage_share,
+    sum_values,
+    verify_sum,
+)
 
 
 _NUMBER_RE = re.compile(r"[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?")
@@ -54,6 +64,45 @@ class ExpectedSource:
         return True
 
 
+
+@dataclass(frozen=True)
+class ExpectedCalculation:
+    """Expected deterministic financial calculation for a case."""
+
+    calc_id: str
+    operation: str
+    args: dict[str, Any]
+    expected_value: str
+    tolerance: str = "0"
+    unit: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ExpectedCalculation":
+        calc_id = data.get("id") or data.get("calc_id") or data.get("operation")
+        operation = data.get("operation")
+        if not calc_id:
+            raise ValueError("expected calculation missing id/calc_id")
+        if not operation:
+            raise ValueError(f"expected calculation {calc_id!r} missing operation")
+        return cls(
+            calc_id=str(calc_id),
+            operation=str(operation),
+            args=dict(data.get("args", {})),
+            expected_value=str(data.get("expected_value")),
+            tolerance=str(data.get("tolerance", "0")),
+            unit=data.get("unit"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.calc_id,
+            "operation": self.operation,
+            "args": self.args,
+            "expected_value": self.expected_value,
+            "tolerance": self.tolerance,
+            "unit": self.unit,
+        }
+
 @dataclass(frozen=True)
 class EvaluationCase:
     """A golden/replay RAG evaluation case."""
@@ -64,6 +113,7 @@ class EvaluationCase:
     expected_answer_contains: tuple[str, ...] = ()
     expected_numbers: tuple[str, ...] = ()
     expected_no_answer: bool = False
+    expected_calculations: tuple[ExpectedCalculation, ...] = ()
     document_names: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -91,6 +141,10 @@ class EvaluationCase:
                 _normalize_number(str(item)) for item in data.get("expected_numbers", [])
             ),
             expected_no_answer=bool(data.get("expected_no_answer", False)),
+            expected_calculations=tuple(
+                ExpectedCalculation.from_dict(item)
+                for item in data.get("expected_calculations", [])
+            ),
             document_names=tuple(str(item) for item in data.get("document_names", [])),
             tags=tuple(str(item) for item in data.get("tags", [])),
             metadata=dict(data.get("metadata", {})),
@@ -112,6 +166,7 @@ class EvaluationCase:
             "expected_answer_contains": list(self.expected_answer_contains),
             "expected_numbers": list(self.expected_numbers),
             "expected_no_answer": self.expected_no_answer,
+            "expected_calculations": [calc.to_dict() for calc in self.expected_calculations],
             "tags": list(self.tags),
             "metadata": self.metadata,
         }
@@ -125,6 +180,7 @@ class Prediction:
     answer: str
     sources: tuple[dict[str, Any], ...] = ()
     retrieved_chunks: tuple[dict[str, Any], ...] = ()
+    calculations: tuple[dict[str, Any], ...] = ()
     latency_ms: float | None = None
 
     @classmethod
@@ -137,6 +193,7 @@ class Prediction:
             answer=str(data.get("answer", "")),
             sources=tuple(dict(item) for item in data.get("sources", [])),
             retrieved_chunks=tuple(dict(item) for item in data.get("retrieved_chunks", [])),
+            calculations=tuple(dict(item) for item in data.get("calculations", [])),
             latency_ms=_optional_float(data.get("latency_ms")),
         )
 
@@ -168,6 +225,7 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
     contains_score = _contains_score(answer_lower, case.expected_answer_contains)
     number_score = _number_score(answer, case.expected_numbers)
     no_answer_score = _no_answer_score(answer_lower, case.expected_no_answer)
+    calculation_score = _calculation_score(case.expected_calculations, prediction.calculations)
 
     required_scores = []
     if case.expected_sources:
@@ -178,6 +236,8 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         required_scores.append(number_score)
     if case.expected_no_answer:
         required_scores.append(no_answer_score)
+    if case.expected_calculations:
+        required_scores.append(calculation_score)
 
     passed = bool(required_scores) and all(score >= 1.0 for score in required_scores)
     if not required_scores:
@@ -193,6 +253,7 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         "answer_contains": contains_score,
         "number_accuracy": number_score,
         "no_answer_accuracy": no_answer_score,
+        "calculation_accuracy": calculation_score,
         "latency_ms": prediction.latency_ms,
         "tags": list(case.tags),
     }
@@ -232,6 +293,7 @@ def evaluate_predictions(
             "answer_contains": _avg(score["answer_contains"] for score in case_scores),
             "number_accuracy": _avg(score["number_accuracy"] for score in case_scores),
             "no_answer_accuracy": _avg(score["no_answer_accuracy"] for score in case_scores),
+            "calculation_accuracy": _avg(score["calculation_accuracy"] for score in case_scores),
             "p95_latency_ms": _percentile(latencies, 95),
         },
         "missing_case_ids": missing,
@@ -373,6 +435,94 @@ def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
                 raise ValueError(f"invalid JSONL at {path}:{line_no}: {exc}") from exc
     return rows
 
+
+
+def _calculation_score(
+    expected_calculations: tuple[ExpectedCalculation, ...],
+    predicted_calculations: tuple[dict[str, Any], ...],
+) -> float:
+    if not expected_calculations:
+        return 1.0
+    if not predicted_calculations:
+        return 0.0
+
+    predicted_by_id = {
+        str(item.get("id") or item.get("calc_id") or item.get("operation")): item
+        for item in predicted_calculations
+    }
+    hits = 0
+    for expected in expected_calculations:
+        predicted = predicted_by_id.get(expected.calc_id)
+        if not predicted:
+            continue
+        if _prediction_matches_expected_calculation(expected, predicted):
+            hits += 1
+    return hits / len(expected_calculations)
+
+
+def _prediction_matches_expected_calculation(
+    expected: ExpectedCalculation,
+    predicted: dict[str, Any],
+) -> bool:
+    if predicted.get("operation") and predicted.get("operation") != expected.operation:
+        return False
+    if expected.unit and predicted.get("unit") and predicted.get("unit") != expected.unit:
+        return False
+
+    predicted_value = _decimal_or_none(predicted.get("value"))
+    if predicted_value is None:
+        return False
+
+    expected_value = _decimal_or_none(expected.expected_value)
+    tolerance = _decimal_or_none(expected.tolerance)
+    if expected_value is None or tolerance is None:
+        return False
+
+    deterministic = _run_expected_calculation(expected)
+    if deterministic is None:
+        return False
+
+    return (
+        abs(predicted_value - expected_value) <= abs(tolerance)
+        and abs(deterministic - expected_value) <= abs(tolerance)
+    )
+
+
+def _run_expected_calculation(expected: ExpectedCalculation) -> Decimal | None:
+    args = expected.args
+    operation = expected.operation
+    if operation == "growth_rate":
+        result = growth_rate(args.get("current"), args.get("previous"))
+    elif operation == "percentage_share":
+        result = percentage_share(args.get("part"), args.get("total"))
+    elif operation == "sum_values":
+        result = sum_values(list(args.get("values", [])))
+    elif operation == "verify_sum":
+        result = verify_sum(
+            list(args.get("components", [])),
+            args.get("reported_total"),
+            tolerance=args.get("tolerance", "0.01"),
+        )
+    elif operation == "convert_scale":
+        result = convert_scale(
+            args.get("value"),
+            args.get("from_scale", ""),
+            args.get("to_scale", ""),
+        )
+    elif operation == "format_ratio_percent":
+        result = format_ratio_percent(args.get("value"))
+    else:
+        return None
+    return result.value if result.ok else None
+
+
+def _decimal_or_none(value: Any) -> Decimal | None:
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
 
 def _score_sources(
     expected_sources: tuple[ExpectedSource, ...],
