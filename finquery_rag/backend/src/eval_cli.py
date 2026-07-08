@@ -43,6 +43,16 @@ def main(argv: list[str] | None = None) -> int:
     compare.add_argument("--tolerance", type=float, default=0.0, help="Allowed negative metric delta")
     compare.add_argument("--out", help="Optional comparison JSON output path")
 
+    traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
+    traces.add_argument("--db", default="trace_log.db", help="TraceLogger SQLite DB")
+    traces.add_argument("--tenant-id", type=int, required=True)
+    traces.add_argument("--limit", type=int, default=100)
+    traces.add_argument("--offset", type=int, default=0)
+    traces.add_argument("--created-after", type=float)
+    traces.add_argument("--created-before", type=float)
+    traces.add_argument("--error-only", action="store_true")
+    traces.add_argument("--out", required=True, help="Output traces JSONL")
+
     replay = sub.add_parser("replay-from-traces", help="Export replay cases from trace DB")
     replay.add_argument("--db", default="trace_log.db", help="TraceLogger SQLite DB")
     replay.add_argument("--tenant-id", type=int, required=True)
@@ -89,9 +99,23 @@ def main(argv: list[str] | None = None) -> int:
         print(payload)
         return 0 if comparison["passed"] else 1
 
+    if args.command == "traces":
+        logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
+        count = logger.export_traces_jsonl(
+            tenant_id=args.tenant_id,
+            output_path=args.out,
+            limit=args.limit,
+            offset=args.offset,
+            created_after=args.created_after,
+            created_before=args.created_before,
+            error_only=args.error_only,
+        )
+        print(f"exported {count} traces to {args.out}")
+        return 0
+
     if args.command == "replay-from-traces":
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
-        traces = logger.get_recent(args.tenant_id, limit=args.limit)
+        traces = logger.query_traces(tenant_id=args.tenant_id, limit=args.limit)
         cases = export_replay_cases_from_traces(traces, args.out)
         print(f"exported {len(cases)} replay cases to {args.out}")
         return 0
