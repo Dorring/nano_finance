@@ -41,11 +41,28 @@
 # # evaluate the model: CORE metric, BPB on train/val, and draw samples
 # torchrun --standalone --nproc_per_node=8 -m scripts.base_eval -- --device-batch-size=16
 
-# 开始预训练 d24 模型 
-torchrun --standalone --nproc_per_node=1 -m scripts.base_train -- --depth=24 --target-param-data-ratio=9.5 --device-batch-size=4 --run=$WANDB_RUN --window-pattern L
+# 延长分布式通信超时时间防止 Checkpoint 保存时 NCCL Timeout
+export TORCH_DISTRIBUTED_TIMEOUT=7200
+export NCCL_TIMEOUT=7200000
+export OMP_NUM_THREADS=8
 
-# 评估预训练模型 (CORE metric, BPB on train/val 等)
-torchrun --standalone --nproc_per_node=1 -m scripts.base_eval -- --device-batch-size=4
+
+
+# 开始预训练 d24 模型 (降低 batch_size，增加定期保存机制)
+torchrun --standalone --nproc_per_node=1 -m scripts.base_train -- --depth=24 --target-param-data-ratio=50 --device-batch-size=4 --save-every=1000 --run=$WANDB_RUN --window-pattern L --model-tag d24_final_mixdata --resume-from-step 28000
+
+# 评估预训练模型 (统一降低)
+torchrun --standalone --nproc_per_node=1 -m scripts.base_eval -- --device-batch-size=4 --model-tag d24_final_mixdata
+
+
+
+# run SFT and eval the model
+# torchrun --standalone --nproc_per_node=8 -m scripts.chat_sft -- --device-batch-size=16 --run=$WANDB_RUN
+
+# torchrun --standalone --nproc_per_node=1 -m scripts.chat_sft -- --device-batch-size=4 --model-tag d24_mixdata --mmlu-epochs=0 --gsm8k-epochs=2
+# torchrun --standalone --nproc_per_node=8 -m scripts.chat_eval -- -i sft
+
+# torchrun --standalone --nproc_per_node=1 -m scripts.chat_eval -- -i sft
 
 # -----------------------------------------------------------------------------
 # 整合预训练阶段的统计数据，生成最终评估报告 (report.md)

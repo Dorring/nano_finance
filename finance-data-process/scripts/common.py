@@ -75,14 +75,22 @@ _TOKENIZER = None
 def get_tokenizer():
     global _TOKENIZER
     if _TOKENIZER is None:
+        # 优先加载自定义训练的 tokenizer (65k vocab)
         try:
             import sys
             project_root = str(ROOT.parent)
             if project_root not in sys.path:
                 sys.path.insert(0, project_root)
-            from nanochat.tokenizer import get_tokenizer as get_nano_tokenizer
-            _TOKENIZER = get_nano_tokenizer()
-        except Exception:
+            from nanochat.tokenizer import RustBPETokenizer
+            import os
+            tokenizer_dir = os.path.expanduser("~/.cache/nanochat/tokenizer")
+            if os.path.exists(os.path.join(tokenizer_dir, "tokenizer.pkl")):
+                _TOKENIZER = RustBPETokenizer.from_directory(tokenizer_dir)
+            else:
+                from nanochat.tokenizer import get_tokenizer as get_nano_tokenizer
+                _TOKENIZER = get_nano_tokenizer()
+        except Exception as e:
+            print(f"Warning: Failed to load nanochat tokenizer ({e}), falling back to Qwen")
             from transformers import AutoTokenizer
             _TOKENIZER = AutoTokenizer.from_pretrained("Qwen/Qwen2-0.5B", trust_remote_code=True)
     return _TOKENIZER

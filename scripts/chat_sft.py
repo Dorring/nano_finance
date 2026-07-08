@@ -12,6 +12,8 @@ torchrun --standalone --nproc_per_node=8 -m scripts.chat_sft -- --device-batch-s
 import gc
 import argparse
 import os
+import sys
+from pathlib import Path
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 import time
 import wandb
@@ -23,6 +25,7 @@ from nanochat.loss_eval import evaluate_bpb
 import torch.distributed as dist
 from nanochat.flash_attention import HAS_FA3
 from nanochat.engine import Engine
+from nanochat.training_metadata import save_best_pointer, scale_initial_learning_rates
 from scripts.chat_eval import run_chat_eval
 
 from tasks.common import TaskMixture
@@ -30,7 +33,7 @@ from tasks.gsm8k import GSM8K
 from tasks.mmlu import MMLU
 from tasks.smoltalk import SmolTalk
 from tasks.customjson import CustomJSON
-from tasks.spellingbee import SimpleSpelling, SpellingBee
+from tasks.spellingbee import SpellingBee
 
 # -----------------------------------------------------------------------------
 # CLI arguments
@@ -41,8 +44,11 @@ parser.add_argument("--run", type=str, default="dummy", help="wandb run name ('d
 parser.add_argument("--device-type", type=str, default="", help="cuda|cpu|mps (empty = autodetect)")
 # Model loading
 parser.add_argument("--model-tag", type=str, default=None, help="model tag to load from")
+parser.add_argument("--output-model-tag", type=str, default=None, help="checkpoint tag to write; defaults to --model-tag")
 parser.add_argument("--model-step", type=int, default=None, help="model step to load from")
 parser.add_argument("--load-optimizer", type=int, default=1, help="warm-start optimizer from pretrained checkpoint (0=no, 1=yes)")
+parser.add_argument("--resume-from-step", type=int, default=-1, help="resume an SFT checkpoint (-1 = disable)")
+parser.add_argument("--resume-lr-scale", type=float, default=1.0, help="scale saved initial LR when starting a resumed stage")
 # Training horizon
 parser.add_argument("--num-iterations", type=int, default=-1, help="number of optimization steps (-1 = full epoch)")
 # Batch sizes (default: inherit from pretrained checkpoint)
@@ -58,16 +64,31 @@ parser.add_argument("--warmup-ratio", type=float, default=0.0, help="ratio of it
 parser.add_argument("--warmdown-ratio", type=float, default=0.5, help="ratio of iterations for LR warmdown")
 parser.add_argument("--final-lr-frac", type=float, default=0.0, help="final LR as fraction of initial LR")
 # Evaluation
-parser.add_argument("--eval-every", type=int, default=200, help="evaluate val bpb every N steps (-1 = disable)")
-parser.add_argument("--eval-tokens", type=int, default=40*524288, help="number of tokens to evaluate val loss on")
-parser.add_argument("--chatcore-every", type=int, default=200, help="evaluate ChatCORE metric every N steps (-1 = disable)")
+parser.add_argument("--eval-every", type=int, default=20, help="evaluate val bpb every N steps (-1 = disable)")
+parser.add_argument("--eval-tokens", type=int, default=10*524288, help="number of tokens to evaluate val loss on")
+parser.add_argument("--chatcore-every", type=int, default=-1, help="evaluate ChatCORE metric every N steps (-1 = disable)")
 parser.add_argument("--chatcore-max-cat", type=int, default=-1, help="max problems per categorical task for ChatCORE")
 parser.add_argument("--chatcore-max-sample", type=int, default=24, help="max problems per generative task for ChatCORE")
+parser.add_argument("--save-every", type=int, default=50, help="save every N optimizer steps (-1 = only at end)")
 # Data mixture
-parser.add_argument("--mmlu-epochs", type=int, default=3, help="number of epochs of MMLU in training mixture (teaches Multiple Choice)")
+parser.add_argument("--mmlu-epochs", type=int, default=1, help="number of epochs of MMLU in training mixture (teaches Multiple Choice)")
 parser.add_argument("--gsm8k-epochs", type=int, default=4, help="number of epochs of GSM8K in training mixture (teaches Math and Tool Use)")
+project_root = Path(__file__).resolve().parents[1]
+finance_data_dir = project_root / "finance-data-process" / "data" / "processed" / "sft"
+parser.add_argument("--finance-train-file", type=str, default=str(finance_data_dir / "train.jsonl"))
+parser.add_argument("--finance-valid-file", type=str, default=str(finance_data_dir / "val.jsonl"))
+parser.add_argument("--finance-cot-file", type=str, default=str(finance_data_dir / "cot_train.jsonl"))
+parser.add_argument("--finance-epochs", type=int, default=5)
+parser.add_argument("--finance-cot-epochs", type=int, default=1)
+parser.add_argument("--smoltalk-size", type=int, default=30000)
+parser.add_argument("--grad-clip", type=float, default=1.0, help="gradient norm cap; <=0 disables clipping")
+parser.add_argument("--early-stopping-patience", type=int, default=-1, help="validation evaluations without improvement; -1 disables")
+parser.add_argument("--early-stopping-min-delta", type=float, default=0.0)
 args = parser.parse_args()
 user_config = vars(args).copy()
+provided_cli_flags = {
+    value.split("=", 1)[0] for value in sys.argv[1:] if value.startswith("--")
+}
 # -----------------------------------------------------------------------------
 
 # Compute init
@@ -92,8 +113,24 @@ wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-sf
 if not HAS_FA3:
     print0("WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback. Training will be less efficient.")
 
-# Load the model and tokenizer
-model, tokenizer, meta = load_model("base", device, phase="train", model_tag=args.model_tag, step=args.model_step)
+# Load the base model for a fresh run, or the SFT model when resuming.
+resuming = args.resume_from_step >= 0
+model_source = "sft" if resuming else "base"
+model_step = args.resume_from_step if resuming else args.model_step
+model, tokenizer, meta = load_model(
+    model_source, device, phase="train", model_tag=args.model_tag, step=model_step
+)
+
+# Restore the original run configuration unless a value was explicitly overridden
+# on the resume command line.
+if resuming:
+    resume_config = meta.get("user_config", {})
+    excluded = {"device_type", "model_tag", "model_step", "resume_from_step", "run"}
+    for name, value in resume_config.items():
+        flag = f"--{name.replace('_', '-')}"
+        if name not in excluded and flag not in provided_cli_flags and value is not None:
+            setattr(args, name, value)
+    print0("Restored SFT run configuration from checkpoint metadata")
 
 # Inherit training hyperparameters from pretrained checkpoint (None = inherit, explicit value = override)
 pretrain_user_config = meta.get("user_config", {})
@@ -133,12 +170,25 @@ token_bytes = get_token_bytes(device=device)
 # Note that pretraining ramps weight_decay to zero by end of pretraining, so SFT continues with zero
 optimizer = model.setup_optimizer(unembedding_lr=args.unembedding_lr, embedding_lr=args.embedding_lr, matrix_lr=args.matrix_lr, weight_decay=0.0)
 
-# Optionally warm-start optimizer from pretrained checkpoint (momentum buffers etc.)
+# Resume the exact SFT optimizer state, or optionally warm-start from pretraining.
 # Note: load_state_dict overwrites param_group metadata (LRs, betas, etc.) with the
 # pretrained values. Since pretraining warmdown brings LRs to ~0, we must save and
 # restore our fresh SFT LRs after loading.
 base_dir = get_base_dir()
-if args.load_optimizer:
+if resuming:
+    optimizer_data = load_optimizer_state(
+        "sft", device, rank=ddp_rank, model_tag=args.model_tag, step=args.resume_from_step
+    )
+    if optimizer_data is None:
+        raise FileNotFoundError(
+            f"Missing SFT optimizer shard for rank {ddp_rank} at step {args.resume_from_step}"
+        )
+    optimizer.load_state_dict(optimizer_data)
+    del optimizer_data
+    scale_initial_learning_rates(optimizer.param_groups, args.resume_lr_scale)
+    print0(f"Resumed SFT optimizer from step {args.resume_from_step}")
+    print0(f"Scaled resumed initial learning rates by {args.resume_lr_scale}")
+elif args.load_optimizer:
     optimizer_data = load_optimizer_state("base", device, rank=ddp_rank, model_tag=args.model_tag, step=args.model_step)
     if optimizer_data is not None:
         base_lrs = [group["lr"] for group in optimizer.param_groups]
@@ -155,29 +205,43 @@ scaler = torch.amp.GradScaler() if COMPUTE_DTYPE == torch.float16 else None
 if scaler is not None:
     print0("GradScaler enabled for fp16 training")
 
-# Override the initial learning rate as a fraction of the base learning rate
-for group in optimizer.param_groups:
-    group["lr"] = group["lr"] * args.init_lr_frac
-    group["initial_lr"] = group["lr"]
+# Override the initial learning rate for a fresh SFT run. A resumed optimizer
+# already contains the original base LR and its current scheduled LR.
+if not resuming:
+    for group in optimizer.param_groups:
+        group["lr"] = group["lr"] * args.init_lr_frac
+        group["initial_lr"] = group["lr"]
 
 # SFT data mixture and DataLoader
-identity_conversations_filepath = os.path.join(base_dir, "identity_conversations.jsonl")
+for name in ("finance_epochs", "finance_cot_epochs", "smoltalk_size"):
+    if getattr(args, name) < 0:
+        parser.error(f"--{name.replace('_', '-')} must be non-negative")
 train_tasks = [
-    SmolTalk(split="train"), # 460K rows of general conversations
-    CustomJSON(filepath=identity_conversations_filepath), # 1000 rows of synthetic identity conversations
-    CustomJSON(filepath=identity_conversations_filepath), # 2 epochs of these
-    *[MMLU(subset="all", split="auxiliary_train") for _ in range(args.mmlu_epochs)], # 100K rows per epoch
-    *[GSM8K(subset="main", split="train") for _ in range(args.gsm8k_epochs)], # 8K rows per epoch
-    SimpleSpelling(size=200000, split="train"), # 200K rows of Simple Spelling (e.g. spell the word 'apple')
-    SpellingBee(size=80000, split="train"), # 80K rows of Spelling Bee (e.g. how many 'r' are in 'strawberry'?)
+    *[
+        CustomJSON(filepath=args.finance_train_file)
+        for _ in range(args.finance_epochs)
+    ],
+    *[
+        CustomJSON(filepath=args.finance_cot_file)
+        for _ in range(args.finance_cot_epochs)
+    ],
+    *([SmolTalk(split="train", stop=args.smoltalk_size)] if args.smoltalk_size else []),
+    *[MMLU(subset="all", split="auxiliary_train") for _ in range(args.mmlu_epochs)],
+    *[GSM8K(subset="main", split="train") for _ in range(args.gsm8k_epochs)],
 ]
+if not train_tasks:
+    parser.error("training mixture is empty")
 train_dataset = TaskMixture(train_tasks)
-print0(f"Training mixture: {len(train_dataset):,} rows (MMLU x{args.mmlu_epochs}, GSM8K x{args.gsm8k_epochs})")
+print0(
+    f"Training mixture: {len(train_dataset):,} rows "
+    f"(Finance x{args.finance_epochs}, Finance CoT x{args.finance_cot_epochs}, "
+    f"SmolTalk {args.smoltalk_size:,}, MMLU x{args.mmlu_epochs}, "
+    f"GSM8K x{args.gsm8k_epochs})"
+)
 val_dataset = TaskMixture([
-    SmolTalk(split="test"), # 24K rows in test set
-    MMLU(subset="all", split="test", stop=5200), # 14K rows in test set, use only 5.2K to match the train ratios
-    GSM8K(subset="main", split="test", stop=420), # 1.32K rows in test set, use only 420 to match the train ratios
-]) # total: 24K + 5.2K + 0.42K ~= 29.6K rows
+    CustomJSON(filepath=args.finance_valid_file), # Finance validation set
+    MMLU(subset="all", split="validation"),
+]) # Validation mixture
 # DataLoader is defined here, it emits inputs, targets : 2D tensors of shape (device_batch_size, max_seq_len)
 # A big problem is that we don't know the final num_iterations in advance. So we create
 # these two global variables and update them from within the data generator.
@@ -206,13 +270,12 @@ def sft_data_generator_bos_bestfit(split, buffer_size=100):
     cursor = ddp_rank  # Each rank processes different conversations (for fetching)
     consumed = ddp_rank  # Track actual consumption separately from buffering
     epoch = 1
-    it = 0  # iteration counter
 
     def refill_buffer():
         nonlocal cursor, epoch
         while len(conv_buffer) < buffer_size:
             conversation = dataset[cursor]
-            ids, mask = tokenizer.render_conversation(conversation)
+            ids, mask = tokenizer.render_conversation(conversation, max_tokens=args.max_seq_len)
             conv_buffer.append((ids, mask))
             cursor += ddp_world_size
             if cursor >= dataset_size:
@@ -267,20 +330,12 @@ def sft_data_generator_bos_bestfit(split, buffer_size=100):
             rows.append(row[:row_capacity])
             mask_rows.append(mask_row[:row_capacity])
 
-        # Stopping condition to respect num_iterations, if given
-        it += 1
-        if 0 < args.num_iterations <= it and split == "train":
-            last_step = True
-
         # Update progress tracking (based on consumed, not cursor, to account for buffering)
         if split == "train":
             current_epoch = epoch
-            if args.num_iterations > 0:
-                approx_progress = it / args.num_iterations
-            else:
-                approx_progress = consumed / dataset_size
-            # Trigger last_step when we've consumed enough (instead of when cursor wraps)
-            if consumed >= dataset_size:
+            approx_progress = consumed / dataset_size
+            # Dataset exhaustion only controls runs without an explicit optimizer horizon.
+            if args.num_iterations < 0 and consumed >= dataset_size:
                 last_step = True
 
         # Build tensors
@@ -312,12 +367,14 @@ progress = 0 # will go from 0 to 1 over the course of the epoch
 # Same shape as base_train but uses progress (0→1) instead of absolute step counts,
 # because SFT doesn't always know num_iterations in advance (dataset-driven stopping).
 def get_lr_multiplier(progress):
+    progress = min(max(progress, 0.0), 1.0)
     if progress < args.warmup_ratio:
         return (progress + 1e-8) / args.warmup_ratio
     elif progress <= 1.0 - args.warmdown_ratio:
         return 1.0
     else:
         decay = (progress - (1.0 - args.warmdown_ratio)) / args.warmdown_ratio
+        decay = min(max(decay, 0.0), 1.0)
         return (1 - decay) * 1.0 + decay * args.final_lr_frac
 
 # Momentum scheduler for Muon optimizer
@@ -329,11 +386,40 @@ def get_muon_momentum(it):
 # -----------------------------------------------------------------------------
 # Training loop
 x, y = next(train_loader) # prefetch the very first batch of data
-min_val_bpb = float("inf")
-smooth_train_loss = 0 # EMA of training loss
+if resuming:
+    skip_batches = args.resume_from_step * grad_accum_steps
+    print0(f"Restoring deterministic SFT dataloader position: skipping {skip_batches:,} batches")
+    for _ in range(skip_batches):
+        x, y = next(train_loader)
+
+if resuming:
+    step = meta["step"]
+    loop_state = meta.get("loop_state", {})
+    val_bpb = meta.get("val_bpb")
+    min_val_bpb = loop_state.get("min_val_bpb", meta.get("val_bpb", float("inf")))
+    smooth_train_loss = loop_state.get("smooth_train_loss", 0)
+    total_training_time = loop_state.get("total_training_time", 0)
+    best_step = loop_state.get("best_step", step)
+    evaluations_without_improvement = loop_state.get(
+        "evaluations_without_improvement", 0
+    )
+else:
+    step = 0
+    val_bpb = None
+    min_val_bpb = float("inf")
+    smooth_train_loss = 0 # EMA of training loss
+    total_training_time = 0 # total wall-clock time of training
+    best_step = -1
+    evaluations_without_improvement = 0
+if resuming and master_process and best_step >= 0:
+    resume_output_tag = args.output_model_tag or args.model_tag or f"d{depth}"
+    resume_checkpoint_dir = os.path.join(
+        base_dir,
+        "chatsft_checkpoints",
+        resume_output_tag,
+    )
+    save_best_pointer(resume_checkpoint_dir, best_step, min_val_bpb)
 ema_beta = 0.9 # EMA decay factor
-total_training_time = 0 # total wall-clock time of training
-step = 0
 while True:
     flops_so_far = num_flops_per_token * args.total_batch_size * step
 
@@ -343,15 +429,29 @@ while True:
         dist.all_reduce(last_step_tensor, op=dist.ReduceOp.MAX)
         last_step = bool(last_step_tensor.item())
 
+    fixed_horizon_done = args.num_iterations >= 0 and step >= args.num_iterations
+    should_stop = fixed_horizon_done or last_step
+
+    best_now = False
     # once in a while: evaluate the val bpb (all ranks participate)
-    if last_step or (args.eval_every > 0 and step % args.eval_every == 0):
+    resume_step_already_evaluated = resuming and step == args.resume_from_step
+    if should_stop or (
+        args.eval_every > 0
+        and step % args.eval_every == 0
+        and not resume_step_already_evaluated
+    ):
         model.eval()
         val_loader = build_val_loader()
         eval_steps = args.eval_tokens // (args.device_batch_size * args.max_seq_len * ddp_world_size)
         val_bpb = evaluate_bpb(model, val_loader, eval_steps, token_bytes)
         print0(f"Step {step:05d} | Validation bpb: {val_bpb:.4f}")
-        if val_bpb < min_val_bpb:
+        if val_bpb < min_val_bpb - args.early_stopping_min_delta:
             min_val_bpb = val_bpb
+            best_step = step
+            evaluations_without_improvement = 0
+            best_now = True
+        else:
+            evaluations_without_improvement += 1
         wandb_run.log({
             "step": step,
             "total_training_flops": flops_so_far,
@@ -359,11 +459,20 @@ while True:
             "val/bpb": val_bpb,
         })
         model.train()
+        if (
+            args.early_stopping_patience > 0
+            and evaluations_without_improvement >= args.early_stopping_patience
+        ):
+            print0(
+                f"Early stopping at step {step}: no validation improvement for "
+                f"{evaluations_without_improvement} evaluations"
+            )
+            should_stop = True
 
     # once in a while: estimate the ChatCORE metric (all ranks participate)
     # use the original uncompiled model because the inputs keep changing shape
     chatcore_results = {}
-    if args.chatcore_every > 0 and (last_step or (step > 0 and step % args.chatcore_every == 0)):
+    if args.chatcore_every > 0 and (should_stop or (step > 0 and step % args.chatcore_every == 0)):
         model.eval()
         engine = Engine(orig_model, tokenizer)
         all_tasks = ['ARC-Easy', 'ARC-Challenge', 'MMLU', 'GSM8K', 'HumanEval', 'SpellingBee']
@@ -395,9 +504,15 @@ while True:
         })
         model.train()
 
-    # save checkpoint at the end of the run (all ranks participate so each saves its optimizer shard)
-    if last_step:
-        output_dirname = args.model_tag if args.model_tag else f"d{depth}" # e.g. d12
+    # Save periodically and at the end. All ranks save their optimizer shard.
+    save_now = best_now or should_stop or (
+        step > 0
+        and step != args.resume_from_step
+        and args.save_every > 0
+        and step % args.save_every == 0
+    )
+    if save_now:
+        output_dirname = args.output_model_tag or args.model_tag or f"d{depth}"
         checkpoint_dir = os.path.join(base_dir, "chatsft_checkpoints", output_dirname)
         save_checkpoint(
             checkpoint_dir,
@@ -416,12 +531,21 @@ while True:
                     "n_embd": model.config.n_embd,
                     "window_pattern": model.config.window_pattern,
                 },
-                "user_config": user_config, # inputs to the training script
+                "user_config": vars(args).copy(),
+                "loop_state": {
+                    "min_val_bpb": min_val_bpb,
+                    "best_step": best_step,
+                    "evaluations_without_improvement": evaluations_without_improvement,
+                    "smooth_train_loss": smooth_train_loss,
+                    "total_training_time": total_training_time,
+                },
             },
             rank=ddp_rank,
         )
+        if best_now and master_process:
+            save_best_pointer(checkpoint_dir, step, val_bpb)
 
-    if last_step:
+    if should_stop:
         break
 
     # -------------------------------------------------------------------------
@@ -429,17 +553,22 @@ while True:
     # evaluate the gradient
     synchronize()
     t0 = time.time()
+    accumulated_train_loss = torch.zeros((), device=device)
     for micro_step in range(grad_accum_steps):
         loss = model(x, y)
-        train_loss = loss.detach() # for logging
+        accumulated_train_loss += loss.detach()
         loss = loss / grad_accum_steps # each .backward() is a grad sum => normalize loss here
         if scaler is not None:
             scaler.scale(loss).backward()
         else:
             loss.backward()
         x, y = next(train_loader) # prefetch the next batch while the GPU is busy with forward/backward
-        progress = max(progress, approx_progress) # only increase progress monotonically
+    train_loss = accumulated_train_loss / grad_accum_steps
     # step the optimizer
+    if args.num_iterations > 0:
+        progress = min((step + 1) / args.num_iterations, 1.0)
+    else:
+        progress = max(progress, approx_progress)
     lrm = get_lr_multiplier(progress)
     muon_momentum = get_muon_momentum(step)
     for group in optimizer.param_groups:
@@ -448,6 +577,13 @@ while True:
             group["momentum"] = muon_momentum
     if scaler is not None:
         scaler.unscale_(optimizer)
+    grad_norm = None
+    if args.grad_clip > 0:
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            model.parameters(),
+            max_norm=args.grad_clip,
+        )
+    if scaler is not None:
         if is_ddp_initialized():
             for v in scaler._found_inf_per_device(optimizer).values():
                 dist.all_reduce(v, op=dist.ReduceOp.MAX)
@@ -485,6 +621,11 @@ while True:
             "train/tok_per_sec": tok_per_sec,
             "train/mfu": mfu,
             "train/epoch": current_epoch,
+            **(
+                {"train/grad_norm": grad_norm.item()}
+                if grad_norm is not None
+                else {}
+            ),
         })
 
     # The garbage collector spends ~500ms scanning for cycles quite frequently.
@@ -500,6 +641,7 @@ while True:
 print0(f"Peak memory usage: {get_max_memory() / 1024 / 1024:.2f}MiB")
 print0(f"Total training time: {total_training_time/60:.2f}m")
 print0(f"Minimum validation bpb: {min_val_bpb:.4f}")
+print0(f"Best checkpoint step: {best_step}")
 
 # Log to report
 from nanochat.report import get_report
@@ -511,6 +653,7 @@ get_report().log(section="SFT", data=[
     },
     { # stats about training outcomes
         "Minimum validation bpb": min_val_bpb,
+        "Best checkpoint step": best_step,
     }
 ])
 

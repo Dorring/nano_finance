@@ -1,0 +1,13 @@
+{
+  "total_assistant_tokens": 1000000,
+  "source_shares": {
+    "finqa": 0.275,
+    "tatqa": 0.225,
+    "finer": 0.10,
+    "finred": 0.10,
+    "finsen": 0.025,
+    "fiqa": 0.05,
+    "ectsum": 0.125,
+    "finance_r1": 0.10
+  }
+}

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.checkpoint
 
 from nanochat.common import get_dist_info, print0, COMPUTE_DTYPE
 from nanochat.optim import MuonAdamW, DistMuonAdamW
@@ -456,7 +457,19 @@ class GPT(nn.Module):
         for i, block in enumerate(self.transformer.h):
             x = self.resid_lambdas[i] * x + self.x0_lambdas[i] * x0
             ve = self.value_embeds[str(i)](idx).to(x.dtype) if str(i) in self.value_embeds else None
-            x = block(x, ve, cos_sin, self.window_sizes[i], kv_cache)
+
+            if self.training and torch.is_grad_enabled():
+                # Use gradient checkpointing to save VRAM at the cost of some compute.
+                # For custom Transformer layers, use_reentrant=False is highly recommended.
+                x = torch.utils.checkpoint.checkpoint(
+                    block,
+                    x, ve, cos_sin, self.window_sizes[i], kv_cache,
+                    use_reentrant=False,
+                    preserve_rng_state=False
+                )
+            else:
+                x = block(x, ve, cos_sin, self.window_sizes[i], kv_cache)
+
             if i == backout_layer:
                 x_backout = x
         # Subtract mid-layer residual to remove low-level features before logit projection
