@@ -43,6 +43,7 @@ class RAGEngine:
                  max_new_tokens: int = None,
                  bm25_db_path: str = "rag_bm25.db",
                  reranker_name: str | None = None,
+                 reranker_model: str | None = None,
                  retrieval_candidate_multiplier: int = 2):
         """
         RAGEngine 类的初始化方法。
@@ -55,6 +56,7 @@ class RAGEngine:
             max_new_tokens (int): 模型单次最大生成 Token 数，默认 512。
             bm25_db_path (str): SQLite FTS5 稀疏检索数据库路径，默认 "rag_bm25.db"。
             reranker_name (str | None): Optional reranker name. None disables reranking.
+            reranker_model (str | None): Optional reranker model name/path for model-backed rerankers.
             retrieval_candidate_multiplier (int): Candidate expansion factor for hybrid retrieval.
         """
         self.llm_client = llm_client
@@ -66,7 +68,7 @@ class RAGEngine:
         self.bm25_retriever = SqliteBM25Retriever(db_path=bm25_db_path)
         self.trace_logger = TraceLogger(sample_rate=1.0, redact_content=True)
         self.min_score_threshold = 0.0  # chunks below this score are discarded
-        self.reranker = build_reranker(reranker_name)
+        self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
 
