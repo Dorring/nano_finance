@@ -36,6 +36,7 @@ async def run_case(
         "searched_docs": result.get("searched_docs", []),
         "confidence": result.get("confidence"),
         "context_sufficient": result.get("context_sufficient"),
+        "retrieval_debug": result.get("retrieval_debug", {}),
         "latency_ms": latency_ms,
     }
     if "rewritten_question" in result:
