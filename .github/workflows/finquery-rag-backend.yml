@@ -1,0 +1,61 @@
+name: FinQuery RAG Backend CI
+
+on:
+  pull_request:
+    paths:
+      - finquery_rag/backend/**
+      - finquery_rag/.gitattributes
+      - finquery_rag/.gitignore
+      - .github/workflows/finquery-rag-backend.yml
+  push:
+    branches:
+      - master
+      - main
+      - cc/rag-production-review
+    paths:
+      - finquery_rag/backend/**
+      - finquery_rag/.gitattributes
+      - finquery_rag/.gitignore
+      - .github/workflows/finquery-rag-backend.yml
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: finquery_rag/backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ghostscript libgl1 poppler-utils
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: finquery_rag/backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Compile Python files
+        run: uv run --with pytest python -m compileall -q src tests
+
+      - name: Run backend tests
+        run: uv run --with pytest python -m pytest -q

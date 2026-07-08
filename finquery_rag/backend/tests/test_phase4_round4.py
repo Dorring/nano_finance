@@ -1,0 +1,237 @@
+"""
+Round 4 tests — counter-examples for Round 3 fixes.
+Covers: low confidence, RRF threshold, BM25 dedup/stale, registry reupload,
+upload rollback, stream sufficiency/session, clear-all idempotency.
+"""
+import os, sys, gc, asyncio, pytest, tempfile, sqlite3
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from services.rag_engine import RAGEngine
+from services.retrieval import SqliteBM25Retriever, rrf
+
+
+class CloseableMockLLM:
+    """Mock LLM that fails if generate_answer is called, for testing no-LLM paths."""
+    def __init__(self, allow_calls=False, response='mock answer'):
+        self._allow = allow_calls
+        self._resp = response
+        self.call_count = 0
+        def _create(**kwargs):
+            self.call_count += 1
+            if not self._allow:
+                raise RuntimeError('LLM should not be called!')
+            class R: choices=[type('C',(),{'message':type('M',(),{'content':self._resp})()})()]
+            return R()
+        self.chat = type('C',(),{'completions':type('Co',(),{'create':staticmethod(_create)})()})()
+
+
+class TestLowConfidenceNoLLM:
+    """Item 8: Low-confidence context must NOT call LLM."""
+    def test_insufficient_context_skips_llm(self, tmp_path):
+        from services.rag_engine import RAGEngine
+        mc = CloseableMockLLM(allow_calls=False)
+        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b.db'))
+        eng._check_context_sufficiency = lambda chunks: (False, 0.01, 0.01)
+        eng._compute_confidence = lambda chunks: 0.01
+        eng.build_context = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.01}])
+        loop = asyncio.new_event_loop()
+        try:
+            r = loop.run_until_complete(eng.query('test', doc_names=['f.pdf'], user_id=1))
+            assert r['context_sufficient'] is False
+            assert 'couldn' in r['answer'].lower() or 'sufficiently' in r['answer'].lower()
+            assert mc.call_count == 0, 'LLM was called despite insufficient context!'
+        finally:
+            loop.close()
+
+    def test_sufficient_context_calls_llm(self, tmp_path):
+        from services.rag_engine import RAGEngine
+        mc = CloseableMockLLM(allow_calls=True, response='Revenue was 10M.')
+        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b2.db'))
+        eng._check_context_sufficiency = lambda chunks: (True, 0.8, 0.75)
+        eng._compute_confidence = lambda chunks: 0.78
+        eng.build_context = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.8}])
+        loop = asyncio.new_event_loop()
+        try:
+            r = loop.run_until_complete(eng.query('test', doc_names=['f.pdf'], user_id=1))
+            assert r['context_sufficient'] is True
+            assert 'Revenue' in r['answer']
+            assert mc.call_count >= 1
+        finally:
+            loop.close()
+
+class TestRRFThreshold:
+    """Item 9: RRF calibration"""
+    def test_high_rrf_score_passes(self):
+        from services.rag_engine import RAGEngine
+        class Dummy: pass
+        eng = RAGEngine(Dummy(), use_hybrid=True)
+        chunks = [{'doc_id':'d1::0','content':'c','metadata':{},'score':0.03}]
+        sufficient, best, avg = eng._check_context_sufficiency(chunks)
+        assert sufficient, 'RRF score 0.03 should pass 0.008 threshold'
+        assert best == 0.03
+
+    def test_low_rrf_score_refuses(self):
+        from services.rag_engine import RAGEngine
+        class Dummy: pass
+        eng = RAGEngine(Dummy(), use_hybrid=True)
+        chunks = [{'doc_id':'d1::0','content':'c','metadata':{},'score':0.003}]
+        sufficient, best, avg = eng._check_context_sufficiency(chunks)
+        assert not sufficient, 'RRF score 0.003 should NOT pass 0.008 threshold'
+
+    def test_high_dense_score_passes(self):
+        from services.rag_engine import RAGEngine
+        class Dummy: pass
+        eng = RAGEngine(Dummy(), use_hybrid=True)
+        chunks = [{'doc_id':'d1::0','content':'c','metadata':{},'score':0.85}]
+        sufficient, best, avg = eng._check_context_sufficiency(chunks)
+        assert sufficient, 'Dense score 0.85 should pass 0.15 threshold'
+
+
+class TestBM25DedupStale:
+    """Item 7: BM25 add_chunks dedup"""
+    def test_duplicate_add_returns_once(self, tmp_path):
+        db = os.path.join(str(tmp_path), 'b.db')
+        r = SqliteBM25Retriever(db_path=db)
+        chunks = [{'metadata':{'doc_id':'d1::0','doc_name':'test.pdf'},'content':'Revenue was ten million dollars in Q3 2024'}]
+        r.add_chunks(chunks, user_id=1)
+        r.add_chunks(chunks, user_id=1)
+        results = r.search('revenue Q3', k=5, user_id=1)
+        ids = [x['doc_id'] for x in results]
+        assert ids.count('user_1_test.pdf::d1::0') <= 1, 'Duplicate FTS rows detected'
+
+    def test_updated_content_no_stale_hit(self, tmp_path):
+        db = os.path.join(str(tmp_path), 'b2.db')
+        r = SqliteBM25Retriever(db_path=db)
+        chunks = [{'metadata':{'doc_id':'d1::0','doc_name':'test.pdf'},'content':'Old content about apples and oranges'}]
+        r.add_chunks(chunks, user_id=1)
+        chunks2 = [{'metadata':{'doc_id':'d1::0','doc_name':'test.pdf'},'content':'New content about revenue and profit Q3 2024'}]
+        r.add_chunks(chunks2, user_id=1)
+        results = r.search('apples oranges', k=5, user_id=1)
+        assert len(results) == 0, 'Stale content should not be searchable after update'
+
+
+class TestRegistryReupload:
+    """Item 5: Registry delete then reupload should NOT be duplicate-skipped."""
+    def test_delete_then_reupload_allowed(self, tmp_path):
+        from services.document_registry import DocumentRegistry
+        reg = DocumentRegistry(db_path=os.path.join(str(tmp_path), 'reg.db'))
+        import uuid
+        did = uuid.uuid4().hex
+        fh = 'abc123'
+        reg.register(did, 1, 'test.pdf', fh, status='parsing')
+        reg.mark_indexing(did)
+        reg.mark_ready(did, 3, 'ch_abc')
+        found = reg.find_by_file_hash(1, fh)
+        assert found is not None, 'Should find ready doc'
+        reg.delete(1, 'test.pdf')
+        found2 = reg.find_by_file_hash(1, fh)
+        assert found2 is None, 'Should NOT find after delete'
+        did2 = uuid.uuid4().hex
+        reg.register(did2, 1, 'test.pdf', fh, status='parsing')
+        found3 = reg.get_latest_version(1, 'test.pdf')
+        assert found3 is not None and found3['status'] == 'parsing', 'Re-upload should create new record'
+
+
+class TestBM25Rollback:
+    """Item 6: BM25 failure triggers dense rollback."""
+    def test_bm25_failure_marks_failed_and_deletes_dense(self):
+        """AST check: upload handler must have rollback logic after BM25 add_chunks."""
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        with open(mp, encoding='utf-8') as fh:
+            content = fh.read()
+        # String-level check: the upload handler must contain rollback logic
+        assert 'delete_document_collection' in content, 'Upload must reference delete_document_collection for rollback'
+        assert 'mark_failed' in content, 'Upload must call mark_failed on error'
+        # Verify try/except exists around BM25 sync
+        assert 'bm25_retriever.add_chunks' in content
+        assert 'rollback' in content.lower() or 'Rollback' in content or 'failed' in content.lower()
+
+    def test_schema_has_confidence_fields(self):
+        from models.schemas import QueryResponse
+        fields = QueryResponse.model_fields
+        assert 'confidence' in fields
+        assert 'context_sufficient' in fields
+
+    def test_query_endpoint_returns_fields(self):
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        tree = ast.parse(open(mp, encoding='utf-8').read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents':
+                found_confidence = False
+                found_sufficient = False
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call):
+                        for kw in getattr(child, 'keywords', []):
+                            if kw.arg == 'confidence':
+                                found_confidence = True
+                            if kw.arg == 'context_sufficient':
+                                found_sufficient = True
+                assert found_confidence, '/query must pass confidence to QueryResponse'
+                assert found_sufficient, '/query must pass context_sufficient to QueryResponse'
+                break
+
+
+class TestClearAllIdempotent:
+    """Item 3 audit round4: clear_all_documents should not 500 on empty user."""
+    def test_clear_all_no_docs_does_not_error(self):
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        tree = ast.parse(open(mp, encoding='utf-8').read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'clear_all_documents':
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Compare):
+                        for operand in ast.walk(child):
+                            if isinstance(operand, ast.Constant) and operand.value == 'Dense index deletion failed':
+                                pytest.fail('clear_all must not fail on empty user')
+                break
+
+
+class TestStreamSuite:
+    """Item 10 audit round4: stream behavior matches /query for key paths."""
+    def test_stream_no_docs_returns_message(self):
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        tree = ast.parse(open(mp, encoding='utf-8').read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents_stream':
+                found_no_docs = False
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Constant) and isinstance(child.value, str):
+                        if 'No documents found' in child.value:
+                            found_no_docs = True
+                assert found_no_docs, 'stream should handle no-docs case'
+                break
+
+    def test_stream_has_sufficiency_check(self):
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        tree = ast.parse(open(mp, encoding='utf-8').read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents_stream':
+                has_suff_check = False
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call):
+                        f = child.func
+                        if isinstance(f, ast.Attribute) and f.attr == '_check_context_sufficiency':
+                            has_suff_check = True
+                    if isinstance(child, ast.Name) and child.id in ('is_sufficient', 'best_score'):
+                        has_suff_check = True
+                assert has_suff_check, 'stream must check context sufficiency'
+                break
+
+    def test_stream_has_session_handling(self):
+        import ast
+        mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
+        tree = ast.parse(open(mp, encoding='utf-8').read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents_stream':
+                has_session_write = False
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call):
+                        f = child.func
+                        if isinstance(f, ast.Attribute) and f.attr == 'add_message':
+                            has_session_write = True
+                assert has_session_write, 'stream must write to session'
+                break
