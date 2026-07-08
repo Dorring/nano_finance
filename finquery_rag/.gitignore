@@ -213,3 +213,23 @@ rag.ipynb*.db
 *.db-shm
 *.db-wal
 pytest-cache-files-*/
+
+# FinQuery generated/local runtime files
+.cc-work/tmp/
+backend/rag_bm25.db
+backend/trace_log.db
+backend/document_registry.db
+backend/sessions.db
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/*.db-journal
+backend/pytest-cache-files-*/
+backend/chroma_db/
+trace_log.db
+rag_bm25.db
+document_registry.db
+sessions.db
+uploads/
+tmp/
+temp/

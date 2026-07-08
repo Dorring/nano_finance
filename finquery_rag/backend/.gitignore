@@ -213,3 +213,14 @@ pytest-cache-files-*/
 *.db
 *.db-shm
 *.db-wal
+
+# Backend generated/local runtime files
+rag_bm25.db
+trace_log.db
+document_registry.db
+sessions.db
+*.sqlite
+*.sqlite3
+uploads/
+tmp/
+temp/
