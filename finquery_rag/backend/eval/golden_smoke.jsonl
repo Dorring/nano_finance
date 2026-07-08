@@ -1,0 +1,2 @@
+{"id":"smoke_revenue","question":"What was Q3 revenue?","document_names":["q3.pdf"],"expected_sources":[{"filename":"q3.pdf","page":2}],"expected_answer_contains":["$10M"],"expected_numbers":["10"],"tags":["smoke","number","citation"]}
+{"id":"smoke_no_answer","question":"What was FY2099 revenue?","document_names":["q3.pdf"],"expected_no_answer":true,"tags":["smoke","no_answer"]}
