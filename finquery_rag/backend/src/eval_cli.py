@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+import os
 
 from .services.evaluation import (
     compare_reports,
@@ -44,7 +45,11 @@ def main(argv: list[str] | None = None) -> int:
     compare.add_argument("--out", help="Optional comparison JSON output path")
 
     traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
-    traces.add_argument("--db", default="trace_log.db", help="TraceLogger SQLite DB")
+    traces.add_argument(
+        "--db",
+        default=os.getenv("TRACE_DB_PATH", "trace_log.db"),
+        help="TraceLogger SQLite DB",
+    )
     traces.add_argument("--tenant-id", type=int, required=True)
     traces.add_argument("--limit", type=int, default=100)
     traces.add_argument("--offset", type=int, default=0)
@@ -54,7 +59,11 @@ def main(argv: list[str] | None = None) -> int:
     traces.add_argument("--out", required=True, help="Output traces JSONL")
 
     replay = sub.add_parser("replay-from-traces", help="Export replay cases from trace DB")
-    replay.add_argument("--db", default="trace_log.db", help="TraceLogger SQLite DB")
+    replay.add_argument(
+        "--db",
+        default=os.getenv("TRACE_DB_PATH", "trace_log.db"),
+        help="TraceLogger SQLite DB",
+    )
     replay.add_argument("--tenant-id", type=int, required=True)
     replay.add_argument("--limit", type=int, default=100)
     replay.add_argument("--out", required=True, help="Output replay JSONL")

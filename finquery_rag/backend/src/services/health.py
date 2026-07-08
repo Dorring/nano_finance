@@ -14,9 +14,15 @@ import time
 from pathlib import Path
 from typing import Any
 
-BM25_DB_PATH = os.getenv("BM25_DB_PATH", "rag_bm25.db")
-CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
+BM25_DB_PATH = "rag_bm25.db"
+CHROMA_PATH = "./chroma_db"
+DOCUMENT_REGISTRY_DB_PATH = "document_registry.db"
+TRACE_DB_PATH = "trace_log.db"
 GLOBAL_COLLECTION_NAME = "rag_global_knowledge_base"
+
+
+def _runtime_path(env_name: str, default: str) -> str:
+    return os.getenv(env_name, default)
 
 
 def _safe_int(value: str | None, default: int) -> tuple[int, str | None]:
@@ -110,11 +116,14 @@ def collect_config_snapshot() -> dict[str, Any]:
             "reranker_model_configured": bool(os.getenv("RAG_RERANKER_MODEL")),
         },
         "storage": {
-            "chroma_path": CHROMA_PATH,
+            "chroma_path": _runtime_path("CHROMA_PATH", CHROMA_PATH),
             "chroma_collection": GLOBAL_COLLECTION_NAME,
-            "bm25_db_path": BM25_DB_PATH,
+            "document_registry_db_path": _runtime_path(
+                "DOCUMENT_REGISTRY_DB_PATH", DOCUMENT_REGISTRY_DB_PATH
+            ),
+            "bm25_db_path": _runtime_path("BM25_DB_PATH", BM25_DB_PATH),
             "sessions_db_path": os.getenv("SESSIONS_DB_PATH", "sessions.db"),
-            "trace_db_path": os.getenv("TRACE_DB_PATH", "trace_log.db"),
+            "trace_db_path": _runtime_path("TRACE_DB_PATH", TRACE_DB_PATH),
         },
         "sessions": {
             "ttl_seconds": session_ttl,
@@ -131,17 +140,22 @@ def collect_health_snapshot(
 ) -> dict[str, Any]:
     """Return a readiness snapshot without reading tenant content."""
     config = collect_config_snapshot()
-    registry_path = getattr(document_registry, "db_path", "document_registry.db")
+    registry_path = getattr(
+        document_registry,
+        "db_path",
+        _runtime_path("DOCUMENT_REGISTRY_DB_PATH", DOCUMENT_REGISTRY_DB_PATH),
+    )
     session_path = getattr(
         session_manager, "db_path", os.getenv("SESSIONS_DB_PATH", "sessions.db")
     )
-    bm25_path = bm25_db_path or BM25_DB_PATH
-    trace_path = trace_db_path or os.getenv("TRACE_DB_PATH", "trace_log.db")
+    bm25_path = bm25_db_path or _runtime_path("BM25_DB_PATH", BM25_DB_PATH)
+    trace_path = trace_db_path or _runtime_path("TRACE_DB_PATH", TRACE_DB_PATH)
+    chroma_path = _runtime_path("CHROMA_PATH", CHROMA_PATH)
 
     checks = {
         "config": config,
         "chroma_path": {
-            **_path_check(CHROMA_PATH, expect_dir=True),
+            **_path_check(chroma_path, expect_dir=True),
             "kind": "directory",
             "required": False,
         },

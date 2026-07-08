@@ -7,6 +7,7 @@ Supports content sanitization and sampling.
 import sqlite3
 import hashlib
 import json
+import os
 import time
 import uuid
 import re
@@ -45,7 +46,9 @@ CREATE INDEX IF NOT EXISTS idx_trace_created ON trace_log(created_at);
 _SANITIZE_RE = re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")
 
 class TraceLogger:
-    def __init__(self, db_path="trace_log.db", sample_rate=1.0, redact_content=True):
+    def __init__(self, db_path=None, sample_rate=1.0, redact_content=True):
+        if db_path is None:
+            db_path = os.getenv("TRACE_DB_PATH", "trace_log.db")
         self.db_path = db_path
         self.sample_rate = max(0.0, min(1.0, sample_rate))
         self.redact_content = redact_content

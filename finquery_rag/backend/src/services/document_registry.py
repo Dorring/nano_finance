@@ -4,6 +4,7 @@ Document Registry - lifecycle management for uploaded documents.
 import sqlite3
 import hashlib
 import time
+import os
 from typing import Optional, Dict, Any, List
 
 SCHEMA_VERSION = 1
@@ -51,7 +52,9 @@ def validate_transition(current, target):
         raise ValueError("Invalid transition %r -> %r; allowed: %s" % (current, target, allowed or "terminal"))
 
 class DocumentRegistry:
-    def __init__(self, db_path="document_registry.db"):
+    def __init__(self, db_path=None):
+        if db_path is None:
+            db_path = os.getenv("DOCUMENT_REGISTRY_DB_PATH", "document_registry.db")
         self.db_path = db_path
         self._init_schema()
 
