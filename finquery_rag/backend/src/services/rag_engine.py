@@ -5,6 +5,7 @@ import asyncio
 from .vector_store import query_collection, list_all_documents
 from .retrieval import SqliteBM25Retriever, rrf
 from .reranker import build_reranker
+from .intent import classify_query_intent
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -474,6 +475,9 @@ class RAGEngine:
             question = await self._rewrite_query_with_context(question, conversation_history)
             trace_data["query_rewritten"] = question
 
+        intent = classify_query_intent(question)
+        trace_data["intent"] = intent["intent"]
+
         conversational_response = self._handle_conversational_query(question)
         if conversational_response:
             result = {
@@ -481,7 +485,23 @@ class RAGEngine:
                 "sources": [],
                 "context": None,
                 "searched_docs": [],
-                "context_sufficient": True
+                "context_sufficient": True,
+                "intent": "conversation",
+                "intent_confidence": intent["confidence"],
+            }
+            if conversation_history:
+                result["rewritten_question"] = question
+            return result
+
+        if not intent["requires_retrieval"]:
+            result = {
+                "answer": "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data.",
+                "sources": [],
+                "context": None,
+                "searched_docs": [],
+                "context_sufficient": True,
+                "intent": intent["intent"],
+                "intent_confidence": intent["confidence"],
             }
             if conversation_history:
                 result["rewritten_question"] = question
@@ -553,6 +573,8 @@ class RAGEngine:
             "searched_docs": doc_names,
             "confidence": confidence,
             "context_sufficient": is_sufficient,
+            "intent": intent["intent"],
+            "intent_confidence": intent["confidence"],
             "rewritten_question": question if conversation_history else None,
             "retrieved_chunks": self._summarize_retrieved_chunks(chunks),
             "retrieval_debug": dict(self._last_retrieval_debug),

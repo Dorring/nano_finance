@@ -53,3 +53,19 @@ curl http://127.0.0.1:8000/readyz
 
 `/readyz` is intentionally cheap: it does not call the LLM, does not request
 embeddings, and does not read tenant document content.
+
+## Intent routing
+
+FinQuery includes a deterministic intent router before retrieval. It is
+conservative by design:
+
+- clear greetings, thanks, and product-help questions bypass retrieval;
+- clear out-of-scope general questions bypass retrieval with a refusal;
+- financial QA, document summaries, and financial calculations continue through
+  the RAG pipeline;
+- unknown domain-specific wording defaults to retrieval to avoid suppressing
+  valid document questions.
+
+The router exposes `intent` and `intent_confidence` in `/query` responses and
+the final `/query/stream` event. It does not call an LLM and has no external
+dependencies.

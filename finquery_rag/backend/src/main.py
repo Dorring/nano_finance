@@ -11,6 +11,7 @@ from .services.rag_engine import RAGEngine
 from .services.document_registry import DocumentRegistry
 from .services.session_manager import SessionManager
 from .services.health import collect_health_snapshot
+from .services.intent import classify_query_intent
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -441,6 +442,8 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             rewritten_question=rewritten,
             confidence=result.get("confidence"),
             context_sufficient=result.get("context_sufficient"),
+            intent=result.get("intent"),
+            intent_confidence=result.get("intent_confidence"),
         )
 
     except Exception as e:
@@ -471,11 +474,19 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         if conversation_history:
             question = await engine._rewrite_query_with_context(question, conversation_history)
 
+        intent = classify_query_intent(question)
+
         # Phase 3: Check if conversational (no RAG needed)
         conversational = engine._handle_conversational_query(question)
         if conversational:
             yield f"data: {json.dumps({'type': 'token', 'content': conversational})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True, 'intent': 'conversation', 'intent_confidence': intent['confidence']})}\n\n"
+            return
+
+        if not intent["requires_retrieval"]:
+            refusal = "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data."
+            yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
             return
 
         # Get document names
@@ -507,7 +518,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 session_manager.add_message(request.session_id, current_user.id, "user", request.question)
                 session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': False})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': False, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
             return
 
         # Phase 4: Save user question to session
@@ -524,7 +535,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         if request.session_id:
             session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
 
-        yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': True})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': True, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
 
     return StreamingResponse(
         generate(),

@@ -34,6 +34,10 @@ class QueryResponse(BaseModel):
     # 检索置信度 0.0-1.0（Phase 3）
     context_sufficient: bool | None = None
     # 检索上下文是否充分（Phase 3）
+    intent: str | None = None
+    # 查询意图（Phase 10）
+    intent_confidence: float | None = None
+    # 意图识别置信度（Phase 10）
 
 class UploadResponse(BaseModel):
     """
