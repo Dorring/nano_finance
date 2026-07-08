@@ -27,6 +27,8 @@ class FakeRAGEngine:
             "searched_docs": doc_names or ["q3.pdf"],
             "confidence": 0.9,
             "context_sufficient": True,
+            "intent": "document_qa",
+            "intent_confidence": 0.82,
             "retrieved_chunks": [{"doc_id": "q3.pdf::1", "filename": "q3.pdf", "page": 2}],
             "retrieval_debug": {"reranker": "heuristic", "candidate_count": 4, "returned_count": 1},
         }
@@ -53,6 +55,8 @@ def test_run_case_calls_rag_engine_with_case_filters():
     assert prediction["sources"][0]["filename"] == "q3.pdf"
     assert prediction["retrieved_chunks"][0]["doc_id"] == "q3.pdf::1"
     assert prediction["retrieval_debug"]["reranker"] == "heuristic"
+    assert prediction["intent"] == "document_qa"
+    assert prediction["intent_confidence"] == 0.82
     assert prediction["latency_ms"] >= 0
 
 
@@ -82,11 +86,11 @@ def test_run_jsonl_cases_writes_predictions(tmp_path):
 
 def test_compare_reports_passes_when_candidate_improves():
     baseline = {
-        "summary": {"pass_rate": 0.5, "citation_recall": 0.5, "p95_latency_ms": 100},
+        "summary": {"pass_rate": 0.5, "citation_recall": 0.5, "intent_accuracy": 0.5, "p95_latency_ms": 100},
         "cases": [{"id": "c1", "passed": False}],
     }
     candidate = {
-        "summary": {"pass_rate": 1.0, "citation_recall": 1.0, "p95_latency_ms": 120},
+        "summary": {"pass_rate": 1.0, "citation_recall": 1.0, "intent_accuracy": 1.0, "p95_latency_ms": 120},
         "cases": [{"id": "c1", "passed": True}],
     }
 
@@ -123,3 +127,14 @@ def test_compare_reports_respects_tolerance():
 
     assert comparison["passed"] is True
     assert comparison["regressions"] == []
+
+
+
+def test_compare_reports_includes_intent_accuracy_regression():
+    baseline = {"summary": {"intent_accuracy": 1.0}, "cases": []}
+    candidate = {"summary": {"intent_accuracy": 0.0}, "cases": []}
+
+    comparison = compare_reports(baseline, candidate)
+
+    assert comparison["passed"] is False
+    assert "intent_accuracy" in comparison["regressions"]

@@ -1,3 +1,3 @@
-{"answer": "Revenue was $10M in Q3.", "id": "smoke_revenue", "latency_ms": 12, "retrieved_chunks": [{"filename": "q3.pdf", "page": 2}], "sources": [{"filename": "q3.pdf", "page": 2}]}
-{"answer": "I couldn't find relevant information in the documents to answer this question.", "id": "smoke_no_answer", "latency_ms": 8, "retrieved_chunks": [], "sources": []}
-{"answer": "Revenue growth was 20%.", "calculations": [{"id": "growth", "operation": "growth_rate", "unit": "ratio", "value": "0.2000"}], "id": "smoke_growth_calc", "latency_ms": 5, "retrieved_chunks": [], "sources": []}
+{"answer": "Revenue was $10M in Q3.", "id": "smoke_revenue", "intent": "document_qa", "intent_confidence": 0.82, "latency_ms": 12, "retrieved_chunks": [{"filename": "q3.pdf", "page": 2}], "sources": [{"filename": "q3.pdf", "page": 2}]}
+{"answer": "I couldn't find relevant information in the documents to answer this question.", "id": "smoke_no_answer", "intent": "document_qa", "intent_confidence": 0.82, "latency_ms": 8, "retrieved_chunks": [], "sources": []}
+{"answer": "Revenue growth was 20%.", "calculations": [{"id": "growth", "operation": "growth_rate", "unit": "ratio", "value": "0.2000"}], "id": "smoke_growth_calc", "intent": "financial_calculation", "intent_confidence": 0.9, "latency_ms": 5, "retrieved_chunks": [], "sources": []}

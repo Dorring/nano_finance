@@ -36,6 +36,8 @@ async def run_case(
         "searched_docs": result.get("searched_docs", []),
         "confidence": result.get("confidence"),
         "context_sufficient": result.get("context_sufficient"),
+        "intent": result.get("intent"),
+        "intent_confidence": result.get("intent_confidence"),
         "retrieval_debug": result.get("retrieval_debug", {}),
         "latency_ms": latency_ms,
     }
