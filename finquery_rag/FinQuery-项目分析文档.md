@@ -216,8 +216,8 @@ E:/financial/finquery-main/
 
 #### 5.1.1 `backend/src/main.py` — 应用入口与 API 端点定义
 
-**文件位置：** `backend/src/main.py`  
-**重要程度：** ★★★  
+**文件位置：** `backend/src/main.py`
+**重要程度：** ★★★
 **被调用关系：** 这是整个后端的入口点，所有其他模块都被它导入和调用。
 
 **导入依赖关系：**
@@ -293,8 +293,8 @@ main.py 导入:
 
 #### 5.1.2 `backend/src/database.py` — 数据库配置
 
-**文件位置：** `backend/src/database.py`  
-**重要程度：** ★  
+**文件位置：** `backend/src/database.py`
+**重要程度：** ★
 **调用者：** `main.py`（导入 get_db, engine, Base）、`models/user.py`（导入 Base）、`services/auth.py`（导入 get_db）
 
 **代码逻辑：**
@@ -323,8 +323,8 @@ def get_db():                              # FastAPI 依赖注入生成器
 
 #### 5.1.3 `backend/src/models/schemas.py` — Pydantic 数据验证模型
 
-**文件位置：** `backend/src/models/schemas.py`  
-**重要程度：** ★  
+**文件位置：** `backend/src/models/schemas.py`
+**重要程度：** ★
 **调用者：** `main.py`（`from .models.schemas import *`，用于端点参数和响应类型注解）
 
 **9 个模型详解：**
@@ -347,8 +347,8 @@ def get_db():                              # FastAPI 依赖注入生成器
 
 #### 5.1.4 `backend/src/models/user.py` — 用户 ORM 模型
 
-**文件位置：** `backend/src/models/user.py`  
-**重要程度：** ★  
+**文件位置：** `backend/src/models/user.py`
+**重要程度：** ★
 **调用者：** `main.py`（注册/登录时查询和创建用户）、`services/auth.py`（验证 JWT 时查询用户是否存在）
 
 ```python
@@ -366,8 +366,8 @@ class User(Base):
 
 #### 5.1.5 `backend/src/services/auth.py` — JWT 认证服务
 
-**文件位置：** `backend/src/services/auth.py`  
-**重要程度：** ★★  
+**文件位置：** `backend/src/services/auth.py`
+**重要程度：** ★★
 **调用者：** `main.py`（所有需要认证的端点通过 `Depends(get_current_user)` 调用）
 
 **导入依赖：**
@@ -403,7 +403,7 @@ auth.py 导入:
   → 返回 user_id (email) 供端点使用
 ```
 
-**面试知识点：** 
+**面试知识点：**
 - HS256 对称签名（同一密钥签发和验证）vs RS256 非对称签名
 - `HTTPBearer()` 自动从请求头提取 Bearer token
 - `Depends()` 实现声明式依赖注入，FastAPI 自动执行
@@ -412,8 +412,8 @@ auth.py 导入:
 
 #### 5.1.6 `backend/src/services/ingest.py` — PDF 摄取管线
 
-**文件位置：** `backend/src/services/ingest.py`  
-**重要程度：** ★★★  
+**文件位置：** `backend/src/services/ingest.py`
+**重要程度：** ★★★
 **调用者：** `main.py` 的 `/upload` 端点调用 `process_pdf(together_client, temp_path)`
 
 **导入依赖：**
@@ -486,8 +486,8 @@ Step 5: 关闭 PDF，返回 (chunks, pages)
 
 #### 5.1.7 `backend/src/services/process_tables.py` — 表格提取与 LLM 增强
 
-**文件位置：** `backend/src/services/process_tables.py`  
-**重要程度：** ★★  
+**文件位置：** `backend/src/services/process_tables.py`
+**重要程度：** ★★
 **调用者：** `ingest.py` 调用 `extract_tables_with_camelot()` 和 `enhance_table_with_context()`
 
 **函数 1: `extract_tables_with_camelot(pdf_path, pages="all")`**
@@ -543,8 +543,8 @@ return final_table.to_markdown(index=False)
 
 #### 5.1.8 `backend/src/services/rag_engine.py` — 核心 RAG 引擎
 
-**文件位置：** `backend/src/services/rag_engine.py`  
-**重要程度：** ★★★★ （整个项目最核心的文件）  
+**文件位置：** `backend/src/services/rag_engine.py`
+**重要程度：** ★★★★ （整个项目最核心的文件）
 **调用者：** `main.py` 的 `/query` 和 `/query/stream` 端点
 
 **导入依赖：**
@@ -681,8 +681,8 @@ class RAGEngine:
 
 #### 5.1.9 `backend/src/services/retrieval.py` — BM25 检索与 RRF 融合
 
-**文件位置：** `backend/src/services/retrieval.py`  
-**重要程度：** ★★  
+**文件位置：** `backend/src/services/retrieval.py`
+**重要程度：** ★★
 **调用者：** `rag_engine.py` 导入 `BM25Retriever` 和 `rrf`
 
 **BM25Retriever 类：**
@@ -700,7 +700,7 @@ class BM25Retriever:
     def search(self, query, k=10):
         scores = self.bm25.get_scores(query.lower().split())  # 计算 BM25 分数
         # 按 score 降序排序，取 top-k
-        ranked = sorted(zip(self.ids, self.documents, self.metadatas, scores), 
+        ranked = sorted(zip(self.ids, self.documents, self.metadatas, scores),
                         key=lambda x: x[3], reverse=True)[:k]
         return [{"doc_id", "content", "metadata", "score"}, ...]
 ```
@@ -751,8 +751,8 @@ RRF 公式: score(d) = Σ 1/(k + rank_i(d))
 
 #### 5.1.10 `backend/src/services/vector_store.py` — ChromaDB 向量库管理
 
-**文件位置：** `backend/src/services/vector_store.py`  
-**重要程度：** ★★★  
+**文件位置：** `backend/src/services/vector_store.py`
+**重要程度：** ★★★
 **调用者：** `main.py`（add_documents, list_all_documents, delete_document_collection, get_collection_stats）、`rag_engine.py`（query_collection, get_or_create_collection, list_all_documents）
 
 **全局初始化：**
@@ -778,7 +778,7 @@ embed_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")  
 **集合命名规则（面试重点）：**
 ```
 原始: "annual_report_2024.pdf", user_id="alice@example.com"
-处理: 
+处理:
   1. 去扩展名: "annual_report_2024"
   2. MD5("alice@example.com")[:8] = "a1b2c3d4"
   3. 添加前缀: "ua1b2c3d4_annual_report_2024"
@@ -846,8 +846,8 @@ createRoot(document.getElementById('root')).render(
 
 #### 5.2.2 `frontend/src/App.jsx` — 根组件 + 路由 + 认证守卫
 
-**文件位置：** `frontend/src/App.jsx`  
-**重要程度：** ★★  
+**文件位置：** `frontend/src/App.jsx`
+**重要程度：** ★★
 **导入依赖：** `AuthContext`, `Login`, `Register`, `Dashboard`, `react-router-dom`, `react-hot-toast`
 
 **组件结构：**
@@ -881,8 +881,8 @@ createRoot(document.getElementById('root')).render(
 
 #### 5.2.3 `frontend/src/api.js` — Axios API 客户端 + SSE 流式查询
 
-**文件位置：** `frontend/src/api.js`  
-**重要程度：** ★★★  
+**文件位置：** `frontend/src/api.js`
+**重要程度：** ★★★
 **调用者：** `AuthContext.jsx`（getCurrentUser）、`Dashboard.jsx`（uploadDocument, listDocuments, queryDocumentsStream, deleteDocument）、`Login.jsx`（login）、`Register.jsx`（register）
 
 **核心设计：**
@@ -967,8 +967,8 @@ export const queryDocumentsStream = async (question, documentNames, onToken, onD
 
 #### 5.2.4 `frontend/src/context/AuthContext.jsx` — 认证上下文
 
-**文件位置：** `frontend/src/context/AuthContext.jsx`  
-**重要程度：** ★★  
+**文件位置：** `frontend/src/context/AuthContext.jsx`
+**重要程度：** ★★
 **调用者：** `App.jsx`（AuthProvider 包裹）、`Dashboard.jsx`（useAuth 获取 user/logout）、`Login.jsx`（useAuth 获取 loginUser）、`Register.jsx`（useAuth 获取 loginUser）
 
 **提供的 Context 值：**
@@ -997,8 +997,8 @@ export const queryDocumentsStream = async (question, documentNames, onToken, onD
 
 #### 5.2.5 `frontend/src/pages/Dashboard.jsx` — 主仪表盘（状态管理中心）
 
-**文件位置：** `frontend/src/pages/Dashboard.jsx`  
-**重要程度：** ★★★  
+**文件位置：** `frontend/src/pages/Dashboard.jsx`
+**重要程度：** ★★★
 **导入依赖：** `Sidebar`, `ChatArea`, `InputBar`, `api.js`（4个API函数）, `AuthContext`（useAuth）, `App.css`
 
 **状态管理：**
@@ -1070,8 +1070,8 @@ const { user, logout } = useAuth();                   // 认证上下文
 
 #### 5.2.6 `frontend/src/components/Sidebar.jsx` — 侧边栏
 
-**文件位置：** `frontend/src/components/Sidebar.jsx`  
-**重要程度：** ★★  
+**文件位置：** `frontend/src/components/Sidebar.jsx`
+**重要程度：** ★★
 **调用者：** `Dashboard.jsx` 传入 8 个 props
 
 **功能区域：**
@@ -1086,7 +1086,7 @@ const { user, logout } = useAuth();                   // 认证上下文
 
 **拖拽上传逻辑：**
 ```javascript
-handleDrop: 
+handleDrop:
   e.preventDefault() → 获取 e.dataTransfer.files[0]
   → 验证 .pdf 后缀 → onUpload(file)
 ```
@@ -1141,7 +1141,7 @@ handleDrop:
 
 **流程：**
 ```
-提交表单 → 验证非空 → login(email, password) 
+提交表单 → 验证非空 → login(email, password)
 → loginUser(data.access_token, data.email)  // 存 token + 设置用户状态
 → navigate('/')  // 跳转仪表盘
 ```

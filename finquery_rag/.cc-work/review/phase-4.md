@@ -73,5 +73,5 @@ Phase 4 implements short-term conversation memory for multi-turn dialogue, follo
 - **No session expiration.** Sessions grow unbounded in SQLite. A cleanup cron job or TTL-based pruning should be added for production.
 - **Rewrite prompt may not work well for complex multi-hop follow-ups.** The 2B model may produce degraded rewrites. A/B comparison or model upgrade recommended before production use.
 - **Stream endpoint not yet session-aware.** `/query/stream` does not save messages to session or perform query rewriting.
-- **No session-level `rewritten_question` returned in stream.** Frontend cannot show rewritten question in streaming mode.` 
+- **No session-level `rewritten_question` returned in stream.** Frontend cannot show rewritten question in streaming mode.`
 - **`session_manager` DB path is hardcoded** (`sessions.db`). Should be configurable via env var.

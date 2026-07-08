@@ -30,7 +30,7 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.endsWith('.pdf')) {
       onUpload(file);
@@ -41,7 +41,7 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
 
   const handleDelete = (e, docName) => {
     e.stopPropagation();
-    
+
     toast((t) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div style={{ fontWeight: 500 }}>Delete {docName}?</div>
@@ -109,7 +109,7 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
       {/* Documents List */}
       <div className="sidebar-content">
         <div className="documents-section-title">Documents</div>
-        
+
         {documents.length === 0 ? (
           <div className="empty-state">
             No documents uploaded yet

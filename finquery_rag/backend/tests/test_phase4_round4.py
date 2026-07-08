@@ -235,4 +235,3 @@ class TestStreamSuite:
                             has_session_write = True
                 assert has_session_write, 'stream must write to session'
                 break
-

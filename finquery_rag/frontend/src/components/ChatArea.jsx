@@ -30,7 +30,7 @@ const ChatArea = ({ messages, isLoading, onExampleClick }) => {
             </svg>
           </div>
           <div className="chat-empty-text">Ready when you are.</div>
-          
+
           {/* Example Questions */}
           <div className="example-questions">
             <div className="example-title">Try asking:</div>

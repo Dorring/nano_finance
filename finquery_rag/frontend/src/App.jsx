@@ -37,7 +37,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster 
+        <Toaster
           position="top-right"
           toastOptions={{
             duration: 3000,
@@ -63,13 +63,13 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
         </Routes>
       </AuthProvider>

@@ -9,7 +9,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # 处理 DATABASE_URL 可能未设置的情况（例如在构建期间）
 if not DATABASE_URL:
     # 如果未指定，则默认使用 sqlite 进行本地开发，或者也可以抛出错误
-    DATABASE_URL = "sqlite:///./temp.db" 
+    DATABASE_URL = "sqlite:///./temp.db"
 
 # 创建数据库引擎实例，用于管理数据库连接池
 engine = create_engine(DATABASE_URL)
@@ -23,7 +23,7 @@ Base = declarative_base()
 def get_db():
     """
     获取数据库会话的生成器函数。
-    
+
     用于在依赖注入系统（如 FastAPI 的 Depends）中提供数据库会话，
     确保在请求处理完成后正确关闭数据库会话，释放连接资源。
 

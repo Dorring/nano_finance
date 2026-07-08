@@ -24,7 +24,7 @@ security = HTTPBearer()
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     验证明文密码与哈希密码是否匹配
-    
+
     :param plain_password: 明文密码
     :type plain_password: str
     :param hashed_password: 哈希处理后的密码
@@ -38,7 +38,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """
     对明文密码进行哈希加密
-    
+
     :param password: 需要加密的明文密码
     :type password: str
     :return: 哈希加密后的密码字符串
@@ -50,7 +50,7 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
     创建 JWT 访问令牌
-    
+
     :param data: 需要编码到 JWT 令牌中的负载数据
     :type data: dict
     :param expires_delta: 令牌的过期时间增量，如果为 None 则使用默认过期时间
@@ -71,7 +71,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     """
     从 JWT 令牌中提取并验证当前用户，返回完整的 User ORM 对象。
-    
+
     :param credentials: HTTP Bearer 授权凭据，通过依赖注入获取
     :type credentials: HTTPAuthorizationCredentials
     :param db: 数据库会话实例，通过依赖注入获取
@@ -91,16 +91,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user_id_str = payload.get("sub")
         if user_id_str is None:
             raise credentials_exception
-        
+
         try:
             user_id = int(user_id_str)
         except ValueError:
             raise credentials_exception
-            
+
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise credentials_exception
-            
+
         return user
     except JWTError:
         raise credentials_exception
@@ -109,7 +109,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), db: Session = Depends(get_db)) -> Optional[User]:
     """
     可选的用户身份验证 - 如果未提供令牌或令牌无效则返回 None
-    
+
     :param credentials: 可选的 HTTP Bearer 授权凭据，通过依赖注入获取，未提供时为 None
     :type credentials: Optional[HTTPAuthorizationCredentials]
     :return: 如果令牌有效则返回 User 对象，否则返回 None

@@ -1,10 +1,10 @@
-# FinQuery - Financial Document QA System 
+# FinQuery - Financial Document QA System
 **FinQuery** is a high-performance, RAG-based system designed to help users extract *grounded*, precise insights from financial documents. By utilizing **hybrid search** (semantic `vector` search + keyword-based `BM25`), it ensures that numerical data and specific financial terminology are captured with high accuracy.
 
 
 [![Demo](./assets/thumbnail.png)](https://cap.so/s/c7mfqk9ebt8047n)
 <p align="center">
-  <b>FinQuery Demo</b> 
+  <b>FinQuery Demo</b>
 </p>
 
 # Table of Contents
@@ -31,7 +31,7 @@ FinQuery addresses the **security** concerns of analyzing _personal_, dense `fin
 * **Table-Aware Ingestion**: PDF processing is optimized to preserve the integrity of numerical data and tables.
 * **Context Enhancement**: Tables are passed in a small llm call to to normalize them and add context that can improve semantic search.
 * **Authentication & Security**: Secure user registration and login (JWT) with password hashing.
-* **User-Scoped Data**: Documents and chat history are isolated per user, ensuring data privacy in a multi-user environment. 
+* **User-Scoped Data**: Documents and chat history are isolated per user, ensuring data privacy in a multi-user environment.
 
 ---
 
@@ -69,7 +69,7 @@ finquery/
 │   │   │   ├── user.py         # User model
 │   │   ├── services/
 │   │   │   ├── auth.py         # JWT authentication
-│   │   │   ├── ingest.py       # PDF processing  
+│   │   │   ├── ingest.py       # PDF processing
 │   │   │   ├── process_tables.py   # table processing
 │   │   │   ├── rag_engine.py   # Complete RAG logic
 │   │   │   ├── retrieval.py    # BM25 and RRF algorithms
@@ -77,7 +77,7 @@ finquery/
 │   │   ├── database.py         # DB connection
 │   │   └── main.py             # FastAPI app entry
 │   ├── .env                    # Togetherai API
-│   ├── pyproject.toml       
+│   ├── pyproject.toml
 │   └── uv.lock                 # Dependencies
 ├── frontend/
     ├── src/
@@ -114,7 +114,7 @@ sudo apt update && sudo apt install ghostscript python3-tk
 * **Windows**:
 1. Download and install the Ghostscript AGPL Release.
 2. Ensure the Ghostscript bin and lib folders are added to your System PATH.
-3. Tkinter is typically included with standard Python installations on Windows.  
+3. Tkinter is typically included with standard Python installations on Windows.
 
 ---
 ### Installation
@@ -137,10 +137,10 @@ source .venv/bin/activate      # macOS/Linux
 # .venv\Scripts\Activate.ps1    # Windows (PowerShell)
 
 # start the backend
-uvicorn src.main:app --reload 
+uvicorn src.main:app --reload
 ```
 
-3. Create a `.env` file in this directory (backend):  
+3. Create a `.env` file in this directory (backend):
 ```bash
 touch .env
 ```
@@ -189,4 +189,3 @@ The app should be running now and accessible at [http://localhost:5173/](http://
 <p align="center">
   Built with 💙 by <a href="https://github.com/datalordstephen"><b>datalordstephen</b></a>
 </p>
-

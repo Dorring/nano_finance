@@ -39,7 +39,7 @@ function Dashboard() {
 
     setIsUploading(true);
     const uploadToast = toast.loading(`Uploading ${file.name}...`);
-    
+
     try {
       await uploadDocument(file);
       await fetchDocuments();
@@ -159,7 +159,7 @@ function Dashboard() {
       />
       <div className="main-content">
         <ChatArea
-          messages={messages} 
+          messages={messages}
           isLoading={isLoading}
           onExampleClick={handleSendMessage}
         />

@@ -439,4 +439,3 @@ class TestDeleteAllRequiresAuth:
         idx = content.find('@app.delete("/documents")')
         assert idx >= 0
         assert "Depends(get_current_user)" in content[idx:idx+500]
-
