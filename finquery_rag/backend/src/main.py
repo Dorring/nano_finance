@@ -80,7 +80,12 @@ def get_rag_engine():
     """
     global rag_engine
     if rag_engine is None:
-        rag_engine = RAGEngine(llm_client, model_name=llm_model_name, use_hybrid=True)
+        rag_engine = RAGEngine(
+            llm_client,
+            model_name=llm_model_name,
+            use_hybrid=True,
+            reranker_name=os.getenv("RAG_RERANKER"),
+        )
     return rag_engine
 
 ######################### API Endpoints #########################

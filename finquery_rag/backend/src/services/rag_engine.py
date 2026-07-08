@@ -4,6 +4,7 @@ import time
 import asyncio
 from .vector_store import query_collection, list_all_documents
 from .retrieval import SqliteBM25Retriever, rrf
+from .reranker import build_reranker
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -40,7 +41,8 @@ class RAGEngine:
                  use_hybrid: bool = True,
                  max_context_tokens: int = None,
                  max_new_tokens: int = None,
-                 bm25_db_path: str = "rag_bm25.db"):
+                 bm25_db_path: str = "rag_bm25.db",
+                 reranker_name: str | None = None):
         """
         RAGEngine 类的初始化方法。
 
@@ -51,6 +53,7 @@ class RAGEngine:
             max_context_tokens (int): 上下文最大 Token 限制，默认 1100（适配 2048 上下文窗口）。
             max_new_tokens (int): 模型单次最大生成 Token 数，默认 512。
             bm25_db_path (str): SQLite FTS5 稀疏检索数据库路径，默认 "rag_bm25.db"。
+            reranker_name (str | None): Optional reranker name. None disables reranking.
         """
         self.llm_client = llm_client
         self.model_name = model_name
@@ -61,6 +64,7 @@ class RAGEngine:
         self.bm25_retriever = SqliteBM25Retriever(db_path=bm25_db_path)
         self.trace_logger = TraceLogger(sample_rate=1.0, redact_content=True)
         self.min_score_threshold = 0.0  # chunks below this score are discarded
+        self.reranker = build_reranker(reranker_name)
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -86,11 +90,18 @@ class RAGEngine:
                 chunk["score"] = 0
         return chunks
 
+    def _apply_reranker(self, query: str, chunks: list, top_k: int) -> list:
+        """Apply optional reranker while preserving default retrieval behavior."""
+        if not self.reranker:
+            return chunks[:top_k]
+        return self.reranker.rerank(query, chunks, top_k=top_k)
+
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
         if not self.use_hybrid:
             results = query_collection(query_text=query, doc_name=doc_name, n_results=n_results, user_id=user_id)
-            return self._normalize_scores(results)
+            results = self._normalize_scores(results)
+            return self._apply_reranker(query, results, n_results)
 
         # Hybrid search
         dense_results = query_collection(query_text=query, doc_name=doc_name, n_results=n_results * 2, user_id=user_id)
@@ -101,10 +112,10 @@ class RAGEngine:
             sparse_results = bm25_retriever.search(query, k=n_results * 2, doc_name=doc_name, user_id=user_id)
             fused = rrf([dense_results, sparse_results])
             results = self._normalize_scores(fused)
-            return results[:n_results]
+            return self._apply_reranker(query, results, n_results)
 
         results = self._normalize_scores(dense_results)
-        return results[:n_results]
+        return self._apply_reranker(query, results, n_results)
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:
         """异步并发地从多个文档中检索相关文本块，并按相关性得分降序返回前 N 个结果。"""
@@ -127,7 +138,7 @@ class RAGEngine:
 
         all_results.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-        return all_results[:n_results]
+        return self._apply_reranker(query, all_results, n_results)
 
     def build_context(self, chunks: list) -> tuple:
         """Build context from retrieved chunks with dedup, score threshold, and token budget."""
