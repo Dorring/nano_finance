@@ -22,3 +22,13 @@ The intended production flow is:
 5. Keep the original table value, unit, currency, period, and citation.
 
 Do not let the model perform arithmetic when exact financial numbers matter.
+
+
+## Answer validation
+
+`src/services/answer_validation.py` can compare percentage claims in generated
+answers against deterministic `calculations` records. It currently validates
+ratio/percent outputs only and returns warnings instead of mutating the answer.
+
+This is intended for post-generation reliability checks and eval tooling before
+any automatic answer blocking is enabled.
