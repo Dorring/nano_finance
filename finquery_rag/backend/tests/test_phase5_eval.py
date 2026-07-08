@@ -255,3 +255,69 @@ def test_evaluate_predictions_includes_calculation_accuracy():
     report = evaluate_predictions(cases, predictions)
 
     assert report["summary"]["calculation_accuracy"] == 1.0
+
+
+def test_score_prediction_checks_answer_calculation_consistency():
+    case = EvaluationCase.from_dict({
+        "id": "calc1",
+        "question": "What was revenue growth?",
+        "expected_calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "args": {"current": "120", "previous": "100"},
+            "expected_value": "0.2000",
+            "tolerance": "0.0001",
+            "unit": "ratio",
+        }],
+    })
+    pred = Prediction.from_dict({
+        "id": "calc1",
+        "answer": "Revenue grew 30%.",
+        "calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "value": "0.2000",
+            "unit": "ratio",
+        }],
+    })
+
+    score = score_prediction(case, pred)
+
+    assert score["calculation_accuracy"] == 1.0
+    assert score["answer_calculation_consistency"] == 0.0
+    assert score["passed"] is False
+
+
+def test_score_prediction_no_calculations_keeps_consistency_neutral():
+    case = EvaluationCase.from_dict({"id": "c1", "question": "Q"})
+    pred = Prediction.from_dict({"id": "c1", "answer": "No calculation."})
+
+    score = score_prediction(case, pred)
+
+    assert score["answer_calculation_consistency"] == 1.0
+    assert score["passed"] is True
+
+
+def test_evaluate_predictions_includes_answer_calculation_consistency():
+    cases = [EvaluationCase.from_dict({
+        "id": "calc1",
+        "question": "What was growth?",
+        "expected_calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "args": {"current": "120", "previous": "100"},
+            "expected_value": "0.2000",
+            "unit": "ratio",
+        }],
+    })]
+    predictions = {
+        "calc1": Prediction.from_dict({
+            "id": "calc1",
+            "answer": "Growth was 20%.",
+            "calculations": [{"id": "growth", "operation": "growth_rate", "value": "0.2000", "unit": "ratio"}],
+        })
+    }
+
+    report = evaluate_predictions(cases, predictions)
+
+    assert report["summary"]["answer_calculation_consistency"] == 1.0

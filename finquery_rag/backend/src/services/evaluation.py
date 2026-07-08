@@ -14,6 +14,7 @@ import re
 from statistics import mean
 from typing import Any, Iterable
 
+from .answer_validation import validate_answer_calculations
 from .financial_tools import (
     convert_scale,
     format_ratio_percent,
@@ -226,6 +227,10 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
     number_score = _number_score(answer, case.expected_numbers)
     no_answer_score = _no_answer_score(answer_lower, case.expected_no_answer)
     calculation_score = _calculation_score(case.expected_calculations, prediction.calculations)
+    answer_calculation_consistency = _answer_calculation_consistency(
+        answer,
+        prediction.calculations,
+    )
 
     required_scores = []
     if case.expected_sources:
@@ -238,6 +243,8 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         required_scores.append(no_answer_score)
     if case.expected_calculations:
         required_scores.append(calculation_score)
+    if prediction.calculations:
+        required_scores.append(answer_calculation_consistency)
 
     passed = bool(required_scores) and all(score >= 1.0 for score in required_scores)
     if not required_scores:
@@ -254,6 +261,7 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         "number_accuracy": number_score,
         "no_answer_accuracy": no_answer_score,
         "calculation_accuracy": calculation_score,
+        "answer_calculation_consistency": answer_calculation_consistency,
         "latency_ms": prediction.latency_ms,
         "tags": list(case.tags),
     }
@@ -294,6 +302,9 @@ def evaluate_predictions(
             "number_accuracy": _avg(score["number_accuracy"] for score in case_scores),
             "no_answer_accuracy": _avg(score["no_answer_accuracy"] for score in case_scores),
             "calculation_accuracy": _avg(score["calculation_accuracy"] for score in case_scores),
+            "answer_calculation_consistency": _avg(
+                score["answer_calculation_consistency"] for score in case_scores
+            ),
             "p95_latency_ms": _percentile(latencies, 95),
         },
         "missing_case_ids": missing,
@@ -365,6 +376,8 @@ def compare_reports(
         "answer_contains",
         "number_accuracy",
         "no_answer_accuracy",
+        "calculation_accuracy",
+        "answer_calculation_consistency",
     ]
 
     metrics = {}
@@ -436,6 +449,13 @@ def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return rows
 
 
+
+
+def _answer_calculation_consistency(answer: str, calculations: tuple[dict[str, Any], ...]) -> float:
+    if not calculations:
+        return 1.0
+    validation = validate_answer_calculations(answer, list(calculations))
+    return 1.0 if validation.ok else 0.0
 
 def _calculation_score(
     expected_calculations: tuple[ExpectedCalculation, ...],
