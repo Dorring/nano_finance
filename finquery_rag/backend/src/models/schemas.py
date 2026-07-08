@@ -30,6 +30,10 @@ class QueryResponse(BaseModel):
     # 会话ID（Phase 4）
     rewritten_question: str | None = None
     # 改写后的独立问题（Phase 4，仅当使用了历史上下文时有值）
+    confidence: float | None = None
+    # 检索置信度 0.0-1.0（Phase 3）
+    context_sufficient: bool | None = None
+    # 检索上下文是否充分（Phase 3）
 
 class UploadResponse(BaseModel):
     """

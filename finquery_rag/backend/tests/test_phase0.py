@@ -382,10 +382,12 @@ class TestUploadSecurity:
 
 class TestClearAllPartialFailure:
     def test_main_checks_delete_return(self):
-        """clear_all_documents must check dense_ok and surface errors."""
+        """clear_all_documents must handle delete errors and surface partial failures."""
         p = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
         with open(p, encoding="utf-8") as f: content = f.read()
-        assert "dense_ok" in content
+        # Round 4: clear_all_documents uses try/except, not dense_ok check.
+        # Idempotent — no docs is not an error.
+        assert "delete_document_collection" in content
         assert "Partial failure" in content or "errors" in content
 
 

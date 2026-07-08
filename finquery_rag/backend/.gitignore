@@ -207,4 +207,6 @@ marimo/_lsp/
 __marimo__/
 .DS_Store
 chroma_db/
-funcs.txt
+funcs.txt*.db
+*.db-journal
+pytest-cache-files-*/

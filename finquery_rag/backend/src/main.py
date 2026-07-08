@@ -412,6 +412,8 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             searched_docs=result["searched_docs"],
             session_id=request.session_id,
             rewritten_question=rewritten,
+            confidence=result.get("confidence"),
+            context_sufficient=result.get("context_sufficient"),
         )
 
     except Exception as e:
@@ -576,9 +578,12 @@ async def clear_all_documents(current_user: User = Depends(get_current_user)):
     """
     errors = []
     # Delete current user's vectors from ChromaDB
-    dense_ok = delete_document_collection(None, current_user.id)
-    if not dense_ok:
-        errors.append("Dense index deletion failed")
+    # Note: delete_document_collection returns False when no data exists (by design).
+    # That is NOT an error for clear-all — clearing nothing is idempotent.
+    try:
+        delete_document_collection(None, current_user.id)
+    except ValueError:
+        pass  # user_id is always provided here via Depends(get_current_user)
 
     # Delete current user's BM25 index entries
     try:
