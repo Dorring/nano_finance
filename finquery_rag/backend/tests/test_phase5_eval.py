@@ -182,3 +182,76 @@ def test_invalid_case_requires_question():
         assert "missing question" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_score_prediction_validates_expected_calculation():
+    case = EvaluationCase.from_dict({
+        "id": "calc1",
+        "question": "What was revenue growth?",
+        "expected_calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "args": {"current": "120", "previous": "100"},
+            "expected_value": "0.2000",
+            "tolerance": "0.0001",
+            "unit": "ratio",
+        }],
+    })
+    pred = Prediction.from_dict({
+        "id": "calc1",
+        "answer": "Revenue grew 20%.",
+        "calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "value": "0.2000",
+            "unit": "ratio",
+        }],
+    })
+
+    score = score_prediction(case, pred)
+
+    assert score["calculation_accuracy"] == 1.0
+    assert score["passed"] is True
+
+
+def test_score_prediction_fails_missing_calculation():
+    case = EvaluationCase.from_dict({
+        "id": "calc1",
+        "question": "What was revenue growth?",
+        "expected_calculations": [{
+            "id": "growth",
+            "operation": "growth_rate",
+            "args": {"current": "120", "previous": "100"},
+            "expected_value": "0.2000",
+        }],
+    })
+    pred = Prediction.from_dict({"id": "calc1", "answer": "Revenue grew 20%."})
+
+    score = score_prediction(case, pred)
+
+    assert score["calculation_accuracy"] == 0.0
+    assert score["passed"] is False
+
+
+def test_evaluate_predictions_includes_calculation_accuracy():
+    cases = [EvaluationCase.from_dict({
+        "id": "calc1",
+        "question": "What is share?",
+        "expected_calculations": [{
+            "id": "share",
+            "operation": "percentage_share",
+            "args": {"part": "25", "total": "100"},
+            "expected_value": "0.2500",
+        }],
+    })]
+    predictions = {
+        "calc1": Prediction.from_dict({
+            "id": "calc1",
+            "answer": "Share was 25%.",
+            "calculations": [{"id": "share", "operation": "percentage_share", "value": "0.2500"}],
+        })
+    }
+
+    report = evaluate_predictions(cases, predictions)
+
+    assert report["summary"]["calculation_accuracy"] == 1.0
