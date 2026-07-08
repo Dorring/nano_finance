@@ -22,7 +22,7 @@ sys.modules["jieba_fast"].cut_for_search = lambda text: [text]
 sys.modules["chromadb.utils.embedding_functions"] = mock_st_ef
 
 from services.rag_engine import RAGEngine
-from services.reranker import HeuristicReranker, NoopReranker, build_reranker
+from services.reranker import CrossEncoderReranker, HeuristicReranker, NoopReranker, build_reranker
 
 
 class MockLLMClient:
@@ -70,11 +70,24 @@ def test_build_reranker_default_disabled():
 def test_build_reranker_known_names():
     assert isinstance(build_reranker("noop"), NoopReranker)
     assert isinstance(build_reranker("heuristic"), HeuristicReranker)
+    assert isinstance(
+        build_reranker("cross-encoder", model_name_or_path="/models/reranker"),
+        CrossEncoderReranker,
+    )
+
+
+def test_build_reranker_requires_model_for_cross_encoder():
+    try:
+        build_reranker("cross-encoder")
+    except ValueError as exc:
+        assert "RAG_RERANKER_MODEL" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
 
 
 def test_build_reranker_rejects_unknown():
     try:
-        build_reranker("cross-encoder")
+        build_reranker("unknown")
     except ValueError as exc:
         assert "Unknown reranker" in str(exc)
     else:
@@ -183,3 +196,35 @@ def test_rag_engine_summarizes_retrieved_chunks_without_content():
         "reranker": "heuristic",
     }]
     assert "content" not in summary[0]
+
+
+class FakeCrossEncoder:
+    def predict(self, pairs):
+        return [0.1 if "cash" in text else 0.9 for _, text in pairs]
+
+
+def test_cross_encoder_reranker_uses_model_scores():
+    chunks = [
+        chunk("a", "cash flow", 0.9),
+        chunk("b", "revenue margin", 0.1),
+    ]
+    reranker = CrossEncoderReranker(
+        model_name_or_path="/models/fake",
+        model=FakeCrossEncoder(),
+    )
+
+    result = reranker.rerank("revenue", chunks, top_k=1)
+
+    assert len(result) == 1
+    assert result[0]["doc_id"] == "b"
+    assert result[0]["reranker"] == "cross-encoder"
+    assert result[0]["rerank_score"] == 0.9
+
+
+def test_cross_encoder_reranker_requires_model_or_path():
+    try:
+        CrossEncoderReranker(model_name_or_path="")
+    except ValueError as exc:
+        assert "requires a model" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")

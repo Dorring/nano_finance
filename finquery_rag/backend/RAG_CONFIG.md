@@ -1,0 +1,38 @@
+# FinQuery RAG configuration
+
+Runtime configuration is read from environment variables.
+
+## Reranking
+
+Reranking is disabled by default.
+
+```bash
+RAG_RERANKER=heuristic
+RAG_CANDIDATE_MULTIPLIER=2
+```
+
+Available rerankers:
+
+- unset / `none` / `off` — disabled, preserves existing retrieval behavior.
+- `heuristic` — dependency-free lexical fallback for local experiments.
+- `cross-encoder` — optional model-backed reranker.
+
+Cross-encoder reranking must also set a model name or local path:
+
+```bash
+RAG_RERANKER=cross-encoder
+RAG_RERANKER_MODEL=/path/to/local/cross-encoder-model
+RAG_CANDIDATE_MULTIPLIER=4
+```
+
+Use a local model path for production-like runs. If `RAG_RERANKER_MODEL` is
+missing, initialization fails explicitly instead of silently downloading a model
+or changing retrieval behavior.
+
+For any reranker change, run an eval report before merging:
+
+```bash
+python -m src.eval_cli run --cases <cases.jsonl> --out <candidate.jsonl> --user-id <id>
+python -m src.eval_cli score --cases <cases.jsonl> --predictions <candidate.jsonl> --out <candidate_report.json>
+python -m src.eval_cli compare --baseline <baseline_report.json> --candidate <candidate_report.json>
+```
