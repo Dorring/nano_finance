@@ -69,3 +69,19 @@ conservative by design:
 The router exposes `intent` and `intent_confidence` in `/query` responses and
 the final `/query/stream` event. It does not call an LLM and has no external
 dependencies.
+
+## Runtime storage paths
+
+Use explicit paths in production so the app, health checks, eval tooling, and
+background scripts read and write the same local stores:
+
+```bash
+CHROMA_PATH=/var/lib/finquery/chroma_db
+DOCUMENT_REGISTRY_DB_PATH=/var/lib/finquery/document_registry.db
+BM25_DB_PATH=/var/lib/finquery/rag_bm25.db
+SESSIONS_DB_PATH=/var/lib/finquery/sessions.db
+TRACE_DB_PATH=/var/lib/finquery/trace_log.db
+```
+
+When unset, FinQuery keeps the existing development defaults under the backend
+working directory.

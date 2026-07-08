@@ -1,5 +1,6 @@
 from .trace import TraceLogger
 import time
+import os
 
 import asyncio
 from .vector_store import query_collection, list_all_documents
@@ -42,7 +43,8 @@ class RAGEngine:
                  use_hybrid: bool = True,
                  max_context_tokens: int = None,
                  max_new_tokens: int = None,
-                 bm25_db_path: str = "rag_bm25.db",
+                 bm25_db_path: str | None = None,
+                 trace_db_path: str | None = None,
                  reranker_name: str | None = None,
                  reranker_model: str | None = None,
                  retrieval_candidate_multiplier: int = 2):
@@ -55,7 +57,8 @@ class RAGEngine:
             use_hybrid (bool): 是否启用 BM25 + 向量搜索的混合检索模式，默认为 True。
             max_context_tokens (int): 上下文最大 Token 限制，默认 1100（适配 2048 上下文窗口）。
             max_new_tokens (int): 模型单次最大生成 Token 数，默认 512。
-            bm25_db_path (str): SQLite FTS5 稀疏检索数据库路径，默认 "rag_bm25.db"。
+            bm25_db_path (str | None): SQLite FTS5 稀疏检索数据库路径。未传入时读取 BM25_DB_PATH。
+            trace_db_path (str | None): TraceLogger SQLite 路径。未传入时读取 TRACE_DB_PATH。
             reranker_name (str | None): Optional reranker name. None disables reranking.
             reranker_model (str | None): Optional reranker model name/path for model-backed rerankers.
             retrieval_candidate_multiplier (int): Candidate expansion factor for hybrid retrieval.
@@ -66,8 +69,15 @@ class RAGEngine:
         self.max_context_tokens = max_context_tokens or self.DEFAULT_MAX_CONTEXT_TOKENS
         self.max_new_tokens = max_new_tokens or self.DEFAULT_MAX_NEW_TOKENS
 
+        if bm25_db_path is None:
+            bm25_db_path = os.getenv("BM25_DB_PATH", "rag_bm25.db")
+        if trace_db_path is None:
+            trace_db_path = os.getenv("TRACE_DB_PATH", "trace_log.db")
+
+        self.bm25_db_path = bm25_db_path
+        self.trace_db_path = trace_db_path
         self.bm25_retriever = SqliteBM25Retriever(db_path=bm25_db_path)
-        self.trace_logger = TraceLogger(sample_rate=1.0, redact_content=True)
+        self.trace_logger = TraceLogger(db_path=trace_db_path, sample_rate=1.0, redact_content=True)
         self.min_score_threshold = 0.0  # chunks below this score are discarded
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
