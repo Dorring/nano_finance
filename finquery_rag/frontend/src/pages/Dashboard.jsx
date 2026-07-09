@@ -15,12 +15,20 @@ const createSessionId = () => {
 };
 
 const sessionStorageKey = (email) => `finquery_session_id:${email || 'anonymous'}`;
+const RETRIEVAL_K_STORAGE_KEY = 'finquery_retrieval_k';
+const RETRIEVAL_K_OPTIONS = [3, 5, 8, 12, 20];
+
+const loadRetrievalK = () => {
+  const stored = Number(localStorage.getItem(RETRIEVAL_K_STORAGE_KEY));
+  return RETRIEVAL_K_OPTIONS.includes(stored) ? stored : 5;
+};
 
 function Dashboard() {
   const [documents, setDocuments] = useState([]);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
+  const [retrievalK, setRetrievalK] = useState(loadRetrievalK);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { user, logout } = useAuth();
@@ -155,6 +163,13 @@ function Dashboard() {
     setSelectedDocs(selectedDocs.filter((name) => name !== docName));
   };
 
+  const handleRetrievalKChange = (nextValue) => {
+    const nextK = Number(nextValue);
+    if (!RETRIEVAL_K_OPTIONS.includes(nextK)) return;
+    localStorage.setItem(RETRIEVAL_K_STORAGE_KEY, String(nextK));
+    setRetrievalK(nextK);
+  };
+
   const handleSendMessage = async (question) => {
     const userMessage = {
       role: 'user',
@@ -180,6 +195,7 @@ function Dashboard() {
         question,
         documentNames,
         activeSessionId,
+        retrievalK,
         // onToken - append each token to the message
         (token) => {
           setMessages((prev) => {
@@ -267,6 +283,9 @@ function Dashboard() {
           isLoading={isLoading}
           onExampleClick={handleSendMessage}
           sessionId={sessionId}
+          retrievalK={retrievalK}
+          retrievalKOptions={RETRIEVAL_K_OPTIONS}
+          onRetrievalKChange={handleRetrievalKChange}
           onNewSession={handleNewSession}
         />
         <InputBar

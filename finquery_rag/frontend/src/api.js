@@ -91,11 +91,11 @@ export const submitAnswerFeedback = async (traceId, rating, comment = null) => {
 };
 
 // Query documents (non-streaming)
-export const queryDocuments = async (question, documentNames = null) => {
+export const queryDocuments = async (question, documentNames = null, nResults = 5) => {
   const response = await api.post('/query', {
     question,
     document_names: documentNames,
-    n_results: 5,
+    n_results: nResults,
   });
   return response.data;
 };
@@ -117,7 +117,7 @@ export const clearSession = async (sessionId) => {
 };
 
 // Query documents with streaming
-export const queryDocumentsStream = async (question, documentNames, sessionId, onToken, onDone, onError) => {
+export const queryDocumentsStream = async (question, documentNames, sessionId, nResults, onToken, onDone, onError) => {
   const token = localStorage.getItem('token');
 
   const response = await fetch(`${API_BASE_URL}/query/stream`, {
@@ -129,7 +129,7 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, o
     body: JSON.stringify({
       question,
       document_names: documentNames,
-      n_results: 5,
+      n_results: nResults,
       session_id: sessionId,
     }),
   });

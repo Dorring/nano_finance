@@ -1,7 +1,16 @@
 import React, { useRef, useEffect } from 'react';
 import Message from './Message';
 
-const ChatArea = ({ messages, isLoading, onExampleClick, sessionId, onNewSession }) => {
+const ChatArea = ({
+  messages,
+  isLoading,
+  onExampleClick,
+  sessionId,
+  retrievalK,
+  retrievalKOptions,
+  onRetrievalKChange,
+  onNewSession,
+}) => {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -23,8 +32,22 @@ const ChatArea = ({ messages, isLoading, onExampleClick, sessionId, onNewSession
   return (
     <div className="chat-area">
       <div className="chat-toolbar">
-        <div className="session-label">
-          Session {sessionId ? sessionId.slice(0, 8) : 'starting'}
+        <div className="toolbar-left">
+          <div className="session-label">
+            Session {sessionId ? sessionId.slice(0, 8) : 'starting'}
+          </div>
+          <label className="retrieval-control">
+            <span>Top-K</span>
+            <select
+              value={retrievalK}
+              onChange={(event) => onRetrievalKChange(event.target.value)}
+              disabled={isLoading}
+            >
+              {retrievalKOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
         </div>
         <button
           type="button"
