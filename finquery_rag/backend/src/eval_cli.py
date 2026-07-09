@@ -15,10 +15,12 @@ import os
 from .services.evaluation import (
     compare_reports,
     evaluate_predictions,
+    export_replay_cases_from_feedback,
     export_replay_cases_from_traces,
     load_jsonl_cases,
     load_jsonl_predictions,
 )
+from .services.feedback import FeedbackStore
 from .services.trace import TraceLogger
 from .services.eval_runner import run_jsonl_cases
 
@@ -82,6 +84,23 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--tenant-id", type=int, required=True)
     replay.add_argument("--limit", type=int, default=100)
     replay.add_argument("--out", required=True, help="Output replay JSONL")
+
+    feedback_replay = sub.add_parser("feedback-to-replay", help="Export feedback-linked trace replay cases")
+    feedback_replay.add_argument(
+        "--feedback-db",
+        default=os.getenv("FEEDBACK_DB_PATH", "feedback.db"),
+        help="Feedback SQLite DB",
+    )
+    feedback_replay.add_argument(
+        "--trace-db",
+        default=os.getenv("TRACE_DB_PATH", "trace_log.db"),
+        help="TraceLogger SQLite DB",
+    )
+    feedback_replay.add_argument("--tenant-id", type=int, required=True)
+    feedback_replay.add_argument("--rating", choices=["up", "down"], default="down")
+    feedback_replay.add_argument("--limit", type=int, default=100)
+    feedback_replay.add_argument("--offset", type=int, default=0)
+    feedback_replay.add_argument("--out", required=True, help="Output replay JSONL")
 
     bm25_check = sub.add_parser("bm25-check", help="Check BM25/FTS5 index consistency")
     bm25_check.add_argument(
@@ -171,6 +190,23 @@ def main(argv: list[str] | None = None) -> int:
         traces = logger.query_traces(tenant_id=args.tenant_id, limit=args.limit)
         cases = export_replay_cases_from_traces(traces, args.out)
         print(f"exported {len(cases)} replay cases to {args.out}")
+        return 0
+
+    if args.command == "feedback-to-replay":
+        feedback_store = FeedbackStore(db_path=args.feedback_db)
+        trace_logger = TraceLogger(db_path=args.trace_db, sample_rate=1.0, redact_content=True)
+        feedback_rows = feedback_store.list_for_tenant(
+            tenant_id=args.tenant_id,
+            limit=args.limit,
+            offset=args.offset,
+            rating=args.rating,
+        )
+        cases = export_replay_cases_from_feedback(
+            feedback_rows,
+            lambda trace_id: trace_logger.get_trace_for_tenant(args.tenant_id, trace_id),
+            args.out,
+        )
+        print(f"exported {len(cases)} feedback replay cases to {args.out}")
         return 0
 
     if args.command == "bm25-check":

@@ -137,6 +137,21 @@ curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/feedback
 Feedback responses omit `tenant_id`. Ratings are constrained to `up` or `down`;
 comments are optional and capped at 2000 characters.
 
+Export down-rated traced answers into replay cases for triage and regression
+testing:
+
+```bash
+python -m src.eval_cli feedback-to-replay \
+  --feedback-db "$FEEDBACK_DB_PATH" \
+  --trace-db "$TRACE_DB_PATH" \
+  --tenant-id 1 \
+  --rating down \
+  --out eval/feedback_replay.jsonl
+```
+
+The output is regular evaluation-case JSONL. Feedback fields are preserved in
+case metadata; missing trace rows are skipped.
+
 ## Trace retention
 
 Trace logs are stored in SQLite and can grow over time. Use explicit retention
