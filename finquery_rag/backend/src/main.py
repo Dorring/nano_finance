@@ -13,6 +13,7 @@ from .services.document_registry import DocumentRegistry, VALID_TRANSITIONS
 from .services.session_manager import SessionManager
 from .services.health import collect_health_snapshot
 from .services.intent import classify_query_intent
+from .services.feedback import FeedbackStore
 from .services.streaming import make_stream_done_event, safe_log_query_trace
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
@@ -73,6 +74,7 @@ llm_model_name = os.getenv("LLM_MODEL_NAME", "nanochat")
 rag_engine: RAGEngine | None = None
 document_registry = DocumentRegistry()
 session_manager = SessionManager()
+feedback_store = FeedbackStore()
 
 def get_rag_engine():
     """
@@ -121,6 +123,12 @@ def _json_field(value):
         return json.loads(value)
     except (TypeError, json.JSONDecodeError):
         return value
+
+
+def _public_feedback(row: dict) -> dict:
+    """Return feedback data without exposing tenant_id."""
+    keys = ["feedback_id", "trace_id", "rating", "comment", "created_at"]
+    return {key: row.get(key) for key in keys}
 
 
 def _public_trace(row: dict) -> dict:
@@ -271,6 +279,43 @@ async def get_query_trace(trace_id: str, current_user: User = Depends(get_curren
     if row is None:
         raise HTTPException(404, "Trace not found")
     return {"trace": _public_trace(row)}
+
+
+@app.post("/feedback", response_model=FeedbackResponse)
+async def submit_answer_feedback(request: FeedbackRequest, current_user: User = Depends(get_current_user)):
+    """Store current user's answer feedback after validating trace ownership."""
+    trace = get_rag_engine().trace_logger.get_trace_for_tenant(current_user.id, request.trace_id)
+    if trace is None:
+        raise HTTPException(404, "Trace not found")
+
+    row = feedback_store.submit(
+        tenant_id=current_user.id,
+        trace_id=request.trace_id,
+        rating=request.rating,
+        comment=request.comment,
+    )
+    if row is None:
+        raise HTTPException(400, "Invalid feedback")
+    return _public_feedback(row)
+
+
+@app.get("/feedback")
+async def list_answer_feedback(
+    limit: int = 50,
+    offset: int = 0,
+    rating: str | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    """List current user's answer feedback for review/export."""
+    if rating is not None and rating not in FeedbackStore.VALID_RATINGS:
+        raise HTTPException(400, "Invalid rating")
+    rows = feedback_store.list_for_tenant(current_user.id, limit=limit, offset=offset, rating=rating)
+    return {
+        "feedback": [_public_feedback(row) for row in rows],
+        "total_returned": len(rows),
+        "limit": max(0, min(int(limit or 50), 1000)),
+        "offset": max(0, int(offset or 0)),
+    }
 
 
 @app.get("/documents/{doc_name}")

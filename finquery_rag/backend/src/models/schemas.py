@@ -41,6 +41,22 @@ class QueryResponse(BaseModel):
     trace_id: str | None = None
     # 查询追踪ID（Phase 12）
 
+class FeedbackRequest(BaseModel):
+    """User answer feedback tied to a persisted query trace."""
+    trace_id: str = Field(..., min_length=1, max_length=128)
+    rating: str = Field(..., pattern=r'^(up|down)$')
+    comment: str | None = Field(None, max_length=2000)
+
+
+class FeedbackResponse(BaseModel):
+    """Stored answer feedback response."""
+    feedback_id: str
+    trace_id: str
+    rating: str
+    comment: str | None = None
+    created_at: float
+
+
 class UploadResponse(BaseModel):
     """
     文件上传响应模型，用于封装文件上传成功后返回的信息。
