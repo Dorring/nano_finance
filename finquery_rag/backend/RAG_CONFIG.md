@@ -81,6 +81,7 @@ DOCUMENT_REGISTRY_DB_PATH=/var/lib/finquery/document_registry.db
 BM25_DB_PATH=/var/lib/finquery/rag_bm25.db
 SESSIONS_DB_PATH=/var/lib/finquery/sessions.db
 TRACE_DB_PATH=/var/lib/finquery/trace_log.db
+FEEDBACK_DB_PATH=/var/lib/finquery/feedback.db
 ```
 
 When unset, FinQuery keeps the existing development defaults under the backend
@@ -118,6 +119,23 @@ curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/traces/<trace_id>
 
 Trace API responses omit `tenant_id` and decode stored JSON columns such as
 sources, candidates, and filter conditions.
+
+## Answer feedback
+
+Authenticated users can submit feedback for their own traced answers. The API
+validates that the `trace_id` belongs to the current user before storing
+feedback:
+
+```bash
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"trace_id":"<trace_id>","rating":"down","comment":"missing citation"}' \
+  http://127.0.0.1:8000/feedback
+
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/feedback
+```
+
+Feedback responses omit `tenant_id`. Ratings are constrained to `up` or `down`;
+comments are optional and capped at 2000 characters.
 
 ## Trace retention
 
