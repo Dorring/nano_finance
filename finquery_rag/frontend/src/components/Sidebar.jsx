@@ -5,6 +5,14 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  const statusLabel = {
+    pending: 'Pending',
+    parsing: 'Parsing',
+    indexing: 'Indexing',
+    ready: 'Ready',
+    failed: 'Failed',
+  };
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -118,19 +126,33 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
           <div className="document-list">
             {documents.map((doc) => {
               const isSelected = selectedDocs.includes(doc.name);
+              const status = doc.status || 'ready';
+              const isSelectable = status === 'ready';
               return (
                 <div
                   key={doc.name}
-                  onClick={() => onSelectDoc(doc.name)}
-                  className={`document-item ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    if (isSelectable) onSelectDoc(doc.name);
+                  }}
+                  className={`document-item ${isSelected ? 'selected' : ''} ${!isSelectable ? 'disabled' : ''}`}
                 >
-                  <div className="document-name">{doc.name}</div>
+                  <div className="document-title-row">
+                    <div className="document-name">{doc.name}</div>
+                    <span className={`document-status status-${status}`}>
+                      {statusLabel[status] || status}
+                    </span>
+                  </div>
                   <div className="document-meta">
                     <div className="document-stats">
                       <span>{doc.pages || 0} pages</span>
                       <span>•</span>
                       <span>{doc.count} chunks</span>
                     </div>
+                    {doc.error_message && (
+                      <div className="document-error" title={doc.error_message}>
+                        {doc.error_message}
+                      </div>
+                    )}
                     <button
                       className="delete-btn"
                       onClick={(e) => handleDelete(e, doc.name)}

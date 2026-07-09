@@ -1,23 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { getCurrentUser } from '../api';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './authContext';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const token = localStorage.getItem('token');
-    if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
-    }
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setUser(null);
   }, []);
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const userData = await getCurrentUser();
       setUser(userData);
@@ -27,16 +21,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [logout]);
+
+  useEffect(() => {
+    // Check if user is logged in on mount
+    const token = localStorage.getItem('token');
+    if (token) {
+      loadUser();
+    } else {
+      setLoading(false);
+    }
+  }, [loadUser]);
 
   const loginUser = (token, email) => {
     localStorage.setItem('token', token);
     setUser({ email });
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
   };
 
   return (
@@ -44,12 +43,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
 };
