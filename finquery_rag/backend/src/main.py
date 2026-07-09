@@ -113,6 +113,39 @@ def _public_registry_document(row: dict) -> dict:
     return {key: row.get(key) for key in keys}
 
 
+def _json_field(value):
+    """Decode trace JSON columns while tolerating legacy/plain values."""
+    if value is None:
+        return None
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return value
+
+
+def _public_trace(row: dict) -> dict:
+    """Return tenant-scoped trace data without exposing tenant_id."""
+    keys = [
+        "trace_id",
+        "query_original",
+        "query_rewritten",
+        "intent",
+        "final_context",
+        "answer",
+        "model_name",
+        "prompt_version",
+        "index_version",
+        "latency_ms",
+        "error_message",
+        "created_at",
+    ]
+    trace = {key: row.get(key) for key in keys}
+    trace["filter_conditions"] = _json_field(row.get("filter_conditions"))
+    trace["candidates"] = _json_field(row.get("candidates_json"))
+    trace["sources"] = _json_field(row.get("sources_json")) or []
+    return trace
+
+
 ######################### API Endpoints #########################
 
 # <---------------------- GET requests ---------------------->
@@ -201,6 +234,44 @@ async def list_document_registry(status: str | None = None, current_user: User =
         "total_documents": len(rows),
         "status_counts": document_registry.status_counts(current_user.id),
     }
+
+@app.get("/traces")
+async def list_query_traces(
+    limit: int = 20,
+    offset: int = 0,
+    error_only: bool = False,
+    created_after: float | None = None,
+    created_before: float | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    """List current user's recent query traces for troubleshooting/replay."""
+    rows = get_rag_engine().trace_logger.query_traces(
+        tenant_id=current_user.id,
+        limit=limit,
+        offset=offset,
+        created_after=created_after,
+        created_before=created_before,
+        error_only=error_only,
+    )
+    return {
+        "traces": [_public_trace(row) for row in rows],
+        "total_returned": len(rows),
+        "limit": max(0, min(int(limit or 20), 1000)),
+        "offset": max(0, int(offset or 0)),
+    }
+
+
+@app.get("/traces/{trace_id}")
+async def get_query_trace(trace_id: str, current_user: User = Depends(get_current_user)):
+    """Return one query trace when it belongs to the current user."""
+    if not trace_id or len(trace_id) > 128:
+        raise HTTPException(400, "Invalid trace_id")
+
+    row = get_rag_engine().trace_logger.get_trace_for_tenant(current_user.id, trace_id)
+    if row is None:
+        raise HTTPException(404, "Trace not found")
+    return {"trace": _public_trace(row)}
+
 
 @app.get("/documents/{doc_name}")
 async def get_document_stats(doc_name: str, current_user: User = Depends(get_current_user)):
