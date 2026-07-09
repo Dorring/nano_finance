@@ -5,7 +5,7 @@ It scores saved predictions and can convert trace records into replay cases.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import json
@@ -371,6 +371,50 @@ def export_replay_cases_from_traces(
     write_jsonl(output_path, (case.to_dict() for case in cases))
     return cases
 
+
+def feedback_to_replay_case(feedback: dict[str, Any], trace: dict[str, Any]) -> EvaluationCase:
+    """Convert one feedback row and its trace into a replay case.
+
+    Feedback metadata is kept outside expected fields so exported cases still
+    load as regular EvaluationCase fixtures. Down-rated cases are tagged for
+    triage and replay prioritization.
+    """
+    case = trace_to_replay_case(trace)
+    rating = feedback.get("rating")
+    tags = list(case.tags)
+    if rating:
+        tags.append(f"feedback_{rating}")
+    tags.append("feedback_replay")
+
+    metadata = dict(case.metadata)
+    metadata.update({
+        "feedback_id": feedback.get("feedback_id"),
+        "feedback_rating": rating,
+        "feedback_comment": feedback.get("comment"),
+        "feedback_created_at": feedback.get("created_at"),
+    })
+
+    return replace(
+        case,
+        tags=tuple(dict.fromkeys(tags)),
+        metadata=metadata,
+    )
+
+
+def export_replay_cases_from_feedback(
+    feedback_rows: Iterable[dict[str, Any]],
+    trace_lookup,
+    output_path: str | Path,
+) -> list[EvaluationCase]:
+    """Export replay cases for feedback rows that still have matching traces."""
+    cases = []
+    for feedback in feedback_rows:
+        trace = trace_lookup(feedback.get("trace_id"))
+        if trace is None:
+            continue
+        cases.append(feedback_to_replay_case(feedback, trace))
+    write_jsonl(output_path, (case.to_dict() for case in cases))
+    return cases
 
 
 def compare_reports(
