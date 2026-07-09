@@ -1,0 +1,47 @@
+name: FinQuery RAG Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - finquery_rag/frontend/**
+      - .github/workflows/finquery-rag-frontend.yml
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - finquery_rag/frontend/**
+      - .github/workflows/finquery-rag-frontend.yml
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-checks:
+    name: Frontend lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: finquery_rag/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: finquery_rag/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
