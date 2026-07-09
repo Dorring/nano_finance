@@ -85,3 +85,18 @@ TRACE_DB_PATH=/var/lib/finquery/trace_log.db
 
 When unset, FinQuery keeps the existing development defaults under the backend
 working directory.
+
+## BM25 maintenance
+
+The sparse index stores canonical chunk rows in `chunk_store` and query rows in
+the FTS5 table `fts_index`. Use the maintenance commands after manual database
+changes, interrupted writes, or before production cutovers:
+
+```bash
+python -m src.eval_cli bm25-check --db "$BM25_DB_PATH"
+python -m src.eval_cli bm25-rebuild --db "$BM25_DB_PATH"
+```
+
+Both commands accept `--user-id` for tenant-scoped checks/rebuilds. A global
+rebuild also removes orphan FTS rows that can no longer be attributed to a
+tenant.
