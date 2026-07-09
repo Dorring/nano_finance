@@ -728,6 +728,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
 
         is_sufficient, best_score, avg_score = engine._check_context_sufficiency(chunks)
+        confidence = engine._compute_confidence(chunks)
 
         # Phase 3: Build context
         context, sources = engine.build_context(chunks)
@@ -740,7 +741,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
             trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-            yield make_stream_done_event(sources=sources, context_sufficient=False, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
+            yield make_stream_done_event(sources=sources, context_sufficient=False, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
         # Phase 4: Save user question to session
@@ -758,7 +759,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
 
         trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
-        yield make_stream_done_event(sources=sources, context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
+        yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
 
     return StreamingResponse(
         generate(),

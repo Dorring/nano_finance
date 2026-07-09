@@ -61,7 +61,8 @@ const uniqueSources = (sources = []) => {
 const Message = ({ message }) => {
   const isUser = message.role === 'user';
   const diagnostics = message.diagnostics;
-  const confidence = diagnostics ? formatPercent(diagnostics.intentConfidence) : null;
+  const intentConfidence = diagnostics ? formatPercent(diagnostics.intentConfidence) : null;
+  const retrievalConfidence = diagnostics ? formatPercent(diagnostics.retrievalConfidence) : null;
   const allCitations = uniqueSources(message.sources);
   const citations = allCitations.slice(0, 5);
   const extraCitationCount = Math.max(0, allCitations.length - citations.length);
@@ -219,9 +220,14 @@ const Message = ({ message }) => {
                   Context {diagnostics.contextSufficient ? 'sufficient' : 'weak'}
                 </span>
               )}
+              {retrievalConfidence && (
+                <span className="diagnostic-chip">
+                  Retrieval {retrievalConfidence}
+                </span>
+              )}
               {diagnostics.intent && (
                 <span className="diagnostic-chip">
-                  Intent {diagnostics.intent}{confidence ? ` · ${confidence}` : ''}
+                  Intent {diagnostics.intent}{intentConfidence ? ` · ${intentConfidence}` : ''}
                 </span>
               )}
             </div>

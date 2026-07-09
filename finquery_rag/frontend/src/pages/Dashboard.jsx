@@ -226,6 +226,7 @@ function Dashboard() {
                 diagnostics: {
                   traceId: donePayload.trace_id || null,
                   contextSufficient: donePayload.context_sufficient,
+                  retrievalConfidence: donePayload.confidence,
                   intent: donePayload.intent || null,
                   intentConfidence: donePayload.intent_confidence,
                 },
