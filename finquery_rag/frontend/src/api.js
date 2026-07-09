@@ -112,27 +112,45 @@ export const queryDocumentsStream = async (question, documentNames, onToken, onD
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  let buffer = '';
+
+  const processEvent = (eventText) => {
+    const dataLines = eventText
+      .split('\n')
+      .filter(line => line.startsWith('data: '))
+      .map(line => line.slice(6));
+
+    if (dataLines.length === 0) return;
+
+    try {
+      const data = JSON.parse(dataLines.join('\n'));
+      if (data.type === 'token') {
+        onToken(data.content);
+      } else if (data.type === 'done') {
+        onDone(data);
+      }
+    } catch (parseError) {
+      console.error('Error parsing SSE data:', parseError);
+    }
+  };
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const text = decoder.decode(value);
-      const lines = text.split('\n').filter(line => line.startsWith('data: '));
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
 
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.type === 'token') {
-            onToken(data.content);
-          } else if (data.type === 'done') {
-            onDone(data.sources);
-          }
-        } catch (parseError) {
-          console.error('Error parsing SSE data:', parseError);
-        }
+      for (const eventText of events) {
+        processEvent(eventText);
       }
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      processEvent(buffer);
     }
   } catch (error) {
     if (onError) onError(error);
