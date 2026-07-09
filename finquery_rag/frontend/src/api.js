@@ -67,6 +67,13 @@ export const listDocuments = async () => {
   return response.data;
 };
 
+// List document lifecycle registry entries
+export const listDocumentRegistry = async (status = null) => {
+  const params = status ? { status } : undefined;
+  const response = await api.get('/document-registry', { params });
+  return response.data;
+};
+
 // Query documents (non-streaming)
 export const queryDocuments = async (question, documentNames = null) => {
   const response = await api.post('/query', {

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, queryDocumentsStream, deleteDocument } from '../api';
+import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument } from '../api';
 import { useAuth } from '../context/AuthContext';
 import '../App.css';
 
@@ -23,8 +23,19 @@ function Dashboard() {
 
   const fetchDocuments = async () => {
     try {
-      const data = await listDocuments();
-      setDocuments(data.documents);
+      try {
+        const registryData = await listDocumentRegistry();
+        setDocuments(registryData.documents.map((doc) => ({
+          ...doc,
+          name: doc.filename,
+          count: doc.chunk_count,
+          pages: doc.page_count,
+        })));
+      } catch (registryError) {
+        console.warn('Document registry unavailable, falling back to /documents:', registryError);
+        const data = await listDocuments();
+        setDocuments(data.documents);
+      }
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast.error('Failed to load documents');
