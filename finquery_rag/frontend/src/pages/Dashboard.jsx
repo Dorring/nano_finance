@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
 import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument } from '../api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import '../App.css';
 
 function Dashboard() {
