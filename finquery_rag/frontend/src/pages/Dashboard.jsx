@@ -241,11 +241,11 @@ function Dashboard() {
         const updated = [...prev];
         const lastMsg = updated[updated.length - 1];
         if (!lastMsg.content) {
-          lastMsg.content = 'Sorry, an error occurred while processing your question. Please try again.';
+          lastMsg.content = error.message || 'Sorry, an error occurred while processing your question. Please try again.';
         }
         return [...updated];
       });
-      toast.error('Failed to get response');
+      toast.error(error.message || 'Failed to get response');
     } finally {
       setIsLoading(false);
     }
