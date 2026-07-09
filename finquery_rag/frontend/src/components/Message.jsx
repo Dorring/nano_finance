@@ -11,8 +11,10 @@ const shortText = (value, limit = 220) => {
   return value.length > limit ? `${value.slice(0, limit)}...` : value;
 };
 
+const getSourceChunkId = (source) => source.chunk_id || source.doc_id || null;
+
 const sourceKey = (source) => [
-  source.filename || source.doc_name || source.source || 'source',
+  getSourceChunkId(source) || source.filename || source.doc_name || source.source || 'source',
   source.page ?? '',
   source.type || '',
 ].join('::');
@@ -22,6 +24,12 @@ const formatSourceLabel = (source) => {
   const page = source.page !== undefined && source.page !== null ? ` p.${source.page}` : '';
   const type = source.type && source.type !== 'text' ? ` · ${source.type}` : '';
   return `${filename}${page}${type}`;
+};
+
+const formatChunkLabel = (chunkId) => {
+  if (!chunkId) return null;
+  const suffix = chunkId.split('::').slice(-2).join('::') || chunkId;
+  return suffix.length > 28 ? `…${suffix.slice(-28)}` : suffix;
 };
 
 const uniqueSources = (sources = []) => {
@@ -42,6 +50,7 @@ const Message = ({ message }) => {
   const citations = allCitations.slice(0, 5);
   const extraCitationCount = Math.max(0, allCitations.length - citations.length);
   const [copiedTraceId, setCopiedTraceId] = useState(false);
+  const [copiedChunkId, setCopiedChunkId] = useState(null);
   const [traceDetails, setTraceDetails] = useState(null);
   const [isTraceOpen, setIsTraceOpen] = useState(false);
   const [isTraceLoading, setIsTraceLoading] = useState(false);
@@ -61,6 +70,18 @@ const Message = ({ message }) => {
       window.setTimeout(() => setCopiedTraceId(false), 1600);
     } catch (error) {
       console.error('Failed to copy trace ID:', error);
+    }
+  };
+
+  const handleCopyChunkId = async (chunkId) => {
+    if (!chunkId) return;
+
+    try {
+      await navigator.clipboard.writeText(chunkId);
+      setCopiedChunkId(chunkId);
+      window.setTimeout(() => setCopiedChunkId(null), 1600);
+    } catch (error) {
+      console.error('Failed to copy chunk ID:', error);
     }
   };
 
@@ -126,11 +147,30 @@ const Message = ({ message }) => {
         {!isUser && citations.length > 0 && (
           <div className="message-citations" aria-label="Answer sources">
             <span className="citations-label">Sources</span>
-            {citations.map((source) => (
-              <span key={sourceKey(source)} className="citation-chip">
-                {formatSourceLabel(source)}
-              </span>
-            ))}
+            {citations.map((source) => {
+              const chunkId = getSourceChunkId(source);
+              const chunkLabel = formatChunkLabel(chunkId);
+              const label = formatSourceLabel(source);
+              if (!chunkId) {
+                return (
+                  <span key={sourceKey(source)} className="citation-chip">
+                    {label}
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={sourceKey(source)}
+                  type="button"
+                  className="citation-chip citation-button"
+                  title={`Copy chunk ID: ${chunkId}`}
+                  onClick={() => handleCopyChunkId(chunkId)}
+                >
+                  <span>{label}</span>
+                  <code>{copiedChunkId === chunkId ? 'copied' : chunkLabel}</code>
+                </button>
+              );
+            })}
             {extraCitationCount > 0 && (
               <span className="citation-chip muted">+{extraCitationCount} more</span>
             )}
@@ -250,7 +290,25 @@ const Message = ({ message }) => {
                     {traceDetails.sources?.length > 0 && (
                       <div className="trace-row">
                         <span>Sources</span>
-                        <p>{uniqueSources(traceDetails.sources).map(formatSourceLabel).join(', ')}</p>
+                        <div className="trace-source-list">
+                          {uniqueSources(traceDetails.sources).map((source) => {
+                            const chunkId = getSourceChunkId(source);
+                            return (
+                              <div key={sourceKey(source)} className="trace-source-item">
+                                <span>{formatSourceLabel(source)}</span>
+                                {chunkId && (
+                                  <button
+                                    type="button"
+                                    title={`Copy chunk ID: ${chunkId}`}
+                                    onClick={() => handleCopyChunkId(chunkId)}
+                                  >
+                                    {copiedChunkId === chunkId ? 'copied' : formatChunkLabel(chunkId)}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                     {traceDetails.error_message && (

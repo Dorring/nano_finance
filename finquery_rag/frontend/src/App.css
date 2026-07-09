@@ -450,6 +450,26 @@
   background-color: #f9fafb;
 }
 
+.citation-button {
+  gap: 0.375rem;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+
+.citation-button:hover {
+  border-color: #6b7280;
+  background-color: #f9fafb;
+}
+
+.citation-button code {
+  padding: 0.0625rem 0.25rem;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+}
+
 .message-diagnostics {
   display: flex;
   flex-wrap: wrap;
@@ -626,6 +646,46 @@
   font-size: 0.75rem;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.trace-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.trace-source-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #111827;
+  font-size: 0.75rem;
+}
+
+.trace-source-item span {
+  margin: 0;
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.trace-source-item button {
+  padding: 0.125rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+}
+
+.trace-source-item button:hover {
+  border-color: #6b7280;
+  background-color: #f9fafb;
 }
 
 .trace-grid {
