@@ -18,9 +18,12 @@ const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled }) => {
     }
   };
 
+  const selectedDocsLabel = selectedDocs.length <= 2
+    ? selectedDocs.join(', ')
+    : `${selectedDocs.length} selected documents`;
   const placeholder = selectedDocs.length === 0
-    ? 'Ask a question (will search all documents)...'
-    : `Ask about ${selectedDocs.join(', ')}...`;
+    ? 'Ask a question (will search all ready documents)...'
+    : `Ask about ${selectedDocsLabel}...`;
 
   return (
     <div className="input-area">

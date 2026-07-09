@@ -40,14 +40,49 @@
   padding: 1rem;
 }
 
+.documents-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0 0.5rem;
+}
+
 .documents-section-title {
   font-size: 0.75rem;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
-  padding: 0 0.5rem;
+}
+
+.documents-section-subtitle {
+  margin-top: 0.125rem;
+  color: #9ca3af;
+  font-size: 0.6875rem;
+}
+
+.documents-actions button {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.documents-actions button:hover:not(:disabled) {
+  border-color: #000000;
+  color: #000000;
+}
+
+.documents-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .document-list {

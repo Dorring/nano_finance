@@ -1,7 +1,18 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
-const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isUploading, user, onLogout }) => {
+const Sidebar = ({
+  documents,
+  selectedDocs,
+  onSelectDoc,
+  onUpload,
+  onDelete,
+  onSelectAllReadyDocs,
+  onClearSelectedDocs,
+  isUploading,
+  user,
+  onLogout,
+}) => {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -12,6 +23,9 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
     ready: 'Ready',
     failed: 'Failed',
   };
+  const readyDocuments = documents.filter((doc) => (doc.status || 'ready') === 'ready');
+  const allReadySelected = readyDocuments.length > 0
+    && readyDocuments.every((doc) => selectedDocs.includes(doc.name));
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -116,7 +130,27 @@ const Sidebar = ({ documents, selectedDocs, onSelectDoc, onUpload, onDelete, isU
 
       {/* Documents List */}
       <div className="sidebar-content">
-        <div className="documents-section-title">Documents</div>
+        <div className="documents-section-header">
+          <div>
+            <div className="documents-section-title">Documents</div>
+            <div className="documents-section-subtitle">
+              {selectedDocs.length === 0
+                ? 'Searching all ready documents'
+                : `${selectedDocs.length} selected`}
+            </div>
+          </div>
+          {documents.length > 0 && (
+            <div className="documents-actions">
+              <button
+                type="button"
+                onClick={allReadySelected ? onClearSelectedDocs : onSelectAllReadyDocs}
+                disabled={readyDocuments.length === 0}
+              >
+                {allReadySelected ? 'Clear' : 'Select ready'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {documents.length === 0 ? (
           <div className="empty-state">

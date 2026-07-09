@@ -33,7 +33,6 @@ function Dashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const { user, logout } = useAuth();
 
-  const MAX_SELECTED_DOCS = 2;
 
   useEffect(() => {
     fetchDocuments();
@@ -150,13 +149,22 @@ function Dashboard() {
     if (selectedDocs.includes(docName)) {
       setSelectedDocs(selectedDocs.filter((name) => name !== docName));
     } else {
-      if (selectedDocs.length >= MAX_SELECTED_DOCS) {
-        toast.error(`You can only select up to ${MAX_SELECTED_DOCS} documents at a time`);
-        return;
-      }
       setSelectedDocs([...selectedDocs, docName]);
       toast.success(`Selected ${docName}`);
     }
+  };
+
+  const handleSelectAllReadyDocs = () => {
+    const readyDocs = documents
+      .filter((doc) => (doc.status || 'ready') === 'ready')
+      .map((doc) => doc.name);
+
+    setSelectedDocs(readyDocs);
+    toast.success(`Selected ${readyDocs.length} ready document${readyDocs.length === 1 ? '' : 's'}`);
+  };
+
+  const handleClearSelectedDocs = () => {
+    setSelectedDocs([]);
   };
 
   const handleRemoveDoc = (docName) => {
@@ -273,6 +281,8 @@ function Dashboard() {
         onSelectDoc={handleSelectDoc}
         onUpload={handleUpload}
         onDelete={handleDelete}
+        onSelectAllReadyDocs={handleSelectAllReadyDocs}
+        onClearSelectedDocs={handleClearSelectedDocs}
         isUploading={isUploading}
         user={user}
         onLogout={handleLogout}
