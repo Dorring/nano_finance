@@ -90,6 +90,12 @@ export const queryDocuments = async (question, documentNames = null) => {
   return response.data;
 };
 
+// Get server-side conversation memory for a session
+export const getSessionHistory = async (sessionId) => {
+  const response = await api.get(`/sessions/${sessionId}`);
+  return response.data;
+};
+
 // Clear server-side conversation memory for a session
 export const clearSession = async (sessionId) => {
   const response = await api.post('/sessions/clear', {
