@@ -74,6 +74,12 @@ export const listDocumentRegistry = async (status = null) => {
   return response.data;
 };
 
+// Get one query trace
+export const getQueryTrace = async (traceId) => {
+  const response = await api.get(`/traces/${traceId}`);
+  return response.data;
+};
+
 // Query documents (non-streaming)
 export const queryDocuments = async (question, documentNames = null) => {
   const response = await api.post('/query', {
