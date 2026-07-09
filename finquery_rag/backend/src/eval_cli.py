@@ -68,6 +68,24 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--limit", type=int, default=100)
     replay.add_argument("--out", required=True, help="Output replay JSONL")
 
+    bm25_check = sub.add_parser("bm25-check", help="Check BM25/FTS5 index consistency")
+    bm25_check.add_argument(
+        "--db",
+        default=os.getenv("BM25_DB_PATH", "rag_bm25.db"),
+        help="BM25 SQLite DB",
+    )
+    bm25_check.add_argument("--user-id", type=int, help="Optional tenant/user scope")
+    bm25_check.add_argument("--out", help="Optional JSON report output path")
+
+    bm25_rebuild = sub.add_parser("bm25-rebuild", help="Rebuild BM25/FTS5 index from chunk_store")
+    bm25_rebuild.add_argument(
+        "--db",
+        default=os.getenv("BM25_DB_PATH", "rag_bm25.db"),
+        help="BM25 SQLite DB",
+    )
+    bm25_rebuild.add_argument("--user-id", type=int, help="Optional tenant/user scope")
+    bm25_rebuild.add_argument("--out", help="Optional JSON report output path")
+
     args = parser.parse_args(argv)
 
     if args.command == "score":
@@ -128,6 +146,32 @@ def main(argv: list[str] | None = None) -> int:
         cases = export_replay_cases_from_traces(traces, args.out)
         print(f"exported {len(cases)} replay cases to {args.out}")
         return 0
+
+    if args.command == "bm25-check":
+        from .services.retrieval import SqliteBM25Retriever
+
+        retriever = SqliteBM25Retriever(db_path=args.db)
+        report = retriever.integrity_report(user_id=args.user_id)
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            path = Path(args.out)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload + "\n", encoding="utf-8")
+        print(payload)
+        return 0 if report["ok"] else 1
+
+    if args.command == "bm25-rebuild":
+        from .services.retrieval import SqliteBM25Retriever
+
+        retriever = SqliteBM25Retriever(db_path=args.db)
+        report = retriever.rebuild_fts_index(user_id=args.user_id)
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            path = Path(args.out)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload + "\n", encoding="utf-8")
+        print(payload)
+        return 0 if report["ok"] else 1
 
     return 2
 

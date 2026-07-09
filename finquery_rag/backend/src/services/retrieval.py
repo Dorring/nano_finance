@@ -191,6 +191,123 @@ class SqliteBM25Retriever:
                 cursor.execute(f"DELETE FROM fts_index WHERE doc_id IN ({placeholders})", doc_ids)
             conn.commit()
 
+    def integrity_report(self, user_id: int = None) -> Dict:
+        """Return a lightweight consistency report for chunk_store and FTS rows.
+
+        The report does not expose chunk content. When user_id is provided,
+        missing and duplicate checks are scoped to that tenant's chunk IDs.
+        Orphan FTS rows cannot be safely attributed to a tenant after their
+        chunk_store rows disappear, so orphan checks are global-only.
+        """
+        with sqlite3.connect(self.db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            if user_id is None:
+                chunk_count = cursor.execute("SELECT COUNT(*) FROM chunk_store").fetchone()[0]
+                fts_count = cursor.execute("SELECT COUNT(*) FROM fts_index").fetchone()[0]
+                missing_rows = cursor.execute("""
+                    SELECT c.doc_id
+                    FROM chunk_store c
+                    LEFT JOIN fts_index f ON f.doc_id = c.doc_id
+                    WHERE f.doc_id IS NULL
+                    ORDER BY c.doc_id
+                """).fetchall()
+                duplicate_rows = cursor.execute("""
+                    SELECT doc_id, COUNT(*) AS n
+                    FROM fts_index
+                    GROUP BY doc_id
+                    HAVING n > 1
+                    ORDER BY doc_id
+                """).fetchall()
+                orphan_rows = cursor.execute("""
+                    SELECT f.doc_id
+                    FROM fts_index f
+                    LEFT JOIN chunk_store c ON c.doc_id = f.doc_id
+                    WHERE c.doc_id IS NULL
+                    ORDER BY f.doc_id
+                """).fetchall()
+            else:
+                chunk_count = cursor.execute(
+                    "SELECT COUNT(*) FROM chunk_store WHERE user_id = ?",
+                    (user_id,),
+                ).fetchone()[0]
+                fts_count = cursor.execute("""
+                    SELECT COUNT(*)
+                    FROM fts_index f
+                    JOIN chunk_store c ON c.doc_id = f.doc_id
+                    WHERE c.user_id = ?
+                """, (user_id,)).fetchone()[0]
+                missing_rows = cursor.execute("""
+                    SELECT c.doc_id
+                    FROM chunk_store c
+                    LEFT JOIN fts_index f ON f.doc_id = c.doc_id
+                    WHERE c.user_id = ? AND f.doc_id IS NULL
+                    ORDER BY c.doc_id
+                """, (user_id,)).fetchall()
+                duplicate_rows = cursor.execute("""
+                    SELECT f.doc_id, COUNT(*) AS n
+                    FROM fts_index f
+                    JOIN chunk_store c ON c.doc_id = f.doc_id
+                    WHERE c.user_id = ?
+                    GROUP BY f.doc_id
+                    HAVING n > 1
+                    ORDER BY f.doc_id
+                """, (user_id,)).fetchall()
+                orphan_rows = []
+
+        missing_doc_ids = [row[0] for row in missing_rows]
+        duplicate_doc_ids = [row[0] for row in duplicate_rows]
+        duplicate_rows_count = sum(int(row[1]) - 1 for row in duplicate_rows)
+        orphan_doc_ids = [row[0] for row in orphan_rows]
+
+        return {
+            "ok": not missing_doc_ids and not duplicate_doc_ids and not orphan_doc_ids,
+            "user_id": user_id,
+            "chunk_store_count": int(chunk_count),
+            "fts_count": int(fts_count),
+            "missing_fts_count": len(missing_doc_ids),
+            "duplicate_doc_id_count": len(duplicate_doc_ids),
+            "duplicate_fts_rows": duplicate_rows_count,
+            "orphan_fts_count": len(orphan_doc_ids),
+            "missing_doc_ids": missing_doc_ids[:50],
+            "duplicate_doc_ids": duplicate_doc_ids[:50],
+            "orphan_doc_ids": orphan_doc_ids[:50],
+        }
+
+    def rebuild_fts_index(self, user_id: int = None) -> Dict:
+        """Rebuild FTS rows from chunk_store and return the post-rebuild report."""
+        with sqlite3.connect(self.db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            if user_id is None:
+                cursor.execute("DELETE FROM fts_index")
+                rows = cursor.execute(
+                    "SELECT doc_id, content FROM chunk_store ORDER BY doc_id"
+                ).fetchall()
+            else:
+                doc_ids = [row[0] for row in cursor.execute(
+                    "SELECT doc_id FROM chunk_store WHERE user_id = ? ORDER BY doc_id",
+                    (user_id,),
+                ).fetchall()]
+                if doc_ids:
+                    placeholders = ",".join("?" for _ in doc_ids)
+                    cursor.execute(
+                        f"DELETE FROM fts_index WHERE doc_id IN ({placeholders})",
+                        doc_ids,
+                    )
+                rows = cursor.execute(
+                    "SELECT doc_id, content FROM chunk_store WHERE user_id = ? ORDER BY doc_id",
+                    (user_id,),
+                ).fetchall()
+
+            for doc_id, content in rows:
+                tokenized_content = " ".join(jieba.cut_for_search((content or "").lower()))
+                cursor.execute(
+                    "INSERT INTO fts_index(content, doc_id) VALUES (?, ?);",
+                    (tokenized_content, doc_id),
+                )
+            conn.commit()
+
+        return self.integrity_report(user_id=user_id)
+
 
 def rrf(ranked_lists, k: int = 60):
     """
