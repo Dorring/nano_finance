@@ -43,6 +43,7 @@ const ChatArea = ({ messages, isLoading, onExampleClick, sessionId, onNewSession
             </svg>
           </div>
           <div className="chat-empty-text">Ready when you are.</div>
+          <div className="chat-empty-subtext">Follow-up questions will use this session's recent context.</div>
 
           {/* Example Questions */}
           <div className="example-questions">

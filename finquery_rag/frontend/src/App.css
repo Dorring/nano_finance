@@ -328,6 +328,11 @@
   font-weight: 500;
 }
 
+.chat-empty-subtext {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+}
+
 .message {
   display: flex;
   margin-bottom: 1.5rem;

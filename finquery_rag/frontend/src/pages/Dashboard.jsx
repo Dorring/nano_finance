@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, clearSession } from '../api';
+import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -43,6 +43,37 @@ function Dashboard() {
     localStorage.setItem(key, next);
     setSessionId(next);
   }, [user?.email]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      try {
+        const data = await getSessionHistory(sessionId);
+        if (cancelled) return;
+
+        setMessages((currentMessages) => {
+          if (currentMessages.length > 0) return currentMessages;
+          return (data.messages || []).map((message) => ({
+            role: message.role,
+            content: message.content,
+            sources: [],
+            diagnostics: null,
+          }));
+        });
+      } catch (error) {
+        console.warn('Failed to restore session history:', error);
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   const ensureSessionId = () => {
     if (sessionId) return sessionId;
