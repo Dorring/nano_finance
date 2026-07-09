@@ -39,6 +39,7 @@ async def run_case(
         "intent": result.get("intent"),
         "intent_confidence": result.get("intent_confidence"),
         "retrieval_debug": result.get("retrieval_debug", {}),
+        "trace_id": result.get("trace_id"),
         "latency_ms": latency_ms,
     }
     if "rewritten_question" in result:
