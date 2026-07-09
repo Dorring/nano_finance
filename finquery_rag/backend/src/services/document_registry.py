@@ -164,6 +164,38 @@ class DocumentRegistry:
         rows = self._conn().execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC", (tenant_id,)).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
+    def list_all(self, tenant_id, status=None):
+        """List registry rows for one tenant, optionally filtered by status."""
+        if tenant_id is None:
+            return []
+        if status is not None and status not in VALID_TRANSITIONS:
+            return []
+        with self._conn() as conn:
+            if status is None:
+                rows = conn.execute(
+                    "SELECT * FROM document_registry WHERE tenant_id = ? ORDER BY updated_at DESC",
+                    (tenant_id,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM document_registry WHERE tenant_id = ? AND status = ? ORDER BY updated_at DESC",
+                    (tenant_id, status),
+                ).fetchall()
+        return [self._row_to_dict(r) for r in rows]
+
+    def status_counts(self, tenant_id):
+        """Return lifecycle status counts for one tenant."""
+        if tenant_id is None:
+            return {}
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT status, COUNT(*) FROM document_registry WHERE tenant_id = ? GROUP BY status",
+                (tenant_id,),
+            ).fetchall()
+        counts = {status: 0 for status in VALID_TRANSITIONS}
+        counts.update({row[0]: row[1] for row in rows})
+        return counts
+
     def get_pending_for_retry(self, tenant_id=None):
         if tenant_id is not None:
             rows = self._conn().execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'failed'", (tenant_id,)).fetchall()

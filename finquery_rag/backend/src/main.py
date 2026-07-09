@@ -9,7 +9,7 @@ from .services.auth import create_access_token, get_current_user, get_current_us
 from .services.ingest import process_pdf
 from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats, clear_all_for_user
 from .services.rag_engine import RAGEngine
-from .services.document_registry import DocumentRegistry
+from .services.document_registry import DocumentRegistry, VALID_TRANSITIONS
 from .services.session_manager import SessionManager
 from .services.health import collect_health_snapshot
 from .services.intent import classify_query_intent
@@ -94,6 +94,24 @@ def get_rag_engine():
         )
     return rag_engine
 
+def _public_registry_document(row: dict) -> dict:
+    """Return document lifecycle fields without file/content hashes."""
+    keys = [
+        "document_id",
+        "filename",
+        "chunk_count",
+        "page_count",
+        "version",
+        "status",
+        "parser_version",
+        "splitter_version",
+        "embedding_version",
+        "created_at",
+        "updated_at",
+        "error_message",
+    ]
+    return {key: row.get(key) for key in keys}
+
 
 ######################### API Endpoints #########################
 
@@ -170,6 +188,19 @@ async def list_documents(current_user: User = Depends(get_current_user)):
         documents=[DocumentInfo(**doc) for doc in docs],
         total_documents=len(docs)
     )
+
+@app.get("/document-registry")
+async def list_document_registry(status: str | None = None, current_user: User = Depends(get_current_user)):
+    """List current user's document lifecycle registry rows."""
+    if status is not None and status not in VALID_TRANSITIONS:
+        raise HTTPException(400, f"Invalid document status: {status}")
+
+    rows = document_registry.list_all(current_user.id, status=status)
+    return {
+        "documents": [_public_registry_document(row) for row in rows],
+        "total_documents": len(rows),
+        "status_counts": document_registry.status_counts(current_user.id),
+    }
 
 @app.get("/documents/{doc_name}")
 async def get_document_stats(doc_name: str, current_user: User = Depends(get_current_user)):

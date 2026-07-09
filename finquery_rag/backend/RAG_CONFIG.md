@@ -121,3 +121,17 @@ python -m src.eval_cli traces-cleanup --db "$TRACE_DB_PATH" --ttl-seconds "$TRAC
 
 Pass `--tenant-id` to clean one tenant only. Without `--tenant-id`, cleanup is
 global and should be treated as an operator/admin action.
+
+## Document lifecycle registry
+
+The upload path records document lifecycle state in `document_registry`.
+Use the authenticated endpoint below to inspect current user's registry rows,
+including failed or in-progress documents that may not appear in vector-store
+document listings:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/document-registry
+curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8000/document-registry?status=failed"
+```
+
+Responses intentionally omit file and content hashes.
