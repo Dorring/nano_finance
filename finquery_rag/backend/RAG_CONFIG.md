@@ -108,3 +108,16 @@ Non-streaming `/query` responses and `/query/stream` final `done` events include
 trace export/query tooling to locate the exact request path during debugging or
 replay preparation. If trace persistence fails, the answer path still succeeds
 and `trace_id` is `null`.
+
+## Trace retention
+
+Trace logs are stored in SQLite and can grow over time. Use explicit retention
+for production or long-running demos:
+
+```bash
+TRACE_TTL_SECONDS=2592000
+python -m src.eval_cli traces-cleanup --db "$TRACE_DB_PATH" --ttl-seconds "$TRACE_TTL_SECONDS"
+```
+
+Pass `--tenant-id` to clean one tenant only. Without `--tenant-id`, cleanup is
+global and should be treated as an operator/admin action.
