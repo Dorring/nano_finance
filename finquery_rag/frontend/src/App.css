@@ -354,11 +354,22 @@
   display: inline-flex;
   align-items: center;
   padding: 0.125rem 0.5rem;
+  border: none;
   border-radius: 999px;
   background-color: #eef2ff;
   color: #3730a3;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
+  line-height: 1.2;
+}
+
+.trace-chip {
+  cursor: pointer;
+}
+
+.trace-chip:hover {
+  background-color: #e0e7ff;
 }
 
 .diagnostic-chip.ok {
