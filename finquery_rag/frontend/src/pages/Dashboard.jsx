@@ -104,6 +104,7 @@ function Dashboard() {
       role: 'assistant',
       content: '',
       sources: [],
+      diagnostics: null,
     };
     setMessages((prev) => [...prev, assistantMessage]);
     setIsLoading(true);
@@ -124,13 +125,22 @@ function Dashboard() {
             ];
           });
         },
-        // onDone - add sources when complete
-        (sources) => {
+        // onDone - add sources and diagnostic metadata when complete
+        (donePayload) => {
           setMessages((prev) => {
             const lastMsg = prev[prev.length - 1];
             return [
               ...prev.slice(0, -1),
-              { ...lastMsg, sources }
+              {
+                ...lastMsg,
+                sources: donePayload.sources || [],
+                diagnostics: {
+                  traceId: donePayload.trace_id || null,
+                  contextSufficient: donePayload.context_sufficient,
+                  intent: donePayload.intent || null,
+                  intentConfidence: donePayload.intent_confidence,
+                },
+              }
             ];
           });
         }

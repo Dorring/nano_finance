@@ -341,6 +341,36 @@
   border-bottom-color: rgba(255, 255, 255, 0.2);
 }
 
+.message-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.diagnostic-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background-color: #eef2ff;
+  color: #3730a3;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.diagnostic-chip.ok {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.diagnostic-chip.warn {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
 .loading-message {
   display: flex;
   justify-content: flex-start;
