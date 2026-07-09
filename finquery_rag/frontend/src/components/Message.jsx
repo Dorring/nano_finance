@@ -47,6 +47,8 @@ const Message = ({ message }) => {
   const [isTraceLoading, setIsTraceLoading] = useState(false);
   const [traceError, setTraceError] = useState(null);
   const [feedbackRating, setFeedbackRating] = useState(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [isFeedbackCommentOpen, setIsFeedbackCommentOpen] = useState(false);
   const [isFeedbackSaving, setIsFeedbackSaving] = useState(false);
   const [feedbackError, setFeedbackError] = useState(null);
 
@@ -84,21 +86,32 @@ const Message = ({ message }) => {
     }
   };
 
-  const handleSubmitFeedback = async (rating) => {
+  const handleSubmitFeedback = async (rating, comment = null) => {
     if (!diagnostics?.traceId || isFeedbackSaving) return;
 
     setIsFeedbackSaving(true);
     setFeedbackError(null);
 
     try {
-      await submitAnswerFeedback(diagnostics.traceId, rating);
+      await submitAnswerFeedback(diagnostics.traceId, rating, comment);
       setFeedbackRating(rating);
+      if (rating === 'down') {
+        setIsFeedbackCommentOpen(false);
+      }
     } catch (error) {
       console.error('Failed to submit feedback:', error);
       setFeedbackError('Feedback failed');
     } finally {
       setIsFeedbackSaving(false);
     }
+  };
+
+  const handleDownFeedbackClick = () => {
+    if (feedbackRating === 'down') {
+      return;
+    }
+    setIsFeedbackCommentOpen(true);
+    setFeedbackError(null);
   };
 
   return (
@@ -170,13 +183,42 @@ const Message = ({ message }) => {
                 <button
                   type="button"
                   className={`feedback-btn ${feedbackRating === 'down' ? 'selected' : ''}`}
-                  onClick={() => handleSubmitFeedback('down')}
+                  onClick={handleDownFeedbackClick}
                   disabled={isFeedbackSaving}
                 >
                   ↓
                 </button>
                 {feedbackRating && <span className="feedback-status">Saved</span>}
                 {feedbackError && <span className="feedback-error">{feedbackError}</span>}
+              </div>
+            )}
+            {isFeedbackCommentOpen && (
+              <div className="feedback-comment-box">
+                <textarea
+                  value={feedbackComment}
+                  onChange={(event) => setFeedbackComment(event.target.value)}
+                  maxLength={2000}
+                  placeholder="Optional: what was wrong or missing?"
+                  disabled={isFeedbackSaving}
+                />
+                <div className="feedback-comment-actions">
+                  <button
+                    type="button"
+                    className="feedback-submit-btn"
+                    onClick={() => handleSubmitFeedback('down', feedbackComment.trim() || null)}
+                    disabled={isFeedbackSaving}
+                  >
+                    Submit feedback
+                  </button>
+                  <button
+                    type="button"
+                    className="feedback-cancel-btn"
+                    onClick={() => setIsFeedbackCommentOpen(false)}
+                    disabled={isFeedbackSaving}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
             {isTraceOpen && (
