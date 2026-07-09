@@ -571,8 +571,9 @@ class RAGEngine:
             "model_name": self.model_name,
             "latency_ms": elapsed_ms,
         })
+        trace_id = None
         try:
-            self.trace_logger.log(**trace_data)
+            trace_id = self.trace_logger.log(**trace_data)
         except Exception:
             pass  # tracing must never break the query path
 
@@ -588,6 +589,7 @@ class RAGEngine:
             "rewritten_question": question if conversation_history else None,
             "retrieved_chunks": self._summarize_retrieved_chunks(chunks),
             "retrieval_debug": dict(self._last_retrieval_debug),
+            "trace_id": trace_id,
         }
 
     def _handle_conversational_query(self, query: str) -> str | None:

@@ -38,6 +38,8 @@ class QueryResponse(BaseModel):
     # 查询意图（Phase 10）
     intent_confidence: float | None = None
     # 意图识别置信度（Phase 10）
+    trace_id: str | None = None
+    # 查询追踪ID（Phase 12）
 
 class UploadResponse(BaseModel):
     """

@@ -444,6 +444,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             context_sufficient=result.get("context_sufficient"),
             intent=result.get("intent"),
             intent_confidence=result.get("intent_confidence"),
+            trace_id=result.get("trace_id"),
         )
 
     except Exception as e:

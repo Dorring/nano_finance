@@ -100,3 +100,10 @@ python -m src.eval_cli bm25-rebuild --db "$BM25_DB_PATH"
 Both commands accept `--user-id` for tenant-scoped checks/rebuilds. A global
 rebuild also removes orphan FTS rows that can no longer be attributed to a
 tenant.
+
+## Trace IDs
+
+Non-streaming `/query` responses include `trace_id` when structured tracing is
+successfully written. Use this ID with trace export/query tooling to locate the
+exact request path during debugging or replay preparation. If trace persistence
+fails, the answer path still succeeds and `trace_id` is `null`.
