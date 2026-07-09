@@ -11,10 +11,36 @@ const shortText = (value, limit = 220) => {
   return value.length > limit ? `${value.slice(0, limit)}...` : value;
 };
 
+const sourceKey = (source) => [
+  source.filename || source.doc_name || source.source || 'source',
+  source.page ?? '',
+  source.type || '',
+].join('::');
+
+const formatSourceLabel = (source) => {
+  const filename = source.filename || source.doc_name || source.source || 'source';
+  const page = source.page !== undefined && source.page !== null ? ` p.${source.page}` : '';
+  const type = source.type && source.type !== 'text' ? ` · ${source.type}` : '';
+  return `${filename}${page}${type}`;
+};
+
+const uniqueSources = (sources = []) => {
+  const seen = new Set();
+  return sources.filter((source) => {
+    const key = sourceKey(source);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const Message = ({ message }) => {
   const isUser = message.role === 'user';
   const diagnostics = message.diagnostics;
   const confidence = diagnostics ? formatPercent(diagnostics.intentConfidence) : null;
+  const allCitations = uniqueSources(message.sources);
+  const citations = allCitations.slice(0, 5);
+  const extraCitationCount = Math.max(0, allCitations.length - citations.length);
   const [copiedTraceId, setCopiedTraceId] = useState(false);
   const [traceDetails, setTraceDetails] = useState(null);
   const [isTraceOpen, setIsTraceOpen] = useState(false);
@@ -84,6 +110,19 @@ const Message = ({ message }) => {
           </div>
         )}
         <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+        {!isUser && citations.length > 0 && (
+          <div className="message-citations" aria-label="Answer sources">
+            <span className="citations-label">Sources</span>
+            {citations.map((source) => (
+              <span key={sourceKey(source)} className="citation-chip">
+                {formatSourceLabel(source)}
+              </span>
+            ))}
+            {extraCitationCount > 0 && (
+              <span className="citation-chip muted">+{extraCitationCount} more</span>
+            )}
+          </div>
+        )}
         {!isUser && diagnostics && (
           <>
             <div className="message-diagnostics" aria-label="Answer diagnostics">
@@ -169,7 +208,7 @@ const Message = ({ message }) => {
                     {traceDetails.sources?.length > 0 && (
                       <div className="trace-row">
                         <span>Sources</span>
-                        <p>{traceDetails.sources.map((source) => source.filename || source.doc_name || 'source').join(', ')}</p>
+                        <p>{uniqueSources(traceDetails.sources).map(formatSourceLabel).join(', ')}</p>
                       </div>
                     )}
                     {traceDetails.error_message && (
