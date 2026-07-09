@@ -3,14 +3,24 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument } from '../api';
+import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, clearSession } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
+
+const createSessionId = () => {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+};
+
+const sessionStorageKey = (email) => `finquery_session_id:${email || 'anonymous'}`;
 
 function Dashboard() {
   const [documents, setDocuments] = useState([]);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { user, logout } = useAuth();
@@ -20,6 +30,28 @@ function Dashboard() {
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    const key = sessionStorageKey(user?.email);
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      setSessionId(existing);
+      return;
+    }
+
+    const next = createSessionId();
+    localStorage.setItem(key, next);
+    setSessionId(next);
+  }, [user?.email]);
+
+  const ensureSessionId = () => {
+    if (sessionId) return sessionId;
+
+    const next = createSessionId();
+    localStorage.setItem(sessionStorageKey(user?.email), next);
+    setSessionId(next);
+    return next;
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -111,10 +143,12 @@ function Dashboard() {
 
     try {
       const documentNames = selectedDocs.length > 0 ? selectedDocs : null;
+      const activeSessionId = ensureSessionId();
 
       await queryDocumentsStream(
         question,
         documentNames,
+        activeSessionId,
         // onToken - append each token to the message
         (token) => {
           setMessages((prev) => {
@@ -161,6 +195,24 @@ function Dashboard() {
     }
   };
 
+  const handleNewSession = async () => {
+    const previousSessionId = sessionId;
+    const nextSessionId = createSessionId();
+    localStorage.setItem(sessionStorageKey(user?.email), nextSessionId);
+    setSessionId(nextSessionId);
+    setMessages([]);
+
+    if (previousSessionId) {
+      try {
+        await clearSession(previousSessionId);
+      } catch (error) {
+        console.warn('Failed to clear previous session:', error);
+      }
+    }
+
+    toast.success('Started a new chat');
+  };
+
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
@@ -183,6 +235,8 @@ function Dashboard() {
           messages={messages}
           isLoading={isLoading}
           onExampleClick={handleSendMessage}
+          sessionId={sessionId}
+          onNewSession={handleNewSession}
         />
         <InputBar
           selectedDocs={selectedDocs}

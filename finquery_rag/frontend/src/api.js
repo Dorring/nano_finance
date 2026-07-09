@@ -90,8 +90,18 @@ export const queryDocuments = async (question, documentNames = null) => {
   return response.data;
 };
 
+// Clear server-side conversation memory for a session
+export const clearSession = async (sessionId) => {
+  const response = await api.post('/sessions/clear', {
+    question: 'Clear session',
+    session_id: sessionId,
+    n_results: 1,
+  });
+  return response.data;
+};
+
 // Query documents with streaming
-export const queryDocumentsStream = async (question, documentNames, onToken, onDone, onError) => {
+export const queryDocumentsStream = async (question, documentNames, sessionId, onToken, onDone, onError) => {
   const token = localStorage.getItem('token');
 
   const response = await fetch(`${API_BASE_URL}/query/stream`, {
@@ -104,6 +114,7 @@ export const queryDocumentsStream = async (question, documentNames, onToken, onD
       question,
       document_names: documentNames,
       n_results: 5,
+      session_id: sessionId,
     }),
   });
 

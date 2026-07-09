@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import Message from './Message';
 
-const ChatArea = ({ messages, isLoading, onExampleClick }) => {
+const ChatArea = ({ messages, isLoading, onExampleClick, sessionId, onNewSession }) => {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -22,6 +22,19 @@ const ChatArea = ({ messages, isLoading, onExampleClick }) => {
 
   return (
     <div className="chat-area">
+      <div className="chat-toolbar">
+        <div className="session-label">
+          Session {sessionId ? sessionId.slice(0, 8) : 'starting'}
+        </div>
+        <button
+          type="button"
+          className="new-session-btn"
+          onClick={onNewSession}
+          disabled={isLoading}
+        >
+          New chat
+        </button>
+      </div>
       {messages.length === 0 ? (
         <div className="chat-empty">
           <div className="chat-empty-icon">
