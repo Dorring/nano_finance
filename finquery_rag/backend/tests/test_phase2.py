@@ -174,6 +174,34 @@ class TestContextBuilderFilenameParsing:
             cleanup(path)
 
 
+class TestContextBuilderSourceProvenance:
+    def test_sources_include_exact_chunk_id(self):
+        engine, path = make_engine()
+        try:
+            chunk_id = "user_5_report.pdf::page_3::chunk_7"
+            c1 = make_chunk(chunk_id, "Financial report content " * 10, page=3)
+            context, sources = engine.build_context([c1])
+
+            assert sources[0]["chunk_id"] == chunk_id
+            assert sources[0]["filename"] == "report.pdf"
+            assert "report.pdf, p3" in context
+        finally:
+            cleanup(path)
+
+    def test_truncated_sources_keep_exact_chunk_id(self):
+        engine, path = make_engine(max_context_tokens=320)
+        try:
+            chunk_id = "user_8_large.pdf::page_1::chunk_0"
+            c1 = make_chunk(chunk_id, "x" * 1000, page=1)
+            context, sources = engine.build_context([c1])
+
+            assert len(sources) == 1
+            assert sources[0]["chunk_id"] == chunk_id
+            assert "[...]" in context
+        finally:
+            cleanup(path)
+
+
 class TestContextBuilderTokenBudget:
     def test_truncation_when_exceeds_budget(self):
         engine, path = make_engine()

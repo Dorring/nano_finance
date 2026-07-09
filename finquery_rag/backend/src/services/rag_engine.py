@@ -261,6 +261,7 @@ class RAGEngine:
                     sources.append({
                         "filename": filename, "page": page,
                         "type": chunk_type, "score": chunk.get("score", 0),
+                        "chunk_id": doc_id,
                     })
                 break
 
@@ -269,6 +270,7 @@ class RAGEngine:
             sources.append({
                 "filename": filename, "page": page,
                 "type": chunk_type, "score": chunk.get("score", 0),
+                "chunk_id": doc_id,
             })
 
         context_str = "\n\n---\n\n".join(context_parts)
