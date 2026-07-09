@@ -1,5 +1,6 @@
 """Phase 18A tests: answer feedback storage/API surface."""
 import os
+import sqlite3
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -37,6 +38,61 @@ def test_feedback_store_truncates_comment(tmp_path):
     row = store.submit(tenant_id=1, trace_id="t1", rating="down", comment="x" * 2500)
 
     assert len(row["comment"]) == 2000
+
+
+def test_feedback_store_keeps_latest_per_tenant_trace(tmp_path):
+    store = FeedbackStore(db_path=str(tmp_path / "feedback.db"))
+    first = store.submit(tenant_id=1, trace_id="same", rating="up", comment="ok", now=1)
+    latest = store.submit(tenant_id=1, trace_id="same", rating="down", comment="bad", now=2)
+    other_tenant = store.submit(tenant_id=2, trace_id="same", rating="up", comment="other", now=3)
+
+    rows = store.list_for_tenant(1)
+
+    assert len(rows) == 1
+    assert rows[0]["feedback_id"] == latest["feedback_id"]
+    assert rows[0]["feedback_id"] != first["feedback_id"]
+    assert rows[0]["rating"] == "down"
+    assert rows[0]["comment"] == "bad"
+    assert store.list_for_tenant(2)[0]["feedback_id"] == other_tenant["feedback_id"]
+
+
+def test_feedback_store_migrates_legacy_duplicate_rows(tmp_path):
+    db_path = tmp_path / "feedback.db"
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE feedback_schema_version (version INTEGER NOT NULL);
+            INSERT INTO feedback_schema_version VALUES (1);
+            CREATE TABLE answer_feedback (
+                feedback_id TEXT PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                trace_id TEXT NOT NULL,
+                rating TEXT NOT NULL,
+                comment TEXT,
+                created_at REAL NOT NULL
+            );
+            """
+        )
+        conn.executemany(
+            "INSERT INTO answer_feedback VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("old", 1, "same", "up", "old", 1.0),
+                ("new", 1, "same", "down", "new", 2.0),
+                ("other", 2, "same", "up", "other", 1.0),
+            ],
+        )
+
+    store = FeedbackStore(db_path=str(db_path))
+    rows = store.list_for_tenant(1)
+    replacement = store.submit(tenant_id=1, trace_id="same", rating="up", comment="replacement", now=3)
+
+    assert [row["feedback_id"] for row in rows] == ["new"]
+    assert store.list_for_tenant(1) == [replacement]
+    assert store.list_for_tenant(2)[0]["feedback_id"] == "other"
+
+    with sqlite3.connect(db_path) as conn:
+        index_rows = conn.execute("PRAGMA index_list(answer_feedback)").fetchall()
+    assert any(row[1] == "idx_feedback_tenant_trace_unique" and row[2] for row in index_rows)
 
 
 def test_main_exposes_authenticated_feedback_routes():
