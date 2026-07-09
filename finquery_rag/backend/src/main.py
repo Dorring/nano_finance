@@ -14,6 +14,7 @@ from .services.session_manager import SessionManager
 from .services.health import collect_health_snapshot
 from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
+from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, safe_log_query_trace
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
@@ -129,6 +130,34 @@ def _public_feedback(row: dict) -> dict:
     """Return feedback data without exposing tenant_id."""
     keys = ["feedback_id", "trace_id", "rating", "comment", "created_at"]
     return {key: row.get(key) for key in keys}
+
+
+def _resolve_query_document_names_for_user(user_id, requested_doc_names):
+    """Return ready document names for query, rejecting stale/unready filters."""
+    ready_names = [
+        row.get("filename")
+        for row in document_registry.list_documents(user_id)
+        if row.get("filename")
+    ]
+    fallback_names = []
+    if not ready_names:
+        fallback_names = [
+            row.get("name")
+            for row in list_all_documents(user_id)
+            if row.get("name")
+        ]
+
+    resolved, invalid = resolve_query_document_names(
+        requested_doc_names,
+        ready_names,
+        fallback_names,
+    )
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail="Documents are not ready or not found: %s" % ", ".join(invalid),
+        )
+    return resolved
 
 
 def _public_trace(row: dict) -> dict:
@@ -568,10 +597,15 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
                 request.session_id, current_user.id
             )
 
+        resolved_doc_names = _resolve_query_document_names_for_user(
+            current_user.id,
+            request.document_names,
+        )
+
         # Run RAG pipeline
         result = await engine.query(
             question=request.question,
-            doc_names=request.document_names,
+            doc_names=resolved_doc_names,
             n_results=request.n_results,
             user_id=current_user.id,
             conversation_history=conversation_history,
@@ -597,6 +631,8 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             trace_id=result.get("trace_id"),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, f"Query error: {str(e)}")
 
@@ -612,6 +648,11 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         request (QueryRequest): 查询请求体。
         current_user (User): 当前登录用户。
     """
+    resolved_doc_names = _resolve_query_document_names_for_user(
+        current_user.id,
+        request.document_names,
+    )
+
     async def generate():
         engine = get_rag_engine()
         started_at = time.time()
@@ -670,11 +711,8 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
-        # Get document names
-        doc_names = request.document_names
-        if doc_names is None:
-            all_docs = list_all_documents(current_user.id)
-            doc_names = [doc["name"] for doc in all_docs]
+        # Get document names resolved from ready lifecycle state.
+        doc_names = resolved_doc_names
 
         if not doc_names:
             answer = 'No documents found. Please upload documents first.'
