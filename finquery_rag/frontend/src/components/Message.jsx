@@ -32,6 +32,22 @@ const formatChunkLabel = (chunkId) => {
   return suffix.length > 28 ? `…${suffix.slice(-28)}` : suffix;
 };
 
+const formatTraceScope = (filterConditions) => {
+  const docNames = filterConditions?.doc_names || [];
+  if (!Array.isArray(docNames) || docNames.length === 0) {
+    return 'All ready documents';
+  }
+  if (docNames.length <= 2) {
+    return docNames.join(', ');
+  }
+  return `${docNames.length} documents`;
+};
+
+const formatTraceTopK = (filterConditions) => {
+  const nResults = filterConditions?.n_results;
+  return typeof nResults === 'number' ? String(nResults) : '—';
+};
+
 const uniqueSources = (sources = []) => {
   const seen = new Set();
   return sources.filter((source) => {
@@ -285,6 +301,16 @@ const Message = ({ message }) => {
                       <div>
                         <span>Latency</span>
                         <p>{typeof traceDetails.latency_ms === 'number' ? `${Math.round(traceDetails.latency_ms)} ms` : '—'}</p>
+                      </div>
+                      <div>
+                        <span>Scope</span>
+                        <p title={(traceDetails.filter_conditions?.doc_names || []).join(', ')}>
+                          {formatTraceScope(traceDetails.filter_conditions)}
+                        </p>
+                      </div>
+                      <div>
+                        <span>Top-K</span>
+                        <p>{formatTraceTopK(traceDetails.filter_conditions)}</p>
                       </div>
                     </div>
                     {traceDetails.sources?.length > 0 && (
