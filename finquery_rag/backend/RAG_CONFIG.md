@@ -109,6 +109,16 @@ trace export/query tooling to locate the exact request path during debugging or
 replay preparation. If trace persistence fails, the answer path still succeeds
 and `trace_id` is `null`.
 
+Authenticated users can inspect only their own traces through the API:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/traces
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/traces/<trace_id>
+```
+
+Trace API responses omit `tenant_id` and decode stored JSON columns such as
+sources, candidates, and filter conditions.
+
 ## Trace retention
 
 Trace logs are stored in SQLite and can grow over time. Use explicit retention
