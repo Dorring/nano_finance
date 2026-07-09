@@ -14,13 +14,23 @@ class QueryRequest(BaseModel):
     session_id: str | None = Field(None, description="Session ID for conversation memory. If null, no history is used.")
     # 会话ID，用于多轮对话记忆。如果为None则不使用历史上下文
 
+
+class SourceInfo(BaseModel):
+    """A retrieved source chunk used to build a RAG answer."""
+    filename: str | None = None
+    page: int | str | None = None
+    type: str | None = None
+    score: float | None = None
+    chunk_id: str | None = None
+
+
 class QueryResponse(BaseModel):
     """
     查询响应模型，用于封装查询操作返回的结果数据。
     """
     answer: str
     # 查询得到的答案
-    sources: list[dict]
+    sources: list[SourceInfo]
     # 答案的来源信息列表
     question: str
     # 原始查询的问题
