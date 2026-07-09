@@ -116,6 +116,27 @@ export const clearSession = async (sessionId) => {
   return response.data;
 };
 
+const readErrorDetail = async (response) => {
+  let text = '';
+  try {
+    text = await response.text();
+  } catch (error) {
+    console.error('Failed to read error response:', error);
+  }
+
+  if (!text) return `HTTP error: ${response.status}`;
+
+  try {
+    const payload = JSON.parse(text);
+    if (typeof payload.detail === 'string') return payload.detail;
+    if (Array.isArray(payload.detail)) return payload.detail.map((item) => item.msg || item.message || String(item)).join('; ');
+    if (payload.message) return payload.message;
+  } catch {
+    return text;
+  }
+  return `HTTP error: ${response.status}`;
+};
+
 // Query documents with streaming
 export const queryDocumentsStream = async (question, documentNames, sessionId, nResults, onToken, onDone, onError) => {
   const token = localStorage.getItem('token');
@@ -140,7 +161,7 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, n
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    throw new Error(`HTTP error: ${response.status}`);
+    throw new Error(await readErrorDetail(response));
   }
 
   const reader = response.body.getReader();
