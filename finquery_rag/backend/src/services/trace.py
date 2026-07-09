@@ -179,6 +179,41 @@ class TraceLogger:
                 fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
         return len(rows)
 
+    def cleanup_older_than(self, cutoff_created_at, tenant_id=None):
+        """Delete traces older than cutoff_created_at and return deleted row count.
+
+        If tenant_id is provided, cleanup is tenant-scoped. If tenant_id is None,
+        cleanup is global and intended for operator/admin maintenance.
+        """
+        cutoff = float(cutoff_created_at)
+        with self._conn() as conn:
+            if tenant_id is None:
+                cursor = conn.execute(
+                    "DELETE FROM trace_log WHERE created_at < ?",
+                    (cutoff,),
+                )
+            else:
+                cursor = conn.execute(
+                    "DELETE FROM trace_log WHERE tenant_id = ? AND created_at < ?",
+                    (tenant_id, cutoff),
+                )
+            conn.commit()
+            return cursor.rowcount
+
+    def cleanup_by_ttl(self, ttl_seconds, tenant_id=None, now=None):
+        """Delete traces older than now - ttl_seconds and return cleanup metadata."""
+        ttl = max(0, int(ttl_seconds or 0))
+        if now is None:
+            now = time.time()
+        cutoff = float(now) - ttl
+        deleted = self.cleanup_older_than(cutoff, tenant_id=tenant_id)
+        return {
+            "deleted": deleted,
+            "tenant_id": tenant_id,
+            "ttl_seconds": ttl,
+            "cutoff_created_at": cutoff,
+        }
+
     @staticmethod
     def _row_to_dict(row):
         columns = ["trace_id", "tenant_id", "query_original", "query_rewritten", "intent",

@@ -58,6 +58,21 @@ def main(argv: list[str] | None = None) -> int:
     traces.add_argument("--error-only", action="store_true")
     traces.add_argument("--out", required=True, help="Output traces JSONL")
 
+    traces_cleanup = sub.add_parser("traces-cleanup", help="Delete old trace rows")
+    traces_cleanup.add_argument(
+        "--db",
+        default=os.getenv("TRACE_DB_PATH", "trace_log.db"),
+        help="TraceLogger SQLite DB",
+    )
+    traces_cleanup.add_argument(
+        "--ttl-seconds",
+        type=int,
+        default=int(os.getenv("TRACE_TTL_SECONDS", "0")),
+        help="Delete traces older than this TTL. 0 deletes traces older than now.",
+    )
+    traces_cleanup.add_argument("--tenant-id", type=int, help="Optional tenant/user scope")
+    traces_cleanup.add_argument("--out", help="Optional JSON cleanup report output path")
+
     replay = sub.add_parser("replay-from-traces", help="Export replay cases from trace DB")
     replay.add_argument(
         "--db",
@@ -138,6 +153,17 @@ def main(argv: list[str] | None = None) -> int:
             error_only=args.error_only,
         )
         print(f"exported {count} traces to {args.out}")
+        return 0
+
+    if args.command == "traces-cleanup":
+        logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
+        report = logger.cleanup_by_ttl(args.ttl_seconds, tenant_id=args.tenant_id)
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            path = Path(args.out)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload + "\n", encoding="utf-8")
+        print(payload)
         return 0
 
     if args.command == "replay-from-traces":
