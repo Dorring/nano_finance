@@ -8,7 +8,7 @@ import uuid
 class FeedbackStore:
     """SQLite-backed feedback store keyed by tenant and trace."""
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
     VALID_RATINGS = {"up", "down"}
 
     def __init__(self, db_path=None):
@@ -43,6 +43,13 @@ class FeedbackStore:
                     ON answer_feedback(tenant_id, trace_id);
                 """
             )
+            self._dedupe_latest_feedback(conn)
+            conn.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_tenant_trace_unique
+                    ON answer_feedback(tenant_id, trace_id)
+                """
+            )
             row = conn.execute("SELECT version FROM feedback_schema_version LIMIT 1").fetchone()
             if row is None:
                 conn.execute("INSERT INTO feedback_schema_version VALUES (?)", (self.SCHEMA_VERSION,))
@@ -50,8 +57,29 @@ class FeedbackStore:
                 conn.execute("UPDATE feedback_schema_version SET version = ?", (self.SCHEMA_VERSION,))
             conn.commit()
 
+    def _dedupe_latest_feedback(self, conn):
+        """Keep only the newest feedback row for each tenant/trace before enabling uniqueness."""
+        conn.execute(
+            """
+            DELETE FROM answer_feedback
+            WHERE EXISTS (
+                SELECT 1
+                FROM answer_feedback AS newer
+                WHERE newer.tenant_id = answer_feedback.tenant_id
+                  AND newer.trace_id = answer_feedback.trace_id
+                  AND (
+                      newer.created_at > answer_feedback.created_at
+                      OR (
+                          newer.created_at = answer_feedback.created_at
+                          AND newer.rowid > answer_feedback.rowid
+                      )
+                  )
+            )
+            """
+        )
+
     def submit(self, tenant_id, trace_id, rating, comment=None, now=None):
-        """Store one feedback row and return it; fail closed on invalid identifiers."""
+        """Store latest feedback for one tenant/trace; fail closed on invalid identifiers."""
         if tenant_id is None or not trace_id:
             return None
         if rating not in self.VALID_RATINGS:
@@ -65,7 +93,15 @@ class FeedbackStore:
 
         with self._conn() as conn:
             conn.execute(
-                "INSERT INTO answer_feedback (feedback_id, tenant_id, trace_id, rating, comment, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO answer_feedback (feedback_id, tenant_id, trace_id, rating, comment, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(tenant_id, trace_id) DO UPDATE SET
+                    feedback_id = excluded.feedback_id,
+                    rating = excluded.rating,
+                    comment = excluded.comment,
+                    created_at = excluded.created_at
+                """,
                 (feedback_id, tenant_id, trace_id, rating, cleaned_comment, created_at),
             )
             conn.commit()

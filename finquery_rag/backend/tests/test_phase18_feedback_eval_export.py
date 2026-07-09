@@ -68,6 +68,24 @@ def test_export_replay_cases_from_feedback_skips_missing_traces(tmp_path):
     assert load_jsonl_cases(out)[0].case_id == trace_id
 
 
+def test_feedback_replay_export_uses_latest_feedback_per_trace(tmp_path):
+    trace_logger = _trace_logger(tmp_path)
+    trace_id = trace_logger.log(tenant_id=1, query_original="Q", answer="A")
+    feedback_store = FeedbackStore(db_path=str(tmp_path / "feedback.db"))
+    feedback_store.submit(tenant_id=1, trace_id=trace_id, rating="up", comment="first", now=1)
+    feedback_store.submit(tenant_id=1, trace_id=trace_id, rating="down", comment="latest", now=2)
+    out = tmp_path / "feedback_replay.jsonl"
+
+    cases = export_replay_cases_from_feedback(
+        feedback_store.list_for_tenant(1, rating="down"),
+        lambda tid: trace_logger.get_trace_for_tenant(1, tid),
+        out,
+    )
+
+    assert len(cases) == 1
+    assert cases[0].metadata["feedback_comment"] == "latest"
+
+
 def test_eval_cli_exposes_feedback_to_replay_command():
     cli_path = os.path.join(os.path.dirname(__file__), "..", "src", "eval_cli.py")
     content = open(cli_path, encoding="utf-8").read()
