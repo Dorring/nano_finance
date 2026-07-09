@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getQueryTrace } from '../api';
+import { getQueryTrace, submitAnswerFeedback } from '../api';
 
 const formatPercent = (value) => {
   if (typeof value !== 'number') return null;
@@ -20,6 +20,9 @@ const Message = ({ message }) => {
   const [isTraceOpen, setIsTraceOpen] = useState(false);
   const [isTraceLoading, setIsTraceLoading] = useState(false);
   const [traceError, setTraceError] = useState(null);
+  const [feedbackRating, setFeedbackRating] = useState(null);
+  const [isFeedbackSaving, setIsFeedbackSaving] = useState(false);
+  const [feedbackError, setFeedbackError] = useState(null);
 
   const handleCopyTraceId = async () => {
     if (!diagnostics?.traceId) return;
@@ -52,6 +55,23 @@ const Message = ({ message }) => {
       setTraceError('Trace details unavailable');
     } finally {
       setIsTraceLoading(false);
+    }
+  };
+
+  const handleSubmitFeedback = async (rating) => {
+    if (!diagnostics?.traceId || isFeedbackSaving) return;
+
+    setIsFeedbackSaving(true);
+    setFeedbackError(null);
+
+    try {
+      await submitAnswerFeedback(diagnostics.traceId, rating);
+      setFeedbackRating(rating);
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      setFeedbackError('Feedback failed');
+    } finally {
+      setIsFeedbackSaving(false);
     }
   };
 
@@ -97,6 +117,29 @@ const Message = ({ message }) => {
                 </span>
               )}
             </div>
+            {diagnostics.traceId && (
+              <div className="answer-feedback" aria-label="Answer feedback">
+                <span>Helpful?</span>
+                <button
+                  type="button"
+                  className={`feedback-btn ${feedbackRating === 'up' ? 'selected' : ''}`}
+                  onClick={() => handleSubmitFeedback('up')}
+                  disabled={isFeedbackSaving}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className={`feedback-btn ${feedbackRating === 'down' ? 'selected' : ''}`}
+                  onClick={() => handleSubmitFeedback('down')}
+                  disabled={isFeedbackSaving}
+                >
+                  ↓
+                </button>
+                {feedbackRating && <span className="feedback-status">Saved</span>}
+                {feedbackError && <span className="feedback-error">{feedbackError}</span>}
+              </div>
+            )}
             {isTraceOpen && (
               <div className="trace-details">
                 {isTraceLoading && <div className="trace-muted">Loading trace details...</div>}

@@ -80,6 +80,16 @@ export const getQueryTrace = async (traceId) => {
   return response.data;
 };
 
+// Submit answer feedback for a traced response
+export const submitAnswerFeedback = async (traceId, rating, comment = null) => {
+  const response = await api.post('/feedback', {
+    trace_id: traceId,
+    rating,
+    comment,
+  });
+  return response.data;
+};
+
 // Query documents (non-streaming)
 export const queryDocuments = async (question, documentNames = null) => {
   const response = await api.post('/query', {
