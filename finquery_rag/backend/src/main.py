@@ -624,7 +624,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         def finish_trace(answer, sources=None, doc_names=None, chunks=None, context=None):
             elapsed_ms = (time.time() - started_at) * 1000
             trace_data.update({
-                "filter_conditions": {"doc_names": doc_names or []},
+                "filter_conditions": {"doc_names": doc_names or [], "n_results": request.n_results},
                 "candidates": [
                     {
                         "doc_id": c.get("doc_id", ""),

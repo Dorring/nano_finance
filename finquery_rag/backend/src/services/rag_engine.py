@@ -557,7 +557,7 @@ class RAGEngine:
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000
         trace_data.update({
-            "filter_conditions": {"doc_names": doc_names},
+            "filter_conditions": {"doc_names": doc_names, "n_results": n_results},
             "candidates": [
                 {
                     "doc_id": c.get("doc_id", ""),

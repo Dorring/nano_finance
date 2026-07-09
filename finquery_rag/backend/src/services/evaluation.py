@@ -359,6 +359,7 @@ def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
             "tenant_id": trace.get("tenant_id"),
             "model_name": trace.get("model_name"),
             "created_at": trace.get("created_at"),
+            "n_results": filters.get("n_results"),
         },
     )
 
