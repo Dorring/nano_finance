@@ -103,7 +103,8 @@ tenant.
 
 ## Trace IDs
 
-Non-streaming `/query` responses include `trace_id` when structured tracing is
-successfully written. Use this ID with trace export/query tooling to locate the
-exact request path during debugging or replay preparation. If trace persistence
-fails, the answer path still succeeds and `trace_id` is `null`.
+Non-streaming `/query` responses and `/query/stream` final `done` events include
+`trace_id` when structured tracing is successfully written. Use this ID with
+trace export/query tooling to locate the exact request path during debugging or
+replay preparation. If trace persistence fails, the answer path still succeeds
+and `trace_id` is `null`.

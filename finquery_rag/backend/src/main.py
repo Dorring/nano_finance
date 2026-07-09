@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from openai import OpenAI
 import json
+import time
 
 from .services.auth import create_access_token, get_current_user, get_current_user_optional, get_password_hash, verify_password
 from .services.ingest import process_pdf
@@ -12,6 +13,7 @@ from .services.document_registry import DocumentRegistry
 from .services.session_manager import SessionManager
 from .services.health import collect_health_snapshot
 from .services.intent import classify_query_intent
+from .services.streaming import make_stream_done_event, safe_log_query_trace
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -91,6 +93,7 @@ def get_rag_engine():
             retrieval_candidate_multiplier=int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "2")),
         )
     return rag_engine
+
 
 ######################### API Endpoints #########################
 
@@ -464,6 +467,32 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
     """
     async def generate():
         engine = get_rag_engine()
+        started_at = time.time()
+        trace_data = {
+            "tenant_id": current_user.id,
+            "query_original": request.question,
+            "model_name": llm_model_name,
+        }
+
+        def finish_trace(answer, sources=None, doc_names=None, chunks=None, context=None):
+            elapsed_ms = (time.time() - started_at) * 1000
+            trace_data.update({
+                "filter_conditions": {"doc_names": doc_names or []},
+                "candidates": [
+                    {
+                        "doc_id": c.get("doc_id", ""),
+                        "score": c.get("score", 0),
+                        "rerank_score": c.get("rerank_score"),
+                        "reranker": c.get("reranker"),
+                    }
+                    for c in (chunks or [])
+                ],
+                "final_context": context,
+                "answer": answer,
+                "sources": sources or [],
+                "latency_ms": elapsed_ms,
+            })
+            return safe_log_query_trace(engine, trace_data)
 
         # Phase 4: Load conversation history and rewrite query
         question = request.question
@@ -474,20 +503,24 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             )
         if conversation_history:
             question = await engine._rewrite_query_with_context(question, conversation_history)
+            trace_data["query_rewritten"] = question
 
         intent = classify_query_intent(question)
+        trace_data["intent"] = intent["intent"]
 
         # Phase 3: Check if conversational (no RAG needed)
         conversational = engine._handle_conversational_query(question)
         if conversational:
+            trace_id = finish_trace(conversational)
             yield f"data: {json.dumps({'type': 'token', 'content': conversational})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True, 'intent': 'conversation', 'intent_confidence': intent['confidence']})}\n\n"
+            yield make_stream_done_event(sources=[], context_sufficient=True, intent='conversation', intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
         if not intent["requires_retrieval"]:
             refusal = "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data."
+            trace_id = finish_trace(refusal)
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': [], 'context_sufficient': True, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
+            yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
         # Get document names
@@ -497,8 +530,10 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             doc_names = [doc["name"] for doc in all_docs]
 
         if not doc_names:
-            yield f"data: {json.dumps({'type': 'token', 'content': 'No documents found. Please upload documents first.'})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': []})}\n\n"
+            answer = 'No documents found. Please upload documents first.'
+            trace_id = finish_trace(answer, doc_names=[])
+            yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
+            yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
         # Phase 3: Retrieve chunks and check sufficiency
@@ -518,8 +553,9 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             if request.session_id:
                 session_manager.add_message(request.session_id, current_user.id, "user", request.question)
                 session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
+            trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': False, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
+            yield make_stream_done_event(sources=sources, context_sufficient=False, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
 
         # Phase 4: Save user question to session
@@ -536,7 +572,8 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         if request.session_id:
             session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
 
-        yield f"data: {json.dumps({'type': 'done', 'sources': sources, 'context_sufficient': True, 'intent': intent['intent'], 'intent_confidence': intent['confidence']})}\n\n"
+        trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
+        yield make_stream_done_event(sources=sources, context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
 
     return StreamingResponse(
         generate(),
