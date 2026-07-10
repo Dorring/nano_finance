@@ -52,3 +52,19 @@ def test_safe_log_query_trace_returns_logger_trace_id():
 
     assert trace_id == "trace-ok"
     engine.trace_logger.log.assert_called_once()
+
+
+
+def test_make_stream_done_event_has_stable_default_fields():
+    event = make_stream_done_event()
+    payload = json.loads(event.removeprefix("data: ").strip())
+
+    assert payload == {
+        "type": "done",
+        "sources": [],
+        "confidence": None,
+        "context_sufficient": None,
+        "intent": None,
+        "intent_confidence": None,
+        "trace_id": None,
+    }

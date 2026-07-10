@@ -97,6 +97,20 @@ def get_rag_engine():
         )
     return rag_engine
 
+def _normalize_api_pagination(limit, offset, default_limit=50, max_limit=1000):
+    """Normalize API pagination and reject ambiguous negative values."""
+    try:
+        normalized_limit = int(limit if limit is not None else default_limit)
+        normalized_offset = int(offset or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "limit and offset must be integers")
+    if normalized_limit < 1:
+        raise HTTPException(400, "limit must be >= 1")
+    if normalized_offset < 0:
+        raise HTTPException(400, "offset must be >= 0")
+    return min(normalized_limit, max_limit), normalized_offset
+
+
 def _public_registry_document(row: dict) -> dict:
     """Return document lifecycle fields without file/content hashes."""
     keys = [
@@ -301,10 +315,13 @@ async def list_query_traces(
     current_user: User = Depends(get_current_user),
 ):
     """List current user's recent query traces for troubleshooting/replay."""
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=20)
+    if created_after is not None and created_before is not None and created_after > created_before:
+        raise HTTPException(400, "created_after must be <= created_before")
     rows = get_rag_engine().trace_logger.query_traces(
         tenant_id=current_user.id,
-        limit=limit,
-        offset=offset,
+        limit=normalized_limit,
+        offset=normalized_offset,
         created_after=created_after,
         created_before=created_before,
         error_only=error_only,
@@ -312,8 +329,8 @@ async def list_query_traces(
     return {
         "traces": [_public_trace(row) for row in rows],
         "total_returned": len(rows),
-        "limit": max(0, min(int(limit or 20), 1000)),
-        "offset": max(0, int(offset or 0)),
+        "limit": normalized_limit,
+        "offset": normalized_offset,
     }
 
 
@@ -357,12 +374,13 @@ async def list_answer_feedback(
     """List current user's answer feedback for review/export."""
     if rating is not None and rating not in FeedbackStore.VALID_RATINGS:
         raise HTTPException(400, "Invalid rating")
-    rows = feedback_store.list_for_tenant(current_user.id, limit=limit, offset=offset, rating=rating)
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)
+    rows = feedback_store.list_for_tenant(current_user.id, limit=normalized_limit, offset=normalized_offset, rating=rating)
     return {
         "feedback": [_public_feedback(row) for row in rows],
         "total_returned": len(rows),
-        "limit": max(0, min(int(limit or 50), 1000)),
-        "offset": max(0, int(offset or 0)),
+        "limit": normalized_limit,
+        "offset": normalized_offset,
     }
 
 
