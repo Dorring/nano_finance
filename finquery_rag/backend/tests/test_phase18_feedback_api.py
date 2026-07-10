@@ -105,3 +105,14 @@ def test_main_exposes_authenticated_feedback_routes():
     assert "get_trace_for_tenant(current_user.id, request.trace_id)" in content
     public_feedback_block = content[content.index("def _public_feedback"):content.index("def _public_trace")]
     assert '"tenant_id"' not in public_feedback_block
+
+
+
+def test_feedback_store_uses_shared_migration_helper_static():
+    feedback_path = os.path.join(os.path.dirname(__file__), "..", "src", "services", "feedback.py")
+    content = open(feedback_path, encoding="utf-8").read()
+
+    assert "run_component_migrations" in content
+    assert "version_table=\"feedback_schema_version\"" in content
+    assert "def _migrate_to_v2" in content
+    assert "UPDATE feedback_schema_version SET version" not in content

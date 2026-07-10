@@ -33,43 +33,52 @@ def ensure_column(conn: sqlite3.Connection, table_name: str, column_name: str, c
     return True
 
 
-def get_component_version(conn: sqlite3.Connection, component: str) -> int:
-    """Read component version from schema_version.
+def get_component_version(
+    conn: sqlite3.Connection,
+    component: str,
+    version_table: str = "schema_version",
+) -> int:
+    """Read component version from a schema version table.
 
-    Supports both normalized schema_version(component, version) and legacy
-    single-column schema_version(version) tables.
+    Supports both normalized version_table(component, version) and legacy
+    single-column version_table(version) tables.
     """
-    if not table_exists(conn, "schema_version"):
+    if not table_exists(conn, version_table):
         return 0
 
-    columns = table_columns(conn, "schema_version")
+    columns = table_columns(conn, version_table)
     if "component" in columns:
         row = conn.execute(
-            "SELECT version FROM schema_version WHERE component = ?",
+            f"SELECT version FROM {version_table} WHERE component = ?",
             (component,),
         ).fetchone()
     else:
-        row = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
+        row = conn.execute(f"SELECT version FROM {version_table} LIMIT 1").fetchone()
     if row is None:
         return 0
     return int(row["version"] if hasattr(row, "keys") else row[0])
 
 
-def set_component_version(conn: sqlite3.Connection, component: str, version: int) -> None:
-    """Store component version while preserving existing schema_version shape."""
-    columns = table_columns(conn, "schema_version")
+def set_component_version(
+    conn: sqlite3.Connection,
+    component: str,
+    version: int,
+    version_table: str = "schema_version",
+) -> None:
+    """Store component version while preserving existing version table shape."""
+    columns = table_columns(conn, version_table)
     if "component" in columns:
         conn.execute(
-            "INSERT OR REPLACE INTO schema_version (component, version) VALUES (?, ?)",
+            f"INSERT OR REPLACE INTO {version_table} (component, version) VALUES (?, ?)",
             (component, int(version)),
         )
     else:
-        row = conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()
+        row = conn.execute(f"SELECT COUNT(*) FROM {version_table}").fetchone()
         count = row[0] if not hasattr(row, "keys") else row[0]
         if count:
-            conn.execute("UPDATE schema_version SET version = ?", (int(version),))
+            conn.execute(f"UPDATE {version_table} SET version = ?", (int(version),))
         else:
-            conn.execute("INSERT INTO schema_version VALUES (?)", (int(version),))
+            conn.execute(f"INSERT INTO {version_table} VALUES (?)", (int(version),))
 
 
 def run_component_migrations(
@@ -77,17 +86,18 @@ def run_component_migrations(
     component: str,
     target_version: int,
     migrations: dict[int, Migration],
+    version_table: str = "schema_version",
 ) -> int:
     """Run migrations newer than current version through target_version.
 
     Migration dict keys are target versions. For example, key 2 migrates
     schema from <2 to 2. Each migration must be idempotent.
     """
-    current_version = get_component_version(conn, component)
+    current_version = get_component_version(conn, component, version_table=version_table)
     for version in sorted(migrations):
         if current_version < version <= target_version:
             migrations[version](conn)
             current_version = version
-    set_component_version(conn, component, target_version)
+    set_component_version(conn, component, target_version, version_table=version_table)
     conn.commit()
     return current_version
