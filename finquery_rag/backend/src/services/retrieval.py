@@ -25,6 +25,16 @@ class SqliteBM25Retriever:
         self._init_db()
 
     SCHEMA_VERSION = 2
+    MAX_SEARCH_LIMIT = 100
+
+    def _normalize_limit(self, k: int) -> int:
+        try:
+            limit = int(k)
+        except (TypeError, ValueError):
+            return 0
+        if limit <= 0:
+            return 0
+        return min(limit, self.MAX_SEARCH_LIMIT)
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -113,6 +123,10 @@ class SqliteBM25Retriever:
         SQLite FTS5 稀疏检索。
         修复：增加 doc_name 和 user_id 过滤，防止跨文档/跨用户数据泄露。
         """
+        limit = self._normalize_limit(k)
+        if limit <= 0:
+            return []
+
         clean_query = self._clean_query(query)
         if not clean_query.strip():
             return []
@@ -141,7 +155,7 @@ class SqliteBM25Retriever:
                     params.append(doc_name)
 
                 sql += " ORDER BY score ASC LIMIT ?;"
-                params.append(k)
+                params.append(limit)
 
                 cursor.execute(sql, tuple(params))
                 rows = cursor.fetchall()
