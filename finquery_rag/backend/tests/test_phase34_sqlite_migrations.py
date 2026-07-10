@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from services.document_registry import DocumentRegistry
 from services.session_manager import SessionManager
 from services.sqlite_migrations import (
     ensure_column,
@@ -140,3 +141,28 @@ def test_migrations_support_custom_single_column_version_table(tmp_path):
             version_table="custom_schema_version",
         ) == 2
         assert "metadata_json" in table_columns(conn, "items")
+
+
+
+def test_document_registry_uses_shared_migration_helper_static():
+    path = os.path.join(os.path.dirname(__file__), "..", "src", "services", "document_registry.py")
+    content = open(path, encoding="utf-8").read()
+
+    assert "run_component_migrations" in content
+    assert '"document_registry"' in content
+    assert "INSERT INTO schema_version VALUES" not in content
+    assert "UPDATE schema_version SET version" not in content
+
+
+def test_document_registry_initializes_schema_version_with_helper(tmp_path):
+    db_path = tmp_path / "registry.db"
+
+    reg = DocumentRegistry(db_path=str(db_path))
+    reg.register("doc1", 1, "a.pdf", DocumentRegistry.file_hash(b"a"))
+
+    with sqlite3.connect(db_path) as conn:
+        version = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM document_registry").fetchone()[0]
+
+    assert version == 1
+    assert count == 1
