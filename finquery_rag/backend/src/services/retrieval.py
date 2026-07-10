@@ -93,19 +93,39 @@ class SqliteBM25Retriever:
         tokenized = re.sub(r'[^\w\s]', ' ', tokenized)
         return tokenized.strip()
 
+    def _normalize_chunk(self, chunk, user_id: int):
+        if not isinstance(chunk, dict):
+            return None
+        content = chunk.get("content")
+        if not isinstance(content, str) or not content.strip():
+            return None
+        metadata = chunk.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+        raw_id = metadata.get("doc_id") or chunk.get("id")
+        if not isinstance(raw_id, str) or not raw_id.strip():
+            return None
+        doc_name = metadata.get("doc_name", "")
+        if not isinstance(doc_name, str):
+            doc_name = ""
+        try:
+            doc_id = ensure_scoped_chunk_id(raw_id.strip(), user_id, doc_name)
+        except ValueError:
+            return None
+        return doc_id, content, metadata, doc_name
+
     def add_chunks(self, chunks: List[Dict], user_id: int = None):
         if user_id is None:
             raise ValueError("user_id is required for add_chunks")
+        if not isinstance(chunks, (list, tuple)) or not chunks:
+            return
         with sqlite3.connect(self.db_path, timeout=10) as conn:
             cursor = conn.cursor()
             for c in chunks:
-                raw_id = c.get("metadata", {}).get("doc_id") or c.get("id")
-                content = c["content"]
-                metadata = c.get("metadata", {})
-                doc_name = metadata.get("doc_name", "")
-
-                # Enforce tenant-scoped ID at storage boundary
-                doc_id = ensure_scoped_chunk_id(raw_id, user_id, doc_name)
+                normalized = self._normalize_chunk(c, user_id)
+                if normalized is None:
+                    continue
+                doc_id, content, metadata, doc_name = normalized
 
                 tokenized_content = " ".join(jieba.cut_for_search(content.lower()))
 

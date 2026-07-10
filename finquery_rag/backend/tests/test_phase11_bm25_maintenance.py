@@ -170,3 +170,50 @@ def test_search_rejects_non_string_and_blank_queries(tmp_path):
     assert retriever.search(None, user_id=1) == []
     assert retriever.search(123, user_id=1) == []
     assert retriever.search("   ", user_id=1) == []
+
+
+
+def test_add_chunks_ignores_empty_and_invalid_batches(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+
+    retriever.add_chunks([], user_id=1)
+    retriever.add_chunks(None, user_id=1)
+    retriever.add_chunks("bad", user_id=1)
+
+    report = retriever.integrity_report(user_id=1)
+    assert report["ok"] is True
+    assert report["chunk_store_count"] == 0
+    assert report["fts_count"] == 0
+
+
+def test_add_chunks_skips_invalid_chunks_and_indexes_valid_rows(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    chunks = [
+        None,
+        {},
+        {"content": "", "metadata": {"doc_id": "empty::1", "doc_name": "r.pdf"}},
+        {"content": "no id", "metadata": {"doc_name": "r.pdf"}},
+        {"content": 123, "metadata": {"doc_id": "bad-content::1", "doc_name": "r.pdf"}},
+        {"content": "wrong tenant", "metadata": {"doc_id": "user_2_r.pdf::1", "doc_name": "r.pdf"}},
+        {"id": "fallback::1", "content": "alpha revenue fallback", "metadata": "bad"},
+        _chunk("r.pdf::1", content="alpha revenue valid"),
+    ]
+
+    retriever.add_chunks(chunks, user_id=1)
+
+    results = retriever.search("revenue", user_id=1, k=10)
+    assert sorted(row["doc_id"] for row in results) == [
+        "user_1_fallback::1",
+        "user_1_r.pdf::1",
+    ]
+
+
+def test_add_chunks_still_requires_user_id(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+
+    try:
+        retriever.add_chunks([_chunk("r.pdf::1")], user_id=None)
+    except ValueError as exc:
+        assert "user_id is required" in str(exc)
+    else:
+        raise AssertionError("add_chunks should require user_id")
