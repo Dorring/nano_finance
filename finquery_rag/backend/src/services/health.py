@@ -52,6 +52,69 @@ def _path_check(path: str, *, expect_dir: bool = False) -> dict[str, Any]:
     }
 
 
+def _bm25_integrity_summary(path: str) -> dict[str, Any]:
+    """Return non-content BM25/FTS consistency counts for health checks."""
+    summary: dict[str, Any] = {
+        "ok": False,
+        "chunk_store_count": 0,
+        "fts_count": 0,
+        "missing_fts_count": 0,
+        "duplicate_doc_id_count": 0,
+        "duplicate_fts_rows": 0,
+        "orphan_fts_count": 0,
+    }
+    try:
+        with sqlite3.connect(path, timeout=2) as conn:
+            chunk_count = conn.execute("SELECT COUNT(*) FROM chunk_store").fetchone()[0]
+            fts_count = conn.execute("SELECT COUNT(*) FROM fts_index").fetchone()[0]
+            missing_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM chunk_store c
+                LEFT JOIN fts_index f ON f.doc_id = c.doc_id
+                WHERE f.doc_id IS NULL
+                """
+            ).fetchone()[0]
+            duplicate_rows = conn.execute(
+                """
+                SELECT COUNT(*) AS duplicate_doc_ids, COALESCE(SUM(n - 1), 0) AS duplicate_rows
+                FROM (
+                    SELECT doc_id, COUNT(*) AS n
+                    FROM fts_index
+                    GROUP BY doc_id
+                    HAVING n > 1
+                )
+                """
+            ).fetchone()
+            orphan_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM fts_index f
+                LEFT JOIN chunk_store c ON c.doc_id = f.doc_id
+                WHERE c.doc_id IS NULL
+                """
+            ).fetchone()[0]
+    except Exception as exc:  # pragma: no cover - exact sqlite errors vary by platform
+        summary["error"] = str(exc)
+        return summary
+
+    summary.update(
+        {
+            "chunk_store_count": int(chunk_count),
+            "fts_count": int(fts_count),
+            "missing_fts_count": int(missing_count),
+            "duplicate_doc_id_count": int(duplicate_rows[0] or 0),
+            "duplicate_fts_rows": int(duplicate_rows[1] or 0),
+            "orphan_fts_count": int(orphan_count),
+        }
+    )
+    summary["ok"] = not any(
+        summary[key]
+        for key in ("missing_fts_count", "duplicate_doc_id_count", "orphan_fts_count")
+    )
+    return summary
+
+
 def _sqlite_check(path: str, *, required_tables: tuple[str, ...] = ()) -> dict[str, Any]:
     p = Path(path)
     base = _path_check(str(p))
@@ -152,6 +215,15 @@ def collect_health_snapshot(
     trace_path = trace_db_path or _runtime_path("TRACE_DB_PATH", TRACE_DB_PATH)
     chroma_path = _runtime_path("CHROMA_PATH", CHROMA_PATH)
 
+    bm25_check = _sqlite_check(bm25_path, required_tables=("chunk_store", "fts_index"))
+    bm25_check["required"] = True
+    if bm25_check.get("ok"):
+        bm25_integrity = _bm25_integrity_summary(bm25_path)
+        bm25_check["integrity"] = bm25_integrity
+        if not bm25_integrity.get("ok", False):
+            bm25_check["ok"] = False
+            bm25_check["error"] = "bm25 index integrity check failed"
+
     checks = {
         "config": config,
         "chroma_path": {
@@ -163,10 +235,7 @@ def collect_health_snapshot(
             **_sqlite_check(registry_path, required_tables=("document_registry",)),
             "required": True,
         },
-        "bm25": {
-            **_sqlite_check(bm25_path, required_tables=("chunk_store", "fts_index")),
-            "required": True,
-        },
+        "bm25": bm25_check,
         "sessions": {
             **_sqlite_check(session_path, required_tables=("conversations",)),
             "required": True,

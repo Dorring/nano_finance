@@ -82,6 +82,7 @@ def test_health_snapshot_ready_when_required_stores_exist(tmp_path, monkeypatch)
         assert snapshot["status"] == "ready"
         assert snapshot["checks"]["document_registry"]["ok"] is True
         assert snapshot["checks"]["bm25"]["ok"] is True
+        assert snapshot["checks"]["bm25"]["integrity"]["ok"] is True
         assert snapshot["checks"]["sessions"]["ok"] is True
         assert snapshot["checks"]["trace"]["ok"] is True
     finally:
@@ -126,5 +127,74 @@ def test_health_snapshot_detects_missing_required_table(tmp_path):
             "chunk_store",
             "fts_index",
         ]
+    finally:
+        _close_session(sessions)
+
+
+
+def test_health_snapshot_degraded_when_bm25_index_inconsistent(tmp_path, monkeypatch):
+    chroma_dir = tmp_path / "chroma_db"
+    chroma_dir.mkdir()
+    monkeypatch.setattr("services.health.CHROMA_PATH", str(chroma_dir))
+    registry = DocumentRegistry(db_path=str(tmp_path / "registry.db"))
+    sessions = SessionManager(db_path=str(tmp_path / "sessions.db"))
+    bm25_path = tmp_path / "bm25.db"
+    _create_bm25_db(bm25_path)
+    with sqlite3.connect(bm25_path) as conn:
+        conn.execute(
+            "INSERT INTO chunk_store VALUES (?, ?, ?, ?, ?)",
+            ("doc::1", "content", "{}", 1, "doc.pdf"),
+        )
+        conn.commit()
+
+    try:
+        snapshot = collect_health_snapshot(
+            document_registry=registry,
+            session_manager=sessions,
+            bm25_db_path=str(bm25_path),
+            trace_db_path=str(tmp_path / "missing_trace.db"),
+        )
+
+        assert snapshot["ready"] is False
+        assert snapshot["checks"]["bm25"]["ok"] is False
+        assert snapshot["checks"]["bm25"]["error"] == "bm25 index integrity check failed"
+        assert snapshot["checks"]["bm25"]["integrity"]["missing_fts_count"] == 1
+        assert "doc::1" not in repr(snapshot["checks"]["bm25"]["integrity"])
+    finally:
+        _close_session(sessions)
+
+
+def test_health_snapshot_reports_bm25_duplicate_and_orphan_counts(tmp_path, monkeypatch):
+    chroma_dir = tmp_path / "chroma_db"
+    chroma_dir.mkdir()
+    monkeypatch.setattr("services.health.CHROMA_PATH", str(chroma_dir))
+    registry = DocumentRegistry(db_path=str(tmp_path / "registry.db"))
+    sessions = SessionManager(db_path=str(tmp_path / "sessions.db"))
+    bm25_path = tmp_path / "bm25.db"
+    _create_bm25_db(bm25_path)
+    with sqlite3.connect(bm25_path) as conn:
+        conn.execute(
+            "INSERT INTO chunk_store VALUES (?, ?, ?, ?, ?)",
+            ("doc::1", "content", "{}", 1, "doc.pdf"),
+        )
+        conn.execute("INSERT INTO fts_index(content, doc_id) VALUES (?, ?)", ("content", "doc::1"))
+        conn.execute("INSERT INTO fts_index(content, doc_id) VALUES (?, ?)", ("content", "doc::1"))
+        conn.execute("INSERT INTO fts_index(content, doc_id) VALUES (?, ?)", ("orphan", "orphan::1"))
+        conn.commit()
+
+    try:
+        snapshot = collect_health_snapshot(
+            document_registry=registry,
+            session_manager=sessions,
+            bm25_db_path=str(bm25_path),
+            trace_db_path=str(tmp_path / "missing_trace.db"),
+        )
+        integrity = snapshot["checks"]["bm25"]["integrity"]
+
+        assert snapshot["ready"] is False
+        assert integrity["duplicate_doc_id_count"] == 1
+        assert integrity["duplicate_fts_rows"] == 1
+        assert integrity["orphan_fts_count"] == 1
+        assert "orphan::1" not in repr(integrity)
     finally:
         _close_session(sessions)
