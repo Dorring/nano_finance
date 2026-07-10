@@ -162,6 +162,25 @@ def _validate_session_id(session_id: str) -> str:
     return session_id
 
 
+def _safe_upload_filename(filename: str) -> str:
+    """Normalize uploaded PDF filenames before they touch local paths or indexes."""
+    if not isinstance(filename, str):
+        raise api_error(400, "invalid_filename", "Invalid filename")
+    safe_filename = os.path.basename(filename).strip()
+    if (
+        not safe_filename
+        or safe_filename in {".", ".."}
+        or len(safe_filename) > 180
+        or any(ord(ch) < 32 for ch in safe_filename)
+        or "/" in safe_filename
+        or "\\" in safe_filename
+    ):
+        raise api_error(400, "invalid_filename", "Invalid filename")
+    if not safe_filename.lower().endswith(".pdf"):
+        raise api_error(400, "invalid_file_type", "Only PDF files are supported")
+    return safe_filename
+
+
 def _assistant_session_metadata(result=None, sources=None, trace_id=None, context_sufficient=None,
                                 confidence=None, intent=None, intent_confidence=None):
     """Build UI-facing metadata for persisted assistant session messages."""
@@ -521,14 +540,8 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
     Raises:
         HTTPException: 如果文件非 PDF 格式抛出 400 异常；如果 PDF 未提取到内容抛出 400 异常；处理过程中发生其他错误抛出 500 异常。
     """
-    # Validate file type
-    # 验证文件类型
-    if not file.filename.endswith(".pdf"):
-        raise api_error(400, "invalid_file_type", "Only PDF files are supported")
-
-    safe_filename = os.path.basename(file.filename)
-    if not safe_filename:
-        raise api_error(400, "invalid_filename", "Invalid filename")
+    # Validate and normalize file name before using it in temp paths or indexes.
+    safe_filename = _safe_upload_filename(file.filename)
     temp_dir = tempfile.mkdtemp()
     temp_path = os.path.join(temp_dir, safe_filename)
 
@@ -547,7 +560,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             os.remove(temp_path)
             os.rmdir(temp_dir)
             return UploadResponse(
-                filename=file.filename,
+                filename=safe_filename,
                 message="Duplicate file skipped (already indexed)",
                 pages=existing["page_count"],
                 collection_name="",
@@ -575,7 +588,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             os.remove(temp_path)
             os.rmdir(temp_dir)
             return UploadResponse(
-                filename=file.filename,
+                filename=safe_filename,
                 message="Duplicate content skipped (matches %s)" % content_existing["filename"],
                 pages=content_existing["page_count"],
                 collection_name="",
@@ -606,8 +619,8 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
         print("\u2713 Document uploaded: %s (user: %s, doc_id: %s)" % (safe_filename, current_user.id, doc_id))
 
         return UploadResponse(
-            filename=file.filename,
-            message="Successfully processed %s" % file.filename,
+            filename=safe_filename,
+            message="Successfully processed %s" % safe_filename,
             pages=no_of_pages,
             **result,
         )
