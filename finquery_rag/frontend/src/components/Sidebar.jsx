@@ -24,6 +24,8 @@ const Sidebar = ({
     failed: 'Failed',
   };
   const readyDocuments = documents.filter((doc) => (doc.status || 'ready') === 'ready');
+  const processingDocuments = documents.filter((doc) => ['pending', 'parsing', 'indexing'].includes(doc.status));
+  const failedDocuments = documents.filter((doc) => doc.status === 'failed');
   const allReadySelected = readyDocuments.length > 0
     && readyDocuments.every((doc) => selectedDocs.includes(doc.name));
 
@@ -138,6 +140,13 @@ const Sidebar = ({
                 ? 'Searching all ready documents'
                 : `${selectedDocs.length} selected`}
             </div>
+            {documents.length > 0 && (
+              <div className="documents-status-summary" aria-label="Document status summary">
+                <span>{readyDocuments.length} ready</span>
+                {processingDocuments.length > 0 && <span>{processingDocuments.length} processing</span>}
+                {failedDocuments.length > 0 && <span>{failedDocuments.length} failed</span>}
+              </div>
+            )}
           </div>
           {documents.length > 0 && (
             <div className="documents-actions">
@@ -169,6 +178,8 @@ const Sidebar = ({
                     if (isSelectable) onSelectDoc(doc.name);
                   }}
                   className={`document-item ${isSelected ? 'selected' : ''} ${!isSelectable ? 'disabled' : ''}`}
+                  aria-disabled={!isSelectable}
+                  title={isSelectable ? `Select ${doc.name}` : `${doc.name} is ${status}`}
                 >
                   <div className="document-title-row">
                     <div className="document-name">{doc.name}</div>
@@ -180,7 +191,7 @@ const Sidebar = ({
                     <div className="document-stats">
                       <span>{doc.pages || 0} pages</span>
                       <span>•</span>
-                      <span>{doc.count} chunks</span>
+                      <span>{doc.count || 0} chunks</span>
                     </div>
                     {doc.error_message && (
                       <div className="document-error" title={doc.error_message}>

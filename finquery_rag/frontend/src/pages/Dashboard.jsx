@@ -31,12 +31,23 @@ function Dashboard() {
   const [retrievalK, setRetrievalK] = useState(loadRetrievalK);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [hasProcessingDocuments, setHasProcessingDocuments] = useState(false);
   const { user, logout } = useAuth();
 
 
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    if (!hasProcessingDocuments) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      fetchDocuments({ silent: true });
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [hasProcessingDocuments]);
 
   useEffect(() => {
     const key = sessionStorageKey(user?.email);
@@ -94,24 +105,41 @@ function Dashboard() {
     return next;
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async ({ silent = false } = {}) => {
     try {
+      let nextDocuments;
       try {
         const registryData = await listDocumentRegistry();
-        setDocuments(registryData.documents.map((doc) => ({
+        nextDocuments = registryData.documents.map((doc) => ({
           ...doc,
           name: doc.filename,
           count: doc.chunk_count,
           pages: doc.page_count,
-        })));
+        }));
       } catch (registryError) {
         console.warn('Document registry unavailable, falling back to /documents:', registryError);
         const data = await listDocuments();
-        setDocuments(data.documents);
+        nextDocuments = data.documents.map((doc) => ({
+          ...doc,
+          status: doc.status || 'ready',
+        }));
       }
+
+      const readyNames = new Set(
+        nextDocuments
+          .filter((doc) => (doc.status || 'ready') === 'ready')
+          .map((doc) => doc.name)
+      );
+      setDocuments(nextDocuments);
+      setSelectedDocs((current) => current.filter((name) => readyNames.has(name)));
+      setHasProcessingDocuments(
+        nextDocuments.some((doc) => ['pending', 'parsing', 'indexing'].includes(doc.status))
+      );
     } catch (error) {
       console.error('Error fetching documents:', error);
-      toast.error(getApiErrorMessage(error, 'Failed to load documents'));
+      if (!silent) {
+        toast.error(getApiErrorMessage(error, 'Failed to load documents'));
+      }
     }
   };
 
@@ -149,6 +177,12 @@ function Dashboard() {
   };
 
   const handleSelectDoc = (docName) => {
+    const doc = documents.find((item) => item.name === docName);
+    if (doc && (doc.status || 'ready') !== 'ready') {
+      toast.error(`${docName} is still ${doc.status}; wait until it is ready`);
+      return;
+    }
+
     if (selectedDocs.includes(docName)) {
       setSelectedDocs(selectedDocs.filter((name) => name !== docName));
     } else {
