@@ -154,6 +154,14 @@ def _public_feedback(row: dict) -> dict:
     return {key: row.get(key) for key in keys}
 
 
+
+def _validate_session_id(session_id: str) -> str:
+    """Validate path/body session IDs before touching session storage."""
+    if not isinstance(session_id, str) or not session_id or len(session_id) > 128:
+        raise api_error(400, "invalid_session_id", "session_id must be 1-128 characters")
+    return session_id
+
+
 def _assistant_session_metadata(result=None, sources=None, trace_id=None, context_sufficient=None,
                                 confidence=None, intent=None, intent_confidence=None):
     """Build UI-facing metadata for persisted assistant session messages."""
@@ -889,14 +897,16 @@ async def clear_session(request: QueryRequest, current_user: User = Depends(get_
     """
     if not request.session_id:
         raise api_error(400, "session_id_required", "session_id is required")
-    cleared = session_manager.clear_session(request.session_id, current_user.id)
-    return {"message": "Session cleared", "session_id": request.session_id, "cleared": cleared}
+    session_id = _validate_session_id(request.session_id)
+    cleared = session_manager.clear_session(session_id, current_user.id)
+    return {"message": "Session cleared", "session_id": session_id, "cleared": cleared}
 
 @app.get("/sessions/{session_id}")
 async def get_session_history(session_id: str, current_user: User = Depends(get_current_user)):
     """
     获取指定会话的历史消息（用于前端恢复对话）。
     """
+    session_id = _validate_session_id(session_id)
     messages = session_manager.get_recent_messages(session_id, current_user.id)
     count = session_manager.get_session_count(session_id, current_user.id)
     return {"session_id": session_id, "messages": messages, "total_messages": count}
