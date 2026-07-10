@@ -149,7 +149,6 @@ const readErrorDetail = async (response) => {
   } catch {
     return text;
   }
-  return `HTTP error: ${response.status}`;
 };
 
 // Query documents with streaming

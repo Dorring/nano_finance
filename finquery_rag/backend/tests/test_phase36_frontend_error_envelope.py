@@ -35,3 +35,15 @@ def test_dashboard_uses_normalized_api_error_message():
     assert "getApiErrorMessage(error, `Failed to upload ${file.name}`)" in content
     assert "getApiErrorMessage(error, `Failed to delete ${docName}`)" in content
     assert "getApiErrorMessage(error, 'Failed to get response')" in content
+
+
+
+def test_stream_error_parser_has_no_unreachable_fallback():
+    content = (FRONTEND / "api.js").read_text(encoding="utf-8")
+    unreachable = """return getApiErrorMessage(payload, `HTTP error: ${response.status}`);
+  } catch {
+    return text;
+  }
+  return `HTTP error: ${response.status}`;"""
+
+    assert unreachable not in content
