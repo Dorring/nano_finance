@@ -4,6 +4,8 @@ import sqlite3
 import time
 import uuid
 
+from .sqlite_migrations import run_component_migrations
+
 
 class FeedbackStore:
     """SQLite-backed feedback store keyed by tenant and trace."""
@@ -43,19 +45,22 @@ class FeedbackStore:
                     ON answer_feedback(tenant_id, trace_id);
                 """
             )
-            self._dedupe_latest_feedback(conn)
-            conn.execute(
-                """
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_tenant_trace_unique
-                    ON answer_feedback(tenant_id, trace_id)
-                """
+            run_component_migrations(
+                conn,
+                "feedback_store",
+                self.SCHEMA_VERSION,
+                {2: self._migrate_to_v2},
+                version_table="feedback_schema_version",
             )
-            row = conn.execute("SELECT version FROM feedback_schema_version LIMIT 1").fetchone()
-            if row is None:
-                conn.execute("INSERT INTO feedback_schema_version VALUES (?)", (self.SCHEMA_VERSION,))
-            elif row["version"] < self.SCHEMA_VERSION:
-                conn.execute("UPDATE feedback_schema_version SET version = ?", (self.SCHEMA_VERSION,))
-            conn.commit()
+
+    def _migrate_to_v2(self, conn):
+        self._dedupe_latest_feedback(conn)
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_tenant_trace_unique
+                ON answer_feedback(tenant_id, trace_id)
+            """
+        )
 
     def _dedupe_latest_feedback(self, conn):
         """Keep only the newest feedback row for each tenant/trace before enabling uniqueness."""
