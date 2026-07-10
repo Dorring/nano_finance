@@ -137,3 +137,26 @@ def test_search_skips_rows_with_corrupt_metadata_json(tmp_path):
     results = retriever.search("revenue", user_id=1)
 
     assert [row["doc_id"] for row in results] == ["user_1_r.pdf::2"]
+
+
+
+def test_search_rejects_non_positive_and_invalid_limits(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    retriever.add_chunks([_chunk("r.pdf::1")], user_id=1)
+
+    assert retriever.search("revenue", k=0, user_id=1) == []
+    assert retriever.search("revenue", k=-1, user_id=1) == []
+    assert retriever.search("revenue", k="bad", user_id=1) == []
+
+
+def test_search_caps_large_limits(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    chunks = [
+        _chunk("r.pdf::%s" % i, content="alpha revenue %s" % i)
+        for i in range(retriever.MAX_SEARCH_LIMIT + 5)
+    ]
+    retriever.add_chunks(chunks, user_id=1)
+
+    results = retriever.search("revenue", k=1000, user_id=1)
+
+    assert len(results) == retriever.MAX_SEARCH_LIMIT
