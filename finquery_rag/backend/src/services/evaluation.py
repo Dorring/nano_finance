@@ -483,10 +483,19 @@ def compare_reports(
 
     metrics = {}
     regressions = []
+    regression_details = []
+    failure_reasons = []
     for name in metric_names:
         base_value = _optional_float(baseline_summary.get(name)) or 0.0
         cand_value = _optional_float(candidate_summary.get(name)) or 0.0
         delta = cand_value - base_value
+        detail = {
+            "metric": name,
+            "baseline": base_value,
+            "candidate": cand_value,
+            "delta": delta,
+            "allowed_drop": regression_tolerance,
+        }
         metrics[name] = {
             "baseline": base_value,
             "candidate": cand_value,
@@ -494,12 +503,22 @@ def compare_reports(
         }
         if delta < -regression_tolerance:
             regressions.append(name)
+            regression_details.append(detail)
+            failure_reasons.append(
+                "metric %s regressed by %.6f (baseline %.6f -> candidate %.6f, tolerance %.6f)"
+                % (name, delta, base_value, cand_value, regression_tolerance)
+            )
 
     latency_delta = None
     base_latency = _optional_float(baseline_summary.get("p95_latency_ms"))
     cand_latency = _optional_float(candidate_summary.get("p95_latency_ms"))
     if base_latency is not None and cand_latency is not None:
         latency_delta = cand_latency - base_latency
+    latency = {
+        "baseline_p95_ms": base_latency,
+        "candidate_p95_ms": cand_latency,
+        "delta_ms": latency_delta,
+    }
 
     baseline_cases = {
         item["id"]: item
@@ -523,14 +542,31 @@ def compare_reports(
         if cand_case.get("passed") is True
         and baseline_cases.get(case_id, {}).get("passed") is False
     )
+    case_failure_details = [
+        {
+            "id": case_id,
+            "baseline_passed": baseline_cases.get(case_id, {}).get("passed"),
+            "candidate_passed": candidate_cases.get(case_id, {}).get("passed"),
+            "tags": candidate_cases.get(case_id, {}).get("tags", []),
+        }
+        for case_id in newly_failed
+    ]
+    for case_id in newly_failed:
+        failure_reasons.append("case %s newly failed" % case_id)
+
+    passed = not regressions and not newly_failed
 
     return {
-        "passed": not regressions and not newly_failed,
+        "passed": passed,
         "regression_tolerance": regression_tolerance,
         "metric_deltas": metrics,
         "regressions": regressions,
+        "regression_details": regression_details,
         "newly_failed": newly_failed,
         "newly_passed": newly_passed,
+        "case_failure_details": case_failure_details,
+        "failure_reasons": failure_reasons,
+        "latency": latency,
         "p95_latency_delta_ms": latency_delta,
         "baseline_missing_predictions": baseline_summary.get("missing_predictions", 0),
         "candidate_missing_predictions": candidate_summary.get("missing_predictions", 0),
