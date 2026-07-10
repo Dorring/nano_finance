@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../api';
+import { getApiErrorMessage, login } from '../api';
 import { useAuth } from '../context/useAuth';
 import toast from 'react-hot-toast';
 import './Auth.css';
@@ -28,7 +28,7 @@ const Login = () => {
       navigate('/');
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error(error.userMessage || getApiErrorMessage(error, 'Login failed'));
     } finally {
       setIsLoading(false);
     }

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession } from '../api';
+import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, getApiErrorMessage } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -111,7 +111,7 @@ function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      toast.error('Failed to load documents');
+      toast.error(getApiErrorMessage(error, 'Failed to load documents'));
     }
   };
 
@@ -130,7 +130,7 @@ function Dashboard() {
       toast.success(`Successfully uploaded ${file.name}`, { id: uploadToast });
     } catch (error) {
       console.error('Error uploading document:', error);
-      toast.error(`Failed to upload ${file.name}`, { id: uploadToast });
+      toast.error(getApiErrorMessage(error, `Failed to upload ${file.name}`), { id: uploadToast });
     } finally {
       setIsUploading(false);
     }
@@ -144,7 +144,7 @@ function Dashboard() {
       toast.success(`Deleted ${docName}`);
     } catch (error) {
       console.error('Error deleting document:', error);
-      toast.error(`Failed to delete ${docName}`);
+      toast.error(getApiErrorMessage(error, `Failed to delete ${docName}`));
     }
   };
 
@@ -248,7 +248,7 @@ function Dashboard() {
         }
         return [...updated];
       });
-      toast.error(error.message || 'Failed to get response');
+      toast.error(getApiErrorMessage(error, 'Failed to get response'));
     } finally {
       setIsLoading(false);
     }
