@@ -22,6 +22,9 @@ class SessionManager:
     SCHEMA_VERSION = 2
     DEFAULT_MAX_HISTORY = 8  # max message pairs to keep
     DEFAULT_TTL_SECONDS = 0  # disabled; set env SESSION_TTL_SECONDS to enable
+    MAX_SESSION_ID_LENGTH = 128
+    MAX_CONTENT_CHARS = 20000
+    MAX_METADATA_JSON_CHARS = 20000
 
     def __init__(self, db_path: str = None, max_history: int = None, ttl_seconds: int = None):
         import os
@@ -78,6 +81,23 @@ class SessionManager:
     def _migrate_to_v2(conn):
         ensure_column(conn, "conversations", "metadata_json", "metadata_json TEXT")
 
+    def _is_valid_session_id(self, session_id: str) -> bool:
+        return isinstance(session_id, str) and 0 < len(session_id) <= self.MAX_SESSION_ID_LENGTH
+
+    def _bounded_content(self, content: str) -> str:
+        content = str(content or "")
+        if len(content) <= self.MAX_CONTENT_CHARS:
+            return content
+        return content[: self.MAX_CONTENT_CHARS] + "\n[truncated]"
+
+    def _bounded_metadata_json(self, metadata: dict = None) -> str | None:
+        if not metadata:
+            return None
+        metadata_json = json.dumps(metadata)
+        if len(metadata_json) <= self.MAX_METADATA_JSON_CHARS:
+            return metadata_json
+        return json.dumps({"truncated": True})
+
     def add_message(self, session_id: str, user_id: int, role: str, content: str, metadata: dict = None):
         """
         Store a conversation message.
@@ -89,16 +109,16 @@ class SessionManager:
             content: Message content
             metadata: Optional UI/debug metadata such as sources and diagnostics
         """
-        if not session_id or user_id is None:
-            return  # fail closed: reject missing identifiers
+        if not self._is_valid_session_id(session_id) or user_id is None:
+            return  # fail closed: reject missing identifiers or oversized session IDs
         if role not in ("user", "assistant"):
             return  # only allow known roles
 
         conn = self._get_conn()
-        metadata_json = json.dumps(metadata) if metadata else None
+        metadata_json = self._bounded_metadata_json(metadata)
         conn.execute(
             "INSERT INTO conversations (session_id, user_id, role, content, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (session_id, user_id, role, content, metadata_json, time.time()),
+            (session_id, user_id, role, self._bounded_content(content), metadata_json, time.time()),
         )
         conn.commit()
 
@@ -122,7 +142,7 @@ class SessionManager:
 
     def prune_session_history(self, session_id: str, user_id: int, max_messages: int = None) -> int:
         """Trim oldest messages for one session and return deleted row count."""
-        if not session_id or user_id is None:
+        if not self._is_valid_session_id(session_id) or user_id is None:
             return 0
         if max_messages is None:
             max_messages = self.max_history * 2
@@ -160,7 +180,7 @@ class SessionManager:
         Returns:
             List of dicts: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}, ...]
         """
-        if not session_id or user_id is None:
+        if not self._is_valid_session_id(session_id) or user_id is None:
             return []
 
         self.cleanup_expired()
@@ -204,7 +224,7 @@ class SessionManager:
         Returns:
             True if messages were deleted, False if no messages found
         """
-        if not session_id or user_id is None:
+        if not self._is_valid_session_id(session_id) or user_id is None:
             return False
 
         conn = self._get_conn()
@@ -217,7 +237,7 @@ class SessionManager:
 
     def get_session_count(self, session_id: str, user_id: int) -> int:
         """Return the number of messages in a session."""
-        if not session_id or user_id is None:
+        if not self._is_valid_session_id(session_id) or user_id is None:
             return 0
         self.cleanup_expired()
         conn = self._get_conn()
