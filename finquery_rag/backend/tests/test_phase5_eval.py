@@ -384,3 +384,78 @@ def test_trace_to_replay_case_keeps_intent_when_available():
 
     assert case.expected_intent == "document_qa"
     assert case.to_dict()["expected_intent"] == "document_qa"
+
+
+
+def test_load_jsonl_cases_reports_line_number_for_schema_errors(tmp_path):
+    case_path = tmp_path / "bad_cases.jsonl"
+    case_path.write_text(
+        json.dumps({"id": "ok", "question": "Q"}) + "\n"
+        + json.dumps({"id": "bad", "expected_sources": []}) + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        load_jsonl_cases(case_path)
+    except ValueError as exc:
+        message = str(exc)
+        assert "bad_cases.jsonl:2" in message
+        assert "missing question" in message
+    else:
+        raise AssertionError("expected schema error")
+
+
+def test_load_jsonl_cases_rejects_duplicate_ids(tmp_path):
+    case_path = tmp_path / "cases.jsonl"
+    case_path.write_text(
+        json.dumps({"id": "dup", "question": "Q1"}) + "\n"
+        + json.dumps({"id": "dup", "question": "Q2"}) + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        load_jsonl_cases(case_path)
+    except ValueError as exc:
+        assert "duplicate evaluation case id 'dup'" in str(exc)
+        assert "cases.jsonl:2" in str(exc)
+    else:
+        raise AssertionError("expected duplicate id error")
+
+
+def test_load_jsonl_predictions_rejects_duplicate_ids(tmp_path):
+    pred_path = tmp_path / "preds.jsonl"
+    pred_path.write_text(
+        json.dumps({"id": "dup", "answer": "A1"}) + "\n"
+        + json.dumps({"id": "dup", "answer": "A2"}) + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        load_jsonl_predictions(pred_path)
+    except ValueError as exc:
+        assert "duplicate prediction id 'dup'" in str(exc)
+        assert "preds.jsonl:2" in str(exc)
+    else:
+        raise AssertionError("expected duplicate id error")
+
+
+def test_case_schema_rejects_non_list_fields():
+    try:
+        EvaluationCase.from_dict({
+            "id": "bad",
+            "question": "Q",
+            "expected_sources": {"filename": "x.pdf"},
+        })
+    except ValueError as exc:
+        assert "field expected_sources must be a list" in str(exc)
+    else:
+        raise AssertionError("expected field type error")
+
+
+def test_prediction_schema_rejects_non_object_sources():
+    try:
+        Prediction.from_dict({"id": "bad", "answer": "A", "sources": ["not-object"]})
+    except ValueError as exc:
+        assert "field sources[0] must be an object" in str(exc)
+    else:
+        raise AssertionError("expected source item type error")

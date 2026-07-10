@@ -38,6 +38,7 @@ class ExpectedSource:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExpectedSource":
+        _ensure_mapping(data, "expected source")
         return cls(
             filename=data.get("filename") or data.get("doc_name"),
             page=data.get("page"),
@@ -79,6 +80,7 @@ class ExpectedCalculation:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExpectedCalculation":
+        _ensure_mapping(data, "expected calculation")
         calc_id = data.get("id") or data.get("calc_id") or data.get("operation")
         operation = data.get("operation")
         if not calc_id:
@@ -122,12 +124,20 @@ class EvaluationCase:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "EvaluationCase":
+        _ensure_mapping(data, "evaluation case")
         case_id = data.get("id") or data.get("case_id") or data.get("trace_id")
         question = data.get("question")
         if not case_id:
             raise ValueError("evaluation case missing id/case_id")
         if not question:
             raise ValueError(f"evaluation case {case_id!r} missing question")
+        _ensure_list_fields(
+            data,
+            ("expected_sources", "expected_answer_contains", "expected_numbers", "expected_calculations", "document_names", "tags"),
+            f"evaluation case {case_id!r}",
+        )
+        if data.get("metadata") is not None and not isinstance(data.get("metadata"), dict):
+            raise ValueError(f"evaluation case {case_id!r} field metadata must be an object")
 
         return cls(
             case_id=str(case_id),
@@ -193,9 +203,15 @@ class Prediction:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Prediction":
+        _ensure_mapping(data, "prediction")
         case_id = data.get("id") or data.get("case_id")
         if not case_id:
             raise ValueError("prediction missing id/case_id")
+        _ensure_list_fields(data, ("sources", "retrieved_chunks", "calculations"), f"prediction {case_id!r}")
+        for field in ("sources", "retrieved_chunks", "calculations"):
+            for idx, item in enumerate(data.get(field, []) or []):
+                if not isinstance(item, dict):
+                    raise ValueError(f"prediction {case_id!r} field {field}[{idx}] must be an object")
         return cls(
             case_id=str(case_id),
             answer=str(data.get("answer", "")),
@@ -209,12 +225,31 @@ class Prediction:
 
 
 def load_jsonl_cases(path: str | Path) -> list[EvaluationCase]:
-    return [EvaluationCase.from_dict(item) for item in _read_jsonl(path)]
+    cases = []
+    seen_ids = set()
+    for line_no, item in _read_jsonl_rows(path):
+        try:
+            case = EvaluationCase.from_dict(item)
+        except ValueError as exc:
+            raise ValueError(f"invalid evaluation case at {path}:{line_no}: {exc}") from exc
+        if case.case_id in seen_ids:
+            raise ValueError(f"duplicate evaluation case id {case.case_id!r} at {path}:{line_no}")
+        seen_ids.add(case.case_id)
+        cases.append(case)
+    return cases
 
 
 def load_jsonl_predictions(path: str | Path) -> dict[str, Prediction]:
-    predictions = [Prediction.from_dict(item) for item in _read_jsonl(path)]
-    return {pred.case_id: pred for pred in predictions}
+    predictions = {}
+    for line_no, item in _read_jsonl_rows(path):
+        try:
+            pred = Prediction.from_dict(item)
+        except ValueError as exc:
+            raise ValueError(f"invalid prediction at {path}:{line_no}: {exc}") from exc
+        if pred.case_id in predictions:
+            raise ValueError(f"duplicate prediction id {pred.case_id!r} at {path}:{line_no}")
+        predictions[pred.case_id] = pred
+    return predictions
 
 
 def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
@@ -502,6 +537,10 @@ def compare_reports(
     }
 
 def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
+    return [item for _, item in _read_jsonl_rows(path)]
+
+
+def _read_jsonl_rows(path: str | Path) -> list[tuple[int, dict[str, Any]]]:
     rows = []
     with Path(path).open("r", encoding="utf-8") as fh:
         for line_no, line in enumerate(fh, 1):
@@ -509,12 +548,24 @@ def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
             if not stripped or stripped.startswith("#"):
                 continue
             try:
-                rows.append(json.loads(stripped))
+                item = json.loads(stripped)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"invalid JSONL at {path}:{line_no}: {exc}") from exc
+            if not isinstance(item, dict):
+                raise ValueError(f"invalid JSONL at {path}:{line_no}: row must be an object")
+            rows.append((line_no, item))
     return rows
 
 
+def _ensure_mapping(value: Any, label: str) -> None:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+
+
+def _ensure_list_fields(data: dict[str, Any], fields: tuple[str, ...], label: str) -> None:
+    for field in fields:
+        if data.get(field) is not None and not isinstance(data.get(field), list):
+            raise ValueError(f"{label} field {field} must be a list")
 
 
 def _intent_score(expected_intent: str | None, predicted_intent: str | None) -> float:
