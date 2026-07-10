@@ -8,8 +8,21 @@ import sqlite3
 Migration = Callable[[sqlite3.Connection], None]
 
 
+def validate_identifier(identifier: str) -> str:
+    """Return identifier when safe for SQLite DDL fragments."""
+    if not isinstance(identifier, str) or not identifier:
+        raise ValueError("SQLite identifier must be a non-empty string")
+    if not (identifier[0].isalpha() or identifier[0] == "_"):
+        raise ValueError("Unsafe SQLite identifier: %r" % (identifier,))
+    for char in identifier:
+        if not (char.isalnum() or char == "_"):
+            raise ValueError("Unsafe SQLite identifier: %r" % (identifier,))
+    return identifier
+
+
 def table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
     """Return True when a table exists."""
+    table_name = validate_identifier(table_name)
     row = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
         (table_name,),
@@ -19,6 +32,7 @@ def table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
 
 def table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
     """Return column names for a table."""
+    table_name = validate_identifier(table_name)
     return {
         row["name"] if hasattr(row, "keys") else row[1]
         for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
@@ -27,6 +41,8 @@ def table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
 
 def ensure_column(conn: sqlite3.Connection, table_name: str, column_name: str, column_sql: str) -> bool:
     """Add a column if missing. Return True when a column was added."""
+    table_name = validate_identifier(table_name)
+    column_name = validate_identifier(column_name)
     if column_name in table_columns(conn, table_name):
         return False
     conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
@@ -43,9 +59,11 @@ def get_component_version(
     Supports both normalized version_table(component, version) and legacy
     single-column version_table(version) tables.
     """
+    version_table = validate_identifier(version_table)
     if not table_exists(conn, version_table):
         return 0
 
+    version_table = validate_identifier(version_table)
     columns = table_columns(conn, version_table)
     if "component" in columns:
         row = conn.execute(
@@ -66,6 +84,7 @@ def set_component_version(
     version_table: str = "schema_version",
 ) -> None:
     """Store component version while preserving existing version table shape."""
+    version_table = validate_identifier(version_table)
     columns = table_columns(conn, version_table)
     if "component" in columns:
         conn.execute(
