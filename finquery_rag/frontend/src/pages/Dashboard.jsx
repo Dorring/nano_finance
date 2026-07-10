@@ -63,12 +63,15 @@ function Dashboard() {
 
         setMessages((currentMessages) => {
           if (currentMessages.length > 0) return currentMessages;
-          return (data.messages || []).map((message) => ({
-            role: message.role,
-            content: message.content,
-            sources: [],
-            diagnostics: null,
-          }));
+          return (data.messages || []).map((message) => {
+            const metadata = message.metadata || {};
+            return {
+              role: message.role,
+              content: message.content,
+              sources: metadata.sources || message.sources || [],
+              diagnostics: metadata.diagnostics || message.diagnostics || null,
+            };
+          });
         });
       } catch (error) {
         console.warn('Failed to restore session history:', error);
