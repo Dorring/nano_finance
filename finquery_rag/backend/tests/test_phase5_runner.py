@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from services.eval_runner import run_case, run_jsonl_cases
 from services.evaluation import EvaluationCase, compare_reports
+from src.eval_cli import main as eval_cli_main
 
 
 class FakeRAGEngine:
@@ -177,3 +178,64 @@ def test_compare_reports_includes_case_failure_tags():
         }
     ]
     assert comparison["failure_reasons"] == ["case c1 newly failed"]
+
+
+
+def test_eval_cli_compare_prints_failure_summary_to_stderr(tmp_path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    out_path = tmp_path / "comparison.json"
+    baseline_path.write_text(json.dumps({
+        "summary": {"pass_rate": 1.0},
+        "cases": [{"id": "c1", "passed": True}],
+    }), encoding="utf-8")
+    candidate_path.write_text(json.dumps({
+        "summary": {"pass_rate": 0.0},
+        "cases": [{"id": "c1", "passed": False, "tags": ["feedback_down"]}],
+    }), encoding="utf-8")
+
+    code = eval_cli_main([
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        "--out",
+        str(out_path),
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert json.loads(captured.out)["passed"] is False
+    assert json.loads(out_path.read_text(encoding="utf-8"))["passed"] is False
+    assert "FinQuery eval comparison failed:" in captured.err
+    assert "metric pass_rate regressed" in captured.err
+    assert "Metric regressions:" in captured.err
+    assert "Newly failed cases:" in captured.err
+    assert "c1 tags=feedback_down" in captured.err
+
+
+def test_eval_cli_compare_success_keeps_stderr_empty(tmp_path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(json.dumps({
+        "summary": {"pass_rate": 0.5},
+        "cases": [{"id": "c1", "passed": False}],
+    }), encoding="utf-8")
+    candidate_path.write_text(json.dumps({
+        "summary": {"pass_rate": 1.0},
+        "cases": [{"id": "c1", "passed": True}],
+    }), encoding="utf-8")
+
+    code = eval_cli_main([
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert json.loads(captured.out)["passed"] is True
+    assert captured.err == ""
