@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
@@ -35,9 +35,47 @@ function Dashboard() {
   const { user, logout } = useAuth();
 
 
+  const fetchDocuments = useCallback(async ({ silent = false } = {}) => {
+    try {
+      let nextDocuments;
+      try {
+        const registryData = await listDocumentRegistry();
+        nextDocuments = registryData.documents.map((doc) => ({
+          ...doc,
+          name: doc.filename,
+          count: doc.chunk_count,
+          pages: doc.page_count,
+        }));
+      } catch (registryError) {
+        console.warn('Document registry unavailable, falling back to /documents:', registryError);
+        const data = await listDocuments();
+        nextDocuments = data.documents.map((doc) => ({
+          ...doc,
+          status: doc.status || 'ready',
+        }));
+      }
+
+      const readyNames = new Set(
+        nextDocuments
+          .filter((doc) => (doc.status || 'ready') === 'ready')
+          .map((doc) => doc.name)
+      );
+      setDocuments(nextDocuments);
+      setSelectedDocs((current) => current.filter((name) => readyNames.has(name)));
+      setHasProcessingDocuments(
+        nextDocuments.some((doc) => ['pending', 'parsing', 'indexing'].includes(doc.status))
+      );
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      if (!silent) {
+        toast.error(getApiErrorMessage(error, 'Failed to load documents'));
+      }
+    }
+  }, []);
+
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
   useEffect(() => {
     if (!hasProcessingDocuments) return undefined;
@@ -47,7 +85,7 @@ function Dashboard() {
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [hasProcessingDocuments]);
+  }, [fetchDocuments, hasProcessingDocuments]);
 
   useEffect(() => {
     const key = sessionStorageKey(user?.email);
@@ -105,44 +143,6 @@ function Dashboard() {
     return next;
   };
 
-  const fetchDocuments = async ({ silent = false } = {}) => {
-    try {
-      let nextDocuments;
-      try {
-        const registryData = await listDocumentRegistry();
-        nextDocuments = registryData.documents.map((doc) => ({
-          ...doc,
-          name: doc.filename,
-          count: doc.chunk_count,
-          pages: doc.page_count,
-        }));
-      } catch (registryError) {
-        console.warn('Document registry unavailable, falling back to /documents:', registryError);
-        const data = await listDocuments();
-        nextDocuments = data.documents.map((doc) => ({
-          ...doc,
-          status: doc.status || 'ready',
-        }));
-      }
-
-      const readyNames = new Set(
-        nextDocuments
-          .filter((doc) => (doc.status || 'ready') === 'ready')
-          .map((doc) => doc.name)
-      );
-      setDocuments(nextDocuments);
-      setSelectedDocs((current) => current.filter((name) => readyNames.has(name)));
-      setHasProcessingDocuments(
-        nextDocuments.some((doc) => ['pending', 'parsing', 'indexing'].includes(doc.status))
-      );
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      if (!silent) {
-        toast.error(getApiErrorMessage(error, 'Failed to load documents'));
-      }
-    }
-  };
-
   const handleUpload = async (file) => {
     if (!file.name.endsWith('.pdf')) {
       toast.error('Please upload a PDF file');
@@ -167,7 +167,7 @@ function Dashboard() {
   const handleDelete = async (docName) => {
     try {
       await deleteDocument(docName);
-      setSelectedDocs(selectedDocs.filter(name => name !== docName));
+      setSelectedDocs((current) => current.filter((name) => name !== docName));
       await fetchDocuments();
       toast.success(`Deleted ${docName}`);
     } catch (error) {
@@ -183,12 +183,13 @@ function Dashboard() {
       return;
     }
 
-    if (selectedDocs.includes(docName)) {
-      setSelectedDocs(selectedDocs.filter((name) => name !== docName));
-    } else {
-      setSelectedDocs([...selectedDocs, docName]);
+    setSelectedDocs((current) => {
+      if (current.includes(docName)) {
+        return current.filter((name) => name !== docName);
+      }
       toast.success(`Selected ${docName}`);
-    }
+      return [...current, docName];
+    });
   };
 
   const handleSelectAllReadyDocs = () => {
@@ -205,7 +206,7 @@ function Dashboard() {
   };
 
   const handleRemoveDoc = (docName) => {
-    setSelectedDocs(selectedDocs.filter((name) => name !== docName));
+    setSelectedDocs((current) => current.filter((name) => name !== docName));
   };
 
   const handleRetrievalKChange = (nextValue) => {
