@@ -132,6 +132,24 @@ def _public_feedback(row: dict) -> dict:
     return {key: row.get(key) for key in keys}
 
 
+def _assistant_session_metadata(result=None, sources=None, trace_id=None, context_sufficient=None,
+                                confidence=None, intent=None, intent_confidence=None):
+    """Build UI-facing metadata for persisted assistant session messages."""
+    result = result or {}
+    return {
+        "sources": sources if sources is not None else result.get("sources", []),
+        "diagnostics": {
+            "traceId": trace_id if trace_id is not None else result.get("trace_id"),
+            "contextSufficient": (
+                context_sufficient if context_sufficient is not None else result.get("context_sufficient")
+            ),
+            "retrievalConfidence": confidence if confidence is not None else result.get("confidence"),
+            "intent": intent if intent is not None else result.get("intent"),
+            "intentConfidence": intent_confidence if intent_confidence is not None else result.get("intent_confidence"),
+        },
+    }
+
+
 def _resolve_query_document_names_for_user(user_id, requested_doc_names):
     """Return ready document names for query, rejecting stale/unready filters."""
     ready_names = [
@@ -616,7 +634,13 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
         rewritten = result.get("rewritten_question")
         if request.session_id:
             session_manager.add_message(request.session_id, current_user.id, "user", request.question)
-            session_manager.add_message(request.session_id, current_user.id, "assistant", result["answer"])
+            session_manager.add_message(
+                request.session_id,
+                current_user.id,
+                "assistant",
+                result["answer"],
+                metadata=_assistant_session_metadata(result=result),
+            )
 
         return QueryResponse(
             answer=result["answer"],
@@ -740,13 +764,27 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             refusal = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
             if request.session_id:
                 session_manager.add_message(request.session_id, current_user.id, "user", request.question)
-                session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
             diagnostics = {
                 "confidence": confidence,
                 "context_sufficient": False,
                 "intent_confidence": intent["confidence"],
             }
             trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
+            if request.session_id:
+                session_manager.add_message(
+                    request.session_id,
+                    current_user.id,
+                    "assistant",
+                    refusal,
+                    metadata=_assistant_session_metadata(
+                        sources=sources,
+                        trace_id=trace_id,
+                        context_sufficient=False,
+                        confidence=confidence,
+                        intent=intent["intent"],
+                        intent_confidence=intent["confidence"],
+                    ),
+                )
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
             yield make_stream_done_event(sources=sources, context_sufficient=False, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
@@ -761,16 +799,29 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             full_answer += token
             yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
 
-        # Phase 4: Save assistant answer to session
-        if request.session_id:
-            session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
-
         diagnostics = {
             "confidence": confidence,
             "context_sufficient": True,
             "intent_confidence": intent["confidence"],
         }
         trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
+
+        # Phase 4: Save assistant answer to session with trace/source metadata.
+        if request.session_id:
+            session_manager.add_message(
+                request.session_id,
+                current_user.id,
+                "assistant",
+                full_answer,
+                metadata=_assistant_session_metadata(
+                    sources=sources,
+                    trace_id=trace_id,
+                    context_sufficient=True,
+                    confidence=confidence,
+                    intent=intent["intent"],
+                    intent_confidence=intent["confidence"],
+                ),
+            )
         yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
 
     return StreamingResponse(

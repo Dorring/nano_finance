@@ -17,7 +17,7 @@ class SessionManager:
     Retention is opt-in and disabled by default for backwards compatibility.
     """
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
     DEFAULT_MAX_HISTORY = 8  # max message pairs to keep
     DEFAULT_TTL_SECONDS = 0  # disabled; set env SESSION_TTL_SECONDS to enable
 
@@ -53,6 +53,7 @@ class SessionManager:
                 user_id INTEGER NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
+                metadata_json TEXT,
                 created_at REAL NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_conv_session
@@ -62,13 +63,29 @@ class SessionManager:
                 version INTEGER NOT NULL
             );
         """)
+        row = conn.execute(
+            "SELECT version FROM schema_version WHERE component = ?",
+            ("session_manager",),
+        ).fetchone()
+        self._migrate_schema(row["version"] if row else 0)
         conn.execute(
             "INSERT OR REPLACE INTO schema_version (component, version) VALUES (?, ?)",
             ("session_manager", self.SCHEMA_VERSION),
         )
         conn.commit()
 
-    def add_message(self, session_id: str, user_id: int, role: str, content: str):
+    def _migrate_schema(self, current_version: int):
+        if current_version < 2:
+            conn = self._get_conn()
+            columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(conversations)").fetchall()
+            }
+            if "metadata_json" not in columns:
+                conn.execute("ALTER TABLE conversations ADD COLUMN metadata_json TEXT")
+                conn.commit()
+
+    def add_message(self, session_id: str, user_id: int, role: str, content: str, metadata: dict = None):
         """
         Store a conversation message.
 
@@ -77,6 +94,7 @@ class SessionManager:
             user_id: Tenant ID for isolation
             role: 'user' or 'assistant'
             content: Message content
+            metadata: Optional UI/debug metadata such as sources and diagnostics
         """
         if not session_id or user_id is None:
             return  # fail closed: reject missing identifiers
@@ -84,9 +102,10 @@ class SessionManager:
             return  # only allow known roles
 
         conn = self._get_conn()
+        metadata_json = json.dumps(metadata) if metadata else None
         conn.execute(
-            "INSERT INTO conversations (session_id, user_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
-            (session_id, user_id, role, content, time.time()),
+            "INSERT INTO conversations (session_id, user_id, role, content, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, user_id, role, content, metadata_json, time.time()),
         )
         conn.commit()
 
@@ -159,14 +178,26 @@ class SessionManager:
         limit = n_pairs * 2
         conn = self._get_conn()
         rows = conn.execute(
-            """SELECT role, content FROM conversations
+            """SELECT role, content, metadata_json FROM conversations
                WHERE session_id = ? AND user_id = ?
                ORDER BY created_at DESC LIMIT ?""",
             (session_id, user_id, limit),
         ).fetchall()
 
         # Reverse to chronological order
-        messages = [{"role": row["role"], "content": row["content"]} for row in reversed(rows)]
+        messages = []
+        for row in reversed(rows):
+            metadata = {}
+            if row["metadata_json"]:
+                try:
+                    metadata = json.loads(row["metadata_json"])
+                except (TypeError, json.JSONDecodeError):
+                    metadata = {}
+            messages.append({
+                "role": row["role"],
+                "content": row["content"],
+                "metadata": metadata,
+            })
         return messages
 
     def clear_session(self, session_id: str, user_id: int) -> bool:
