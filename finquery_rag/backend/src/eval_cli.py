@@ -11,6 +11,7 @@ import asyncio
 import json
 from pathlib import Path
 import os
+import sys
 
 from .services.evaluation import (
     compare_reports,
@@ -158,6 +159,8 @@ def main(argv: list[str] | None = None) -> int:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(payload + "\n", encoding="utf-8")
         print(payload)
+        if not comparison["passed"]:
+            _print_compare_failure_summary(comparison)
         return 0 if comparison["passed"] else 1
 
     if args.command == "traces":
@@ -236,6 +239,43 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report["ok"] else 1
 
     return 2
+
+
+def _print_compare_failure_summary(comparison: dict) -> None:
+    """Print a compact human-readable compare failure summary to stderr."""
+    print("FinQuery eval comparison failed:", file=sys.stderr)
+    reasons = comparison.get("failure_reasons") or []
+    if reasons:
+        for reason in reasons[:10]:
+            print(f"- {reason}", file=sys.stderr)
+        if len(reasons) > 10:
+            print(f"- ... {len(reasons) - 10} more failure reasons", file=sys.stderr)
+    else:
+        print("- no failure reason details available", file=sys.stderr)
+
+    regressions = comparison.get("regression_details") or []
+    if regressions:
+        print("Metric regressions:", file=sys.stderr)
+        for item in regressions[:10]:
+            print(
+                "- {metric}: {baseline:.6f} -> {candidate:.6f} (delta {delta:.6f}, tolerance {allowed_drop:.6f})".format(
+                    metric=item.get("metric", "unknown"),
+                    baseline=float(item.get("baseline") or 0.0),
+                    candidate=float(item.get("candidate") or 0.0),
+                    delta=float(item.get("delta") or 0.0),
+                    allowed_drop=float(item.get("allowed_drop") or 0.0),
+                ),
+                file=sys.stderr,
+            )
+
+    case_failures = comparison.get("case_failure_details") or []
+    if case_failures:
+        print("Newly failed cases:", file=sys.stderr)
+        for item in case_failures[:10]:
+            tags = item.get("tags") or []
+            suffix = f" tags={','.join(tags)}" if tags else ""
+            print(f"- {item.get('id')}{suffix}", file=sys.stderr)
+
 
 
 if __name__ == "__main__":
