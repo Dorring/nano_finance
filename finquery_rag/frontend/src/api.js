@@ -10,6 +10,22 @@ const api = axios.create({
   },
 });
 
+export const getApiErrorMessage = (errorOrPayload, fallback = 'Request failed') => {
+  const payload = errorOrPayload?.response?.data || errorOrPayload;
+  const detail = payload?.detail;
+
+  if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+    return detail.message || detail.error_code || fallback;
+  }
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || item.message || String(item)).join('; ');
+  }
+  if (typeof payload?.message === 'string') return payload.message;
+  if (typeof errorOrPayload?.message === 'string') return errorOrPayload.message;
+  return fallback;
+};
+
 // Add token to requests if it exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -23,6 +39,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    error.userMessage = getApiErrorMessage(error);
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -128,9 +145,7 @@ const readErrorDetail = async (response) => {
 
   try {
     const payload = JSON.parse(text);
-    if (typeof payload.detail === 'string') return payload.detail;
-    if (Array.isArray(payload.detail)) return payload.detail.map((item) => item.msg || item.message || String(item)).join('; ');
-    if (payload.message) return payload.message;
+    return getApiErrorMessage(payload, `HTTP error: ${response.status}`);
   } catch {
     return text;
   }

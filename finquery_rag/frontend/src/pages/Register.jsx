@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../api';
+import { getApiErrorMessage, register } from '../api';
 import { useAuth } from '../context/useAuth';
 import toast from 'react-hot-toast';
 import './Auth.css';
@@ -39,7 +39,7 @@ const Register = () => {
       navigate('/');
     } catch (error) {
       console.error('Register error:', error);
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      toast.error(error.userMessage || getApiErrorMessage(error, 'Registration failed'));
     } finally {
       setIsLoading(false);
     }
