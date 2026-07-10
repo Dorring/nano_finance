@@ -151,11 +151,20 @@ class SqliteBM25Retriever:
             return []
 
         results = []
+        seen_doc_ids = set()
         for row in rows:
+            doc_id = row[0]
+            if doc_id in seen_doc_ids:
+                continue
+            try:
+                metadata = json.loads(row[2] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            seen_doc_ids.add(doc_id)
             results.append({
-                "doc_id": row[0],
+                "doc_id": doc_id,
                 "content": row[1],
-                "metadata": json.loads(row[2]),
+                "metadata": metadata,
                 "score": -float(row[3]) # BM25 score in FTS5 is negative, so we negate it
             })
         return results

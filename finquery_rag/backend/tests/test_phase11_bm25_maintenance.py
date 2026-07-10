@@ -106,3 +106,34 @@ def test_eval_cli_bm25_check_and_rebuild(tmp_path, capsys):
     assert eval_cli_main(["bm25-rebuild", "--db", db_path]) == 0
     rebuild_output = json.loads(capsys.readouterr().out)
     assert rebuild_output["ok"] is True
+
+
+
+def test_search_deduplicates_duplicate_fts_rows(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    retriever.add_chunks([_chunk("r.pdf::1")], user_id=1)
+    with sqlite3.connect(retriever.db_path) as conn:
+        conn.execute(
+            "INSERT INTO fts_index(content, doc_id) VALUES (?, ?)",
+            ("alpha revenue", "user_1_r.pdf::1"),
+        )
+        conn.commit()
+
+    results = retriever.search("revenue", user_id=1)
+
+    assert [row["doc_id"] for row in results] == ["user_1_r.pdf::1"]
+
+
+def test_search_skips_rows_with_corrupt_metadata_json(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    retriever.add_chunks([_chunk("r.pdf::1"), _chunk("r.pdf::2")], user_id=1)
+    with sqlite3.connect(retriever.db_path) as conn:
+        conn.execute(
+            "UPDATE chunk_store SET metadata_json = ? WHERE doc_id = ?",
+            ("{bad-json", "user_1_r.pdf::1"),
+        )
+        conn.commit()
+
+    results = retriever.search("revenue", user_id=1)
+
+    assert [row["doc_id"] for row in results] == ["user_1_r.pdf::2"]
