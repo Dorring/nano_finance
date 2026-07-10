@@ -100,6 +100,12 @@ def test_compare_reports_passes_when_candidate_improves():
     assert comparison["metric_deltas"]["pass_rate"]["delta"] == 0.5
     assert comparison["newly_passed"] == ["c1"]
     assert comparison["p95_latency_delta_ms"] == 20
+    assert comparison["latency"] == {
+        "baseline_p95_ms": 100.0,
+        "candidate_p95_ms": 120.0,
+        "delta_ms": 20.0,
+    }
+    assert comparison["failure_reasons"] == []
 
 
 def test_compare_reports_fails_on_regression():
@@ -117,6 +123,14 @@ def test_compare_reports_fails_on_regression():
     assert comparison["passed"] is False
     assert "pass_rate" in comparison["regressions"]
     assert comparison["newly_failed"] == ["c1"]
+    assert comparison["regression_details"][0]["metric"] == "pass_rate"
+    assert comparison["regression_details"][0]["baseline"] == 1.0
+    assert comparison["regression_details"][0]["candidate"] == 0.0
+    assert comparison["case_failure_details"] == [
+        {"id": "c1", "baseline_passed": True, "candidate_passed": False, "tags": []}
+    ]
+    assert any("metric pass_rate regressed" in reason for reason in comparison["failure_reasons"])
+    assert "case c1 newly failed" in comparison["failure_reasons"]
 
 
 def test_compare_reports_respects_tolerance():
@@ -138,3 +152,28 @@ def test_compare_reports_includes_intent_accuracy_regression():
 
     assert comparison["passed"] is False
     assert "intent_accuracy" in comparison["regressions"]
+
+
+
+def test_compare_reports_includes_case_failure_tags():
+    baseline = {
+        "summary": {"pass_rate": 1.0},
+        "cases": [{"id": "c1", "passed": True}],
+    }
+    candidate = {
+        "summary": {"pass_rate": 1.0},
+        "cases": [{"id": "c1", "passed": False, "tags": ["feedback_down", "trace_replay"]}],
+    }
+
+    comparison = compare_reports(baseline, candidate)
+
+    assert comparison["passed"] is False
+    assert comparison["case_failure_details"] == [
+        {
+            "id": "c1",
+            "baseline_passed": True,
+            "candidate_passed": False,
+            "tags": ["feedback_down", "trace_replay"],
+        }
+    ]
+    assert comparison["failure_reasons"] == ["case c1 newly failed"]
