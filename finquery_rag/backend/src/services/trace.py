@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS trace_log (
     final_context TEXT,
     answer        TEXT,
     sources_json  TEXT,
+    diagnostics_json TEXT,
     model_name    TEXT,
     prompt_version TEXT,
     index_version TEXT,
@@ -55,7 +56,9 @@ class TraceLogger:
         self._init_schema()
 
     def _conn(self):
-        return sqlite3.connect(self.db_path, timeout=10)
+        conn = sqlite3.connect(self.db_path, timeout=10)
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def _init_schema(self):
         with self._conn() as conn:
@@ -66,9 +69,19 @@ class TraceLogger:
                 conn.commit()
             else:
                 ver = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
-                if ver and ver[0] < SCHEMA_VERSION:
-                    conn.execute("UPDATE schema_version SET version = ?", (SCHEMA_VERSION,))
-                    conn.commit()
+                self._migrate_schema(conn, ver[0] if ver else 0)
+
+    def _migrate_schema(self, conn, current_version):
+        if current_version < 2:
+            columns = {
+                row[1]
+                for row in conn.execute("PRAGMA table_info(trace_log)").fetchall()
+            }
+            if "diagnostics_json" not in columns:
+                conn.execute("ALTER TABLE trace_log ADD COLUMN diagnostics_json TEXT")
+        if current_version < SCHEMA_VERSION:
+            conn.execute("UPDATE schema_version SET version = ?", (SCHEMA_VERSION,))
+            conn.commit()
 
     def _should_sample(self):
         if self.sample_rate >= 1.0:
@@ -84,7 +97,7 @@ class TraceLogger:
 
     def log(self, tenant_id, query_original, query_rewritten=None, intent=None,
             filter_conditions=None, candidates=None, final_context=None,
-            answer=None, sources=None, model_name=None, prompt_version=None,
+            answer=None, sources=None, diagnostics=None, model_name=None, prompt_version=None,
             index_version=None, latency_ms=None, error_message=None):
         if not self._should_sample():
             return None
@@ -99,12 +112,13 @@ class TraceLogger:
 
         with self._conn() as conn:
             conn.execute(
-                "INSERT INTO trace_log (trace_id, tenant_id, query_original, query_rewritten, intent, filter_conditions, candidates_json, final_context, answer, sources_json, model_name, prompt_version, index_version, latency_ms, error_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO trace_log (trace_id, tenant_id, query_original, query_rewritten, intent, filter_conditions, candidates_json, final_context, answer, sources_json, diagnostics_json, model_name, prompt_version, index_version, latency_ms, error_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (trace_id, tenant_id, q_orig, q_rewr, intent,
                  json.dumps(filter_conditions) if filter_conditions else None,
                  json.dumps(candidates) if candidates else None,
                  ctx, ans,
                  json.dumps(sources) if sources else None,
+                 json.dumps(diagnostics) if diagnostics else None,
                  model_name, prompt_version, index_version,
                  latency_ms, error_message, now)
             )
@@ -216,8 +230,10 @@ class TraceLogger:
 
     @staticmethod
     def _row_to_dict(row):
+        if hasattr(row, "keys"):
+            return {key: row[key] for key in row.keys()}
         columns = ["trace_id", "tenant_id", "query_original", "query_rewritten", "intent",
                     "filter_conditions", "candidates_json", "final_context", "answer",
-                    "sources_json", "model_name", "prompt_version", "index_version",
+                    "sources_json", "diagnostics_json", "model_name", "prompt_version", "index_version",
                     "latency_ms", "error_message", "created_at"]
         return dict(zip(columns, row))
