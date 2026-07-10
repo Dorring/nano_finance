@@ -570,6 +570,11 @@ class RAGEngine:
             "final_context": context,
             "answer": answer,
             "sources": sources,
+            "diagnostics": {
+                "confidence": confidence,
+                "context_sufficient": is_sufficient,
+                "intent_confidence": intent["confidence"],
+            },
             "model_name": self.model_name,
             "latency_ms": elapsed_ms,
         })

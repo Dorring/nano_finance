@@ -343,6 +343,7 @@ def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
 
     filters = _loads_json(trace.get("filter_conditions")) or {}
     sources = _loads_json(trace.get("sources_json")) or []
+    diagnostics = _loads_json(trace.get("diagnostics_json")) or {}
 
     return EvaluationCase(
         case_id=str(trace_id),
@@ -360,6 +361,7 @@ def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
             "model_name": trace.get("model_name"),
             "created_at": trace.get("created_at"),
             "n_results": filters.get("n_results"),
+            "diagnostics": diagnostics,
         },
     )
 

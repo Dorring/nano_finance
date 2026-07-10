@@ -180,6 +180,7 @@ def _public_trace(row: dict) -> dict:
     trace["filter_conditions"] = _json_field(row.get("filter_conditions"))
     trace["candidates"] = _json_field(row.get("candidates_json"))
     trace["sources"] = _json_field(row.get("sources_json")) or []
+    trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}
     return trace
 
 
@@ -662,7 +663,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             "model_name": llm_model_name,
         }
 
-        def finish_trace(answer, sources=None, doc_names=None, chunks=None, context=None):
+        def finish_trace(answer, sources=None, doc_names=None, chunks=None, context=None, diagnostics=None):
             elapsed_ms = (time.time() - started_at) * 1000
             trace_data.update({
                 "filter_conditions": {"doc_names": doc_names or [], "n_results": request.n_results},
@@ -678,6 +679,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 "final_context": context,
                 "answer": answer,
                 "sources": sources or [],
+                "diagnostics": diagnostics,
                 "latency_ms": elapsed_ms,
             })
             return safe_log_query_trace(engine, trace_data)
@@ -739,7 +741,12 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             if request.session_id:
                 session_manager.add_message(request.session_id, current_user.id, "user", request.question)
                 session_manager.add_message(request.session_id, current_user.id, "assistant", refusal)
-            trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
+            diagnostics = {
+                "confidence": confidence,
+                "context_sufficient": False,
+                "intent_confidence": intent["confidence"],
+            }
+            trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
             yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
             yield make_stream_done_event(sources=sources, context_sufficient=False, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
             return
@@ -758,7 +765,12 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         if request.session_id:
             session_manager.add_message(request.session_id, current_user.id, "assistant", full_answer)
 
-        trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context)
+        diagnostics = {
+            "confidence": confidence,
+            "context_sufficient": True,
+            "intent_confidence": intent["confidence"],
+        }
+        trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
         yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
 
     return StreamingResponse(
