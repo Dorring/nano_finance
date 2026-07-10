@@ -17,6 +17,9 @@ from typing import Optional, Dict, Any, List
 from .sqlite_migrations import ensure_column, run_component_migrations, table_exists
 
 SCHEMA_VERSION = 2
+MAX_TRACE_ID_LENGTH = 128
+MAX_TEXT_CHARS = 50000
+MAX_JSON_CHARS = 50000
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -89,7 +92,38 @@ class TraceLogger:
 
     @staticmethod
     def sanitize(text):
-        return _SANITIZE_RE.sub("[REDACTED]", text)
+        return _SANITIZE_RE.sub("[REDACTED]", str(text))
+
+    @staticmethod
+    def _is_valid_trace_id(trace_id):
+        return isinstance(trace_id, str) and 0 < len(trace_id) <= MAX_TRACE_ID_LENGTH
+
+    @staticmethod
+    def _bounded_text(value):
+        if value is None:
+            return None
+        text = str(value)
+        if len(text) <= MAX_TEXT_CHARS:
+            return text
+        return text[:MAX_TEXT_CHARS] + "\n[truncated]"
+
+    @staticmethod
+    def _bounded_json(value):
+        if not value:
+            return None
+        payload = json.dumps(value)
+        if len(payload) <= MAX_JSON_CHARS:
+            return payload
+        return json.dumps({"truncated": True})
+
+    @staticmethod
+    def _normalize_query_bounds(limit=20, offset=0):
+        try:
+            normalized_limit = int(limit or 20)
+            normalized_offset = int(offset or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(0, min(normalized_limit, 1000)), max(0, normalized_offset)
 
     def log(self, tenant_id, query_original, query_rewritten=None, intent=None,
             filter_conditions=None, candidates=None, final_context=None,
@@ -105,23 +139,30 @@ class TraceLogger:
         q_rewr = self.sanitize(query_rewritten) if self.redact_content and query_rewritten else query_rewritten
         ctx = self.sanitize(final_context) if self.redact_content and final_context else final_context
         ans = self.sanitize(answer) if self.redact_content and answer else answer
+        q_orig = self._bounded_text(q_orig)
+        q_rewr = self._bounded_text(q_rewr)
+        ctx = self._bounded_text(ctx)
+        ans = self._bounded_text(ans)
+        err = self._bounded_text(error_message)
 
         with self._conn() as conn:
             conn.execute(
                 "INSERT INTO trace_log (trace_id, tenant_id, query_original, query_rewritten, intent, filter_conditions, candidates_json, final_context, answer, sources_json, diagnostics_json, model_name, prompt_version, index_version, latency_ms, error_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (trace_id, tenant_id, q_orig, q_rewr, intent,
-                 json.dumps(filter_conditions) if filter_conditions else None,
-                 json.dumps(candidates) if candidates else None,
+                 self._bounded_json(filter_conditions),
+                 self._bounded_json(candidates),
                  ctx, ans,
-                 json.dumps(sources) if sources else None,
-                 json.dumps(diagnostics) if diagnostics else None,
-                 model_name, prompt_version, index_version,
-                 latency_ms, error_message, now)
+                 self._bounded_json(sources),
+                 self._bounded_json(diagnostics),
+                 self._bounded_text(model_name), self._bounded_text(prompt_version), self._bounded_text(index_version),
+                 latency_ms, err, now)
             )
             conn.commit()
         return trace_id
 
     def get_trace(self, trace_id):
+        if not self._is_valid_trace_id(trace_id):
+            return None
         with self._conn() as conn:
             row = conn.execute("SELECT * FROM trace_log WHERE trace_id = ?", (trace_id,)).fetchone()
             if not row:
@@ -130,7 +171,7 @@ class TraceLogger:
 
     def get_trace_for_tenant(self, tenant_id, trace_id):
         """Return a trace only when it belongs to the requested tenant."""
-        if tenant_id is None or not trace_id:
+        if tenant_id is None or not self._is_valid_trace_id(trace_id):
             return None
         with self._conn() as conn:
             row = conn.execute(
@@ -156,8 +197,10 @@ class TraceLogger:
         """Tenant-scoped trace query with basic filters for replay/export."""
         if tenant_id is None:
             return []
-        limit = max(0, min(int(limit or 20), 1000))
-        offset = max(0, int(offset or 0))
+        bounds = self._normalize_query_bounds(limit, offset)
+        if bounds is None:
+            return []
+        limit, offset = bounds
 
         where = ["tenant_id = ?"]
         params = [tenant_id]
