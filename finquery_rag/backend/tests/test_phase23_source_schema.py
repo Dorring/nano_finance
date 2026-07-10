@@ -50,3 +50,33 @@ def test_main_api_pagination_helper_rejects_negative_values_static():
     assert "created_after must be <= created_before" in content
     assert "normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=20)" in content
     assert "normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)" in content
+
+
+
+def test_main_business_errors_use_stable_error_envelope_static():
+    main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+    content = open(main_path, encoding="utf-8").read()
+
+    assert "def api_error" in content
+    assert '"error_code": error_code' in content
+    assert '"message": message' in content
+    for code in [
+        "invalid_pagination",
+        "invalid_time_range",
+        "trace_not_found",
+        "invalid_feedback",
+        "document_not_found",
+        "query_error",
+        "partial_failure",
+    ]:
+        assert code in content
+
+
+def test_core_business_errors_no_longer_raise_plain_string_details_static():
+    main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+    content = open(main_path, encoding="utf-8").read()
+
+    assert 'raise HTTPException(404, "Trace not found")' not in content
+    assert 'raise HTTPException(400, "Invalid feedback")' not in content
+    assert 'raise HTTPException(500, f"Query error:' not in content
+    assert 'raise HTTPException(500, f"Partial failure:' not in content

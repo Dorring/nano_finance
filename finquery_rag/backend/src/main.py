@@ -97,17 +97,25 @@ def get_rag_engine():
         )
     return rag_engine
 
+def api_error(status_code: int, error_code: str, message: str) -> HTTPException:
+    """Build a stable business-error response envelope."""
+    return HTTPException(
+        status_code=status_code,
+        detail={"error_code": error_code, "message": message},
+    )
+
+
 def _normalize_api_pagination(limit, offset, default_limit=50, max_limit=1000):
     """Normalize API pagination and reject ambiguous negative values."""
     try:
         normalized_limit = int(limit if limit is not None else default_limit)
         normalized_offset = int(offset or 0)
     except (TypeError, ValueError):
-        raise HTTPException(400, "limit and offset must be integers")
+        raise api_error(400, "invalid_pagination", "limit and offset must be integers")
     if normalized_limit < 1:
-        raise HTTPException(400, "limit must be >= 1")
+        raise api_error(400, "invalid_pagination", "limit must be >= 1")
     if normalized_offset < 0:
-        raise HTTPException(400, "offset must be >= 0")
+        raise api_error(400, "invalid_pagination", "offset must be >= 0")
     return min(normalized_limit, max_limit), normalized_offset
 
 
@@ -185,9 +193,10 @@ def _resolve_query_document_names_for_user(user_id, requested_doc_names):
         fallback_names,
     )
     if invalid:
-        raise HTTPException(
-            status_code=400,
-            detail="Documents are not ready or not found: %s" % ", ".join(invalid),
+        raise api_error(
+            400,
+            "documents_not_ready",
+            "Documents are not ready or not found: %s" % ", ".join(invalid),
         )
     return resolved
 
@@ -296,7 +305,7 @@ async def list_documents(current_user: User = Depends(get_current_user)):
 async def list_document_registry(status: str | None = None, current_user: User = Depends(get_current_user)):
     """List current user's document lifecycle registry rows."""
     if status is not None and status not in VALID_TRANSITIONS:
-        raise HTTPException(400, f"Invalid document status: {status}")
+        raise api_error(400, "invalid_document_status", f"Invalid document status: {status}")
 
     rows = document_registry.list_all(current_user.id, status=status)
     return {
@@ -317,7 +326,7 @@ async def list_query_traces(
     """List current user's recent query traces for troubleshooting/replay."""
     normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=20)
     if created_after is not None and created_before is not None and created_after > created_before:
-        raise HTTPException(400, "created_after must be <= created_before")
+        raise api_error(400, "invalid_time_range", "created_after must be <= created_before")
     rows = get_rag_engine().trace_logger.query_traces(
         tenant_id=current_user.id,
         limit=normalized_limit,
@@ -338,11 +347,11 @@ async def list_query_traces(
 async def get_query_trace(trace_id: str, current_user: User = Depends(get_current_user)):
     """Return one query trace when it belongs to the current user."""
     if not trace_id or len(trace_id) > 128:
-        raise HTTPException(400, "Invalid trace_id")
+        raise api_error(400, "invalid_trace_id", "Invalid trace_id")
 
     row = get_rag_engine().trace_logger.get_trace_for_tenant(current_user.id, trace_id)
     if row is None:
-        raise HTTPException(404, "Trace not found")
+        raise api_error(404, "trace_not_found", "Trace not found")
     return {"trace": _public_trace(row)}
 
 
@@ -351,7 +360,7 @@ async def submit_answer_feedback(request: FeedbackRequest, current_user: User = 
     """Store current user's answer feedback after validating trace ownership."""
     trace = get_rag_engine().trace_logger.get_trace_for_tenant(current_user.id, request.trace_id)
     if trace is None:
-        raise HTTPException(404, "Trace not found")
+        raise api_error(404, "trace_not_found", "Trace not found")
 
     row = feedback_store.submit(
         tenant_id=current_user.id,
@@ -360,7 +369,7 @@ async def submit_answer_feedback(request: FeedbackRequest, current_user: User = 
         comment=request.comment,
     )
     if row is None:
-        raise HTTPException(400, "Invalid feedback")
+        raise api_error(400, "invalid_feedback", "Invalid feedback")
     return _public_feedback(row)
 
 
@@ -373,7 +382,7 @@ async def list_answer_feedback(
 ):
     """List current user's answer feedback for review/export."""
     if rating is not None and rating not in FeedbackStore.VALID_RATINGS:
-        raise HTTPException(400, "Invalid rating")
+        raise api_error(400, "invalid_rating", "Invalid rating")
     normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)
     rows = feedback_store.list_for_tenant(current_user.id, limit=normalized_limit, offset=normalized_offset, rating=rating)
     return {
@@ -403,7 +412,7 @@ async def get_document_stats(doc_name: str, current_user: User = Depends(get_cur
     stats = get_collection_stats(doc_name, current_user.id)
 
     if not stats["exists"]:
-        raise HTTPException(404, f"Document '{doc_name}' not found")
+        raise api_error(404, "document_not_found", f"Document '{doc_name}' not found")
 
     return stats
 
@@ -507,11 +516,11 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
     # Validate file type
     # 验证文件类型
     if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        raise api_error(400, "invalid_file_type", "Only PDF files are supported")
 
     safe_filename = os.path.basename(file.filename)
     if not safe_filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
+        raise api_error(400, "invalid_filename", "Invalid filename")
     temp_dir = tempfile.mkdtemp()
     temp_path = os.path.join(temp_dir, safe_filename)
 
@@ -548,7 +557,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
 
         if not chunks:
             document_registry.mark_failed(doc_id, "No content extracted from PDF")
-            raise HTTPException(status_code=400, detail="No content extracted from PDF")
+            raise api_error(400, "empty_document", "No content extracted from PDF")
 
         # Phase 1: content hash dedup
         ch = DocumentRegistry.content_hash(chunks)
@@ -578,7 +587,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             # Rollback ChromaDB dense data for this doc
             delete_document_collection(safe_filename, current_user.id)
             document_registry.mark_failed(doc_id, f"BM25 write failed, dense rolled back: {bm25_err}")
-            raise HTTPException(status_code=500, detail=f"Indexing error: {bm25_err}")
+            raise api_error(500, "indexing_error", f"Indexing error: {bm25_err}")
 
         # Mark ready in registry
         document_registry.mark_ready(doc_id, len(chunks), ch)
@@ -615,7 +624,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             os.remove(temp_path)
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail="Processing error: %s" % str(e))
+        raise api_error(500, "processing_error", "Processing error: %s" % str(e))
 
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
@@ -677,7 +686,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Query error: {str(e)}")
+        raise api_error(500, "query_error", f"Query error: {str(e)}")
 
 
 
@@ -859,7 +868,7 @@ async def clear_session(request: QueryRequest, current_user: User = Depends(get_
     清除指定会话的历史消息。
     """
     if not request.session_id:
-        raise HTTPException(400, "session_id is required")
+        raise api_error(400, "session_id_required", "session_id is required")
     cleared = session_manager.clear_session(request.session_id, current_user.id)
     return {"message": "Session cleared", "session_id": request.session_id, "cleared": cleared}
 
@@ -893,7 +902,7 @@ async def delete_document(doc_name: str, current_user: User = Depends(get_curren
     success = delete_document_collection(doc_name, current_user.id)
 
     if not success:
-        raise HTTPException(404, f"Document '{doc_name}' not found")
+        raise api_error(404, "document_not_found", f"Document '{doc_name}' not found")
 
     # Clear from SQLite FTS5 index
     # 从 SQLite FTS5 索引中清除
@@ -942,6 +951,6 @@ async def clear_all_documents(current_user: User = Depends(get_current_user)):
         errors.append(f"Registry sync failed: {e}")
 
     if errors:
-        raise HTTPException(500, f"Partial failure: {'; '.join(errors)}")
+        raise api_error(500, "partial_failure", f"Partial failure: {'; '.join(errors)}")
 
     return {"message": f"All documents cleared for user {current_user.id}"}
