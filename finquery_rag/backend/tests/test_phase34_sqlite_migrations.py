@@ -87,3 +87,27 @@ def test_session_manager_still_migrates_legacy_schema(tmp_path):
     manager.add_message("s1", 1, "assistant", "A", metadata={"trace": "t1"})
 
     assert manager.get_recent_messages("s1", 1)[0]["metadata"] == {"trace": "t1"}
+
+
+
+def test_migrations_support_legacy_single_column_schema_version(tmp_path):
+    db_path = tmp_path / "legacy_version.db"
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.executescript(
+            """
+            CREATE TABLE items (id INTEGER PRIMARY KEY);
+            CREATE TABLE schema_version (version INTEGER NOT NULL);
+            INSERT INTO schema_version VALUES (1);
+            """
+        )
+
+        run_component_migrations(
+            conn,
+            "legacy_component",
+            2,
+            {2: lambda c: ensure_column(c, "items", "metadata_json", "metadata_json TEXT")},
+        )
+
+        assert get_component_version(conn, "legacy_component") == 2
+        assert "metadata_json" in table_columns(conn, "items")

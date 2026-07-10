@@ -95,3 +95,13 @@ def test_trace_to_replay_case_keeps_diagnostics_metadata():
         "confidence": 0.77,
         "context_sufficient": True,
     }
+
+
+
+def test_trace_logger_uses_shared_migration_helper_static():
+    path = os.path.join(os.path.dirname(__file__), "..", "src", "services", "trace.py")
+    content = open(path, encoding="utf-8").read()
+
+    assert "run_component_migrations" in content
+    assert "ensure_column" in content
+    assert "def _migrate_to_v2" in content

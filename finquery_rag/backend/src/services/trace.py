@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+from .sqlite_migrations import ensure_column, run_component_migrations, table_exists
+
 SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """
@@ -62,26 +64,20 @@ class TraceLogger:
 
     def _init_schema(self):
         with self._conn() as conn:
-            row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'").fetchone()
-            if row is None:
+            if not table_exists(conn, "schema_version"):
                 conn.executescript(_SCHEMA_SQL)
-                conn.execute("INSERT INTO schema_version VALUES (?)", (SCHEMA_VERSION,))
-                conn.commit()
-            else:
-                ver = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
-                self._migrate_schema(conn, ver[0] if ver else 0)
+            run_component_migrations(
+                conn,
+                "trace_logger",
+                SCHEMA_VERSION,
+                {
+                    2: self._migrate_to_v2,
+                },
+            )
 
-    def _migrate_schema(self, conn, current_version):
-        if current_version < 2:
-            columns = {
-                row[1]
-                for row in conn.execute("PRAGMA table_info(trace_log)").fetchall()
-            }
-            if "diagnostics_json" not in columns:
-                conn.execute("ALTER TABLE trace_log ADD COLUMN diagnostics_json TEXT")
-        if current_version < SCHEMA_VERSION:
-            conn.execute("UPDATE schema_version SET version = ?", (SCHEMA_VERSION,))
-            conn.commit()
+    @staticmethod
+    def _migrate_to_v2(conn):
+        ensure_column(conn, "trace_log", "diagnostics_json", "diagnostics_json TEXT")
 
     def _should_sample(self):
         if self.sample_rate >= 1.0:
