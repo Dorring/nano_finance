@@ -48,6 +48,11 @@ const formatTraceTopK = (filterConditions) => {
   return typeof nResults === 'number' ? String(nResults) : '—';
 };
 
+const formatTraceContext = (diagnostics) => {
+  if (typeof diagnostics?.context_sufficient !== 'boolean') return '—';
+  return diagnostics.context_sufficient ? 'sufficient' : 'weak';
+};
+
 const uniqueSources = (sources = []) => {
   const seen = new Set();
   return sources.filter((source) => {
@@ -317,6 +322,14 @@ const Message = ({ message }) => {
                       <div>
                         <span>Top-K</span>
                         <p>{formatTraceTopK(traceDetails.filter_conditions)}</p>
+                      </div>
+                      <div>
+                        <span>Retrieval</span>
+                        <p>{formatPercent(traceDetails.diagnostics?.confidence) || '—'}</p>
+                      </div>
+                      <div>
+                        <span>Context</span>
+                        <p>{formatTraceContext(traceDetails.diagnostics)}</p>
                       </div>
                     </div>
                     {traceDetails.sources?.length > 0 && (
