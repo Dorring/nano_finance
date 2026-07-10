@@ -164,22 +164,30 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if comparison["passed"] else 1
 
     if args.command == "traces":
+        bounds = _normalize_trace_bounds(args.limit, args.offset, args.created_after, args.created_before)
+        if bounds["error"]:
+            print(bounds["error"], file=sys.stderr)
+            return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
         count = logger.export_traces_jsonl(
             tenant_id=args.tenant_id,
             output_path=args.out,
-            limit=args.limit,
-            offset=args.offset,
-            created_after=args.created_after,
-            created_before=args.created_before,
+            limit=bounds["limit"],
+            offset=bounds["offset"],
+            created_after=bounds["created_after"],
+            created_before=bounds["created_before"],
             error_only=args.error_only,
         )
         print(f"exported {count} traces to {args.out}")
         return 0
 
     if args.command == "traces-cleanup":
+        ttl_seconds = _normalize_non_negative_int(args.ttl_seconds, "ttl-seconds")
+        if isinstance(ttl_seconds, str):
+            print(ttl_seconds, file=sys.stderr)
+            return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
-        report = logger.cleanup_by_ttl(args.ttl_seconds, tenant_id=args.tenant_id)
+        report = logger.cleanup_by_ttl(ttl_seconds, tenant_id=args.tenant_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             path = Path(args.out)
@@ -189,19 +197,29 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "replay-from-traces":
+        limit = _normalize_limit(args.limit)
+        if isinstance(limit, str):
+            print(limit, file=sys.stderr)
+            return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
-        traces = logger.query_traces(tenant_id=args.tenant_id, limit=args.limit)
+        traces = logger.query_traces(tenant_id=args.tenant_id, limit=limit)
         cases = export_replay_cases_from_traces(traces, args.out)
         print(f"exported {len(cases)} replay cases to {args.out}")
         return 0
 
     if args.command == "feedback-to-replay":
+        limit = _normalize_limit(args.limit)
+        offset = _normalize_non_negative_int(args.offset, "offset")
+        for error in (limit, offset):
+            if isinstance(error, str):
+                print(error, file=sys.stderr)
+                return 2
         feedback_store = FeedbackStore(db_path=args.feedback_db)
         trace_logger = TraceLogger(db_path=args.trace_db, sample_rate=1.0, redact_content=True)
         feedback_rows = feedback_store.list_for_tenant(
             tenant_id=args.tenant_id,
-            limit=args.limit,
-            offset=args.offset,
+            limit=limit,
+            offset=offset,
             rating=args.rating,
         )
         cases = export_replay_cases_from_feedback(
@@ -239,6 +257,52 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report["ok"] else 1
 
     return 2
+
+
+MAX_TRACE_EXPORT_LIMIT = 1000
+
+
+def _normalize_limit(value, *, default: int = 100, maximum: int = MAX_TRACE_EXPORT_LIMIT):
+    try:
+        limit = int(value if value is not None else default)
+    except (TypeError, ValueError):
+        return "limit must be an integer"
+    if limit <= 0:
+        return "limit must be >= 1"
+    return min(limit, maximum)
+
+
+def _normalize_non_negative_int(value, name: str):
+    try:
+        parsed = int(value or 0)
+    except (TypeError, ValueError):
+        return f"{name} must be an integer"
+    if parsed < 0:
+        return f"{name} must be >= 0"
+    return parsed
+
+
+def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dict:
+    normalized_limit = _normalize_limit(limit)
+    if isinstance(normalized_limit, str):
+        return {"error": normalized_limit}
+    normalized_offset = _normalize_non_negative_int(offset, "offset")
+    if isinstance(normalized_offset, str):
+        return {"error": normalized_offset}
+    if (
+        created_after is not None
+        and created_before is not None
+        and float(created_after) > float(created_before)
+    ):
+        return {"error": "created-after must be <= created-before"}
+    return {
+        "error": None,
+        "limit": normalized_limit,
+        "offset": normalized_offset,
+        "created_after": created_after,
+        "created_before": created_before,
+    }
+
 
 
 def _print_compare_failure_summary(comparison: dict) -> None:
