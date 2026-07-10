@@ -363,10 +363,12 @@ class TestAwaitChecks:
 
 
 class TestUploadSecurity:
-    def test_main_uses_basename(self):
+    def test_main_uses_safe_upload_filename(self):
         p = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
         with open(p, encoding="utf-8") as f: content = f.read()
-        assert "os.path.basename(file.filename)" in content
+        assert "def _safe_upload_filename" in content
+        assert "os.path.basename(filename).strip()" in content
+        assert "safe_filename = _safe_upload_filename(file.filename)" in content
 
     def test_main_uses_tempfile(self):
         p = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
