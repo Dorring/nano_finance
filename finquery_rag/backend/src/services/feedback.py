@@ -12,6 +12,8 @@ class FeedbackStore:
 
     SCHEMA_VERSION = 2
     VALID_RATINGS = {"up", "down"}
+    MAX_TRACE_ID_LENGTH = 128
+    MAX_COMMENT_CHARS = 2000
 
     def __init__(self, db_path=None):
         if db_path is None:
@@ -83,18 +85,35 @@ class FeedbackStore:
             """
         )
 
+    def _is_valid_trace_id(self, trace_id) -> bool:
+        return isinstance(trace_id, str) and 0 < len(trace_id) <= self.MAX_TRACE_ID_LENGTH
+
+    def _clean_comment(self, comment):
+        if not isinstance(comment, str):
+            return None
+        cleaned = " ".join(comment.replace("\x00", " ").split())
+        if not cleaned:
+            return None
+        return cleaned[: self.MAX_COMMENT_CHARS]
+
+    def _normalize_bounds(self, limit=50, offset=0):
+        try:
+            normalized_limit = int(limit or 50)
+            normalized_offset = int(offset or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(0, min(normalized_limit, 1000)), max(0, normalized_offset)
+
     def submit(self, tenant_id, trace_id, rating, comment=None, now=None):
         """Store latest feedback for one tenant/trace; fail closed on invalid identifiers."""
-        if tenant_id is None or not trace_id:
+        if tenant_id is None or not self._is_valid_trace_id(trace_id):
             return None
         if rating not in self.VALID_RATINGS:
             return None
 
         feedback_id = uuid.uuid4().hex
         created_at = time.time() if now is None else float(now)
-        cleaned_comment = comment.strip() if isinstance(comment, str) and comment.strip() else None
-        if cleaned_comment and len(cleaned_comment) > 2000:
-            cleaned_comment = cleaned_comment[:2000]
+        cleaned_comment = self._clean_comment(comment)
 
         with self._conn() as conn:
             conn.execute(
@@ -125,8 +144,10 @@ class FeedbackStore:
         if tenant_id is None:
             return []
 
-        limit = max(0, min(int(limit or 50), 1000))
-        offset = max(0, int(offset or 0))
+        bounds = self._normalize_bounds(limit, offset)
+        if bounds is None:
+            return []
+        limit, offset = bounds
         where = ["tenant_id = ?"]
         params = [tenant_id]
         if rating:
