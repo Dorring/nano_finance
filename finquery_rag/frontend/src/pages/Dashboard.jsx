@@ -33,6 +33,11 @@ function Dashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [hasProcessingDocuments, setHasProcessingDocuments] = useState(false);
   const { user, logout } = useAuth();
+  const readyDocumentCount = documents.filter((doc) => (doc.status || 'ready') === 'ready').length;
+  const queryDisabledReason = readyDocumentCount === 0
+    ? (hasProcessingDocuments ? 'Documents are still processing. Query will be available when indexing finishes.' : 'Upload a ready PDF before asking a question.')
+    : null;
+  const isQueryDisabled = isLoading || readyDocumentCount === 0;
 
 
   const fetchDocuments = useCallback(async ({ silent = false } = {}) => {
@@ -217,6 +222,11 @@ function Dashboard() {
   };
 
   const handleSendMessage = async (question) => {
+    if (readyDocumentCount === 0) {
+      toast.error(queryDisabledReason || 'No ready documents are available');
+      return;
+    }
+
     const userMessage = {
       role: 'user',
       content: question,
@@ -336,12 +346,15 @@ function Dashboard() {
           retrievalKOptions={RETRIEVAL_K_OPTIONS}
           onRetrievalKChange={handleRetrievalKChange}
           onNewSession={handleNewSession}
+          queryDisabled={isQueryDisabled}
+          queryDisabledReason={queryDisabledReason}
         />
         <InputBar
           selectedDocs={selectedDocs}
           onRemoveDoc={handleRemoveDoc}
           onSendMessage={handleSendMessage}
-          disabled={isLoading}
+          disabled={isQueryDisabled}
+          disabledReason={queryDisabledReason}
         />
       </div>
     </div>

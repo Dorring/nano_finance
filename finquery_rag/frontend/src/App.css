@@ -977,3 +977,25 @@
   background-color: #e5e7eb;
   border-color: #d1d5db;
 }
+
+
+.query-disabled-notice,
+.input-disabled-reason {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background-color: #fffbeb;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.input-disabled-reason {
+  margin-bottom: 0.75rem;
+}
+
+.example-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}

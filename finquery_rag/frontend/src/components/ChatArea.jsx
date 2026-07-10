@@ -10,6 +10,8 @@ const ChatArea = ({
   retrievalKOptions,
   onRetrievalKChange,
   onNewSession,
+  queryDisabled,
+  queryDisabledReason,
 }) => {
   const messagesEndRef = useRef(null);
 
@@ -67,6 +69,11 @@ const ChatArea = ({
           </div>
           <div className="chat-empty-text">Ready when you are.</div>
           <div className="chat-empty-subtext">Follow-up questions will use this session's recent context.</div>
+          {queryDisabledReason && (
+            <div className="query-disabled-notice" role="status">
+              {queryDisabledReason}
+            </div>
+          )}
 
           {/* Example Questions */}
           <div className="example-questions">
@@ -77,6 +84,8 @@ const ChatArea = ({
                   key={idx}
                   className="example-button"
                   onClick={() => onExampleClick(question)}
+                  disabled={queryDisabled}
+                  title={queryDisabledReason || question}
                 >
                   {question}
                 </button>

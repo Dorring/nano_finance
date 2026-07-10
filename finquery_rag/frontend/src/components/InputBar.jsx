@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled }) => {
+const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled, disabledReason }) => {
   const [input, setInput] = useState('');
 
   const handleSubmit = (e) => {
@@ -45,6 +45,12 @@ const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled }) => {
           </div>
         )}
 
+        {disabledReason && (
+          <div id="query-disabled-reason" className="input-disabled-reason" role="status">
+            {disabledReason}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="input-form">
           <div className="input-wrapper">
             <textarea
@@ -52,8 +58,9 @@ const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={placeholder}
+              placeholder={disabledReason || placeholder}
               disabled={disabled}
+              aria-describedby={disabledReason ? 'query-disabled-reason' : undefined}
               rows={1}
             />
           </div>
@@ -61,6 +68,7 @@ const InputBar = ({ selectedDocs, onRemoveDoc, onSendMessage, disabled }) => {
             type="submit"
             className="send-button"
             disabled={disabled || !input.trim()}
+            title={disabledReason || 'Send question'}
           >
             Send
           </button>
