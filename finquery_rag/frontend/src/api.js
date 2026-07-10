@@ -178,9 +178,14 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, n
     throw new Error(await readErrorDetail(response));
   }
 
+  if (!response.body) {
+    throw new Error('Streaming response body is not available');
+  }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let sawDoneEvent = false;
 
   const processEvent = (eventText) => {
     const dataLines = eventText
@@ -190,15 +195,21 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, n
 
     if (dataLines.length === 0) return;
 
+    let data;
     try {
-      const data = JSON.parse(dataLines.join('\n'));
-      if (data.type === 'token') {
-        onToken(data.content);
-      } else if (data.type === 'done') {
-        onDone(data);
-      }
+      data = JSON.parse(dataLines.join('\n'));
     } catch (parseError) {
       console.error('Error parsing SSE data:', parseError);
+      throw new Error('Malformed streaming response');
+    }
+
+    if (data.type === 'token') {
+      onToken(data.content || '');
+    } else if (data.type === 'done') {
+      sawDoneEvent = true;
+      onDone(data);
+    } else if (data.type === 'error') {
+      throw new Error(getApiErrorMessage(data, data.message || 'Streaming query failed'));
     }
   };
 
@@ -219,6 +230,9 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, n
     buffer += decoder.decode();
     if (buffer.trim()) {
       processEvent(buffer);
+    }
+    if (!sawDoneEvent) {
+      throw new Error('Streaming response ended before completion');
     }
   } catch (error) {
     if (onError) onError(error);

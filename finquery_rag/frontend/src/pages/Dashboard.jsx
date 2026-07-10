@@ -288,10 +288,17 @@ function Dashboard() {
       setMessages((prev) => {
         const updated = [...prev];
         const lastMsg = updated[updated.length - 1];
-        if (!lastMsg.content) {
-          lastMsg.content = error.message || 'Sorry, an error occurred while processing your question. Please try again.';
-        }
-        return [...updated];
+        const fallback = error.message || 'Sorry, an error occurred while processing your question. Please try again.';
+        if (lastMsg?.role !== 'assistant') return updated;
+        updated[updated.length - 1] = {
+          ...lastMsg,
+          content: lastMsg.content || fallback,
+          diagnostics: {
+            ...(lastMsg.diagnostics || {}),
+            streamError: fallback,
+          },
+        };
+        return updated;
       });
       toast.error(getApiErrorMessage(error, 'Failed to get response'));
     } finally {
