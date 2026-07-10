@@ -12,6 +12,8 @@ from services.sqlite_migrations import (
     get_component_version,
     run_component_migrations,
     table_columns,
+    table_exists,
+    validate_identifier,
 )
 
 
@@ -24,6 +26,25 @@ def test_ensure_column_is_idempotent(tmp_path):
         assert ensure_column(conn, "items", "metadata_json", "metadata_json TEXT") is True
         assert ensure_column(conn, "items", "metadata_json", "metadata_json TEXT") is False
         assert "metadata_json" in table_columns(conn, "items")
+
+
+def test_migration_helpers_reject_unsafe_identifiers(tmp_path):
+    assert validate_identifier("_safe_table_1") == "_safe_table_1"
+
+    db_path = tmp_path / "unsafe.db"
+    with sqlite3.connect(db_path) as conn:
+        for call in (
+            lambda: table_exists(conn, "schema_version; DROP TABLE items"),
+            lambda: table_columns(conn, "bad-name"),
+            lambda: ensure_column(conn, "items", "bad name", "bad name TEXT"),
+            lambda: get_component_version(conn, "items", version_table="schema version"),
+        ):
+            try:
+                call()
+            except ValueError as exc:
+                assert "SQLite identifier" in str(exc)
+            else:
+                raise AssertionError("unsafe SQLite identifier should be rejected")
 
 
 def test_run_component_migrations_updates_version_once(tmp_path):
