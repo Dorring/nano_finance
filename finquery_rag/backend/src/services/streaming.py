@@ -24,3 +24,19 @@ def make_stream_done_event(**payload) -> str:
     }
     defaults.update(payload)
     return f"data: {json.dumps({'type': 'done', **defaults})}\n\n"
+
+
+
+def make_stream_error_event(error_code: str, message: str, *, retryable: bool = True, trace_id: str | None = None) -> str:
+    """Build one SSE error event using the same error envelope shape as JSON APIs."""
+    payload = {
+        "type": "error",
+        "detail": {
+            "error_code": error_code,
+            "message": message,
+        },
+        "message": message,
+        "retryable": retryable,
+        "trace_id": trace_id,
+    }
+    return f"data: {json.dumps(payload)}\n\n"
