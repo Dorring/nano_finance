@@ -7,6 +7,8 @@ import time
 import os
 from typing import Optional, Dict, Any, List
 
+from .sqlite_migrations import run_component_migrations
+
 SCHEMA_VERSION = 1
 
 _SCHEMA_SQL = """
@@ -63,16 +65,13 @@ class DocumentRegistry:
 
     def _init_schema(self):
         with self._conn() as conn:
-            row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'").fetchone()
-            if row is None:
-                conn.executescript(_SCHEMA_SQL)
-                conn.execute("INSERT INTO schema_version VALUES (?)", (SCHEMA_VERSION,))
-                conn.commit()
-            else:
-                ver = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
-                if ver and ver[0] < SCHEMA_VERSION:
-                    conn.execute("UPDATE schema_version SET version = ?", (SCHEMA_VERSION,))
-                    conn.commit()
+            conn.executescript(_SCHEMA_SQL)
+            run_component_migrations(
+                conn,
+                "document_registry",
+                SCHEMA_VERSION,
+                {},
+            )
 
     @staticmethod
     def file_hash(data):
