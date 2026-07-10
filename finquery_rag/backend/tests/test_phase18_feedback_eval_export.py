@@ -12,6 +12,7 @@ from services.evaluation import (
 )
 from services.feedback import FeedbackStore
 from services.trace import TraceLogger
+from src.eval_cli import main as eval_cli_main
 
 
 def _trace_logger(tmp_path):
@@ -93,3 +94,106 @@ def test_eval_cli_exposes_feedback_to_replay_command():
     assert 'feedback-to-replay' in content
     assert 'FeedbackStore' in content
     assert 'export_replay_cases_from_feedback' in content
+
+
+
+def test_eval_cli_rejects_invalid_trace_export_bounds(tmp_path, capsys):
+    out = tmp_path / "traces.jsonl"
+
+    code = eval_cli_main([
+        "traces",
+        "--db",
+        str(tmp_path / "trace.db"),
+        "--tenant-id",
+        "1",
+        "--limit",
+        "0",
+        "--out",
+        str(out),
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 2
+    assert "limit must be >= 1" in captured.err
+    assert not out.exists()
+
+
+def test_eval_cli_rejects_invalid_trace_time_range(tmp_path, capsys):
+    out = tmp_path / "traces.jsonl"
+
+    code = eval_cli_main([
+        "traces",
+        "--db",
+        str(tmp_path / "trace.db"),
+        "--tenant-id",
+        "1",
+        "--created-after",
+        "20",
+        "--created-before",
+        "10",
+        "--out",
+        str(out),
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 2
+    assert "created-after must be <= created-before" in captured.err
+    assert not out.exists()
+
+
+def test_eval_cli_caps_trace_export_limit(tmp_path, capsys):
+    logger = TraceLogger(db_path=str(tmp_path / "trace.db"), sample_rate=1.0, redact_content=True)
+    trace_id = logger.log(tenant_id=1, query_original="Q", answer="A")
+    out = tmp_path / "traces.jsonl"
+
+    code = eval_cli_main([
+        "traces",
+        "--db",
+        str(tmp_path / "trace.db"),
+        "--tenant-id",
+        "1",
+        "--limit",
+        "999999",
+        "--out",
+        str(out),
+    ])
+
+    assert code == 0
+    assert trace_id in out.read_text(encoding="utf-8")
+
+
+def test_eval_cli_rejects_invalid_feedback_replay_offset(tmp_path, capsys):
+    out = tmp_path / "feedback_replay.jsonl"
+
+    code = eval_cli_main([
+        "feedback-to-replay",
+        "--feedback-db",
+        str(tmp_path / "feedback.db"),
+        "--trace-db",
+        str(tmp_path / "trace.db"),
+        "--tenant-id",
+        "1",
+        "--offset",
+        "-1",
+        "--out",
+        str(out),
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 2
+    assert "offset must be >= 0" in captured.err
+    assert not out.exists()
+
+
+def test_eval_cli_rejects_negative_trace_cleanup_ttl(tmp_path, capsys):
+    code = eval_cli_main([
+        "traces-cleanup",
+        "--db",
+        str(tmp_path / "trace.db"),
+        "--ttl-seconds",
+        "-1",
+    ])
+    captured = capsys.readouterr()
+
+    assert code == 2
+    assert "ttl-seconds must be >= 0" in captured.err
