@@ -3,6 +3,8 @@ import time
 import json
 import threading
 
+from .sqlite_migrations import ensure_column, run_component_migrations
+
 
 class SessionManager:
     """
@@ -12,7 +14,7 @@ class SessionManager:
     Designed for short-term memory: recent messages for query rewriting context.
     Historical answers are NEVER used as financial facts in retrieval context.
 
-    Schema version: 1
+    Schema version: 2
 
     Retention is opt-in and disabled by default for backwards compatibility.
     """
@@ -63,27 +65,18 @@ class SessionManager:
                 version INTEGER NOT NULL
             );
         """)
-        row = conn.execute(
-            "SELECT version FROM schema_version WHERE component = ?",
-            ("session_manager",),
-        ).fetchone()
-        self._migrate_schema(row["version"] if row else 0)
-        conn.execute(
-            "INSERT OR REPLACE INTO schema_version (component, version) VALUES (?, ?)",
-            ("session_manager", self.SCHEMA_VERSION),
+        run_component_migrations(
+            conn,
+            "session_manager",
+            self.SCHEMA_VERSION,
+            {
+                2: self._migrate_to_v2,
+            },
         )
-        conn.commit()
 
-    def _migrate_schema(self, current_version: int):
-        if current_version < 2:
-            conn = self._get_conn()
-            columns = {
-                row["name"]
-                for row in conn.execute("PRAGMA table_info(conversations)").fetchall()
-            }
-            if "metadata_json" not in columns:
-                conn.execute("ALTER TABLE conversations ADD COLUMN metadata_json TEXT")
-                conn.commit()
+    @staticmethod
+    def _migrate_to_v2(conn):
+        ensure_column(conn, "conversations", "metadata_json", "metadata_json TEXT")
 
     def add_message(self, session_id: str, user_id: int, role: str, content: str, metadata: dict = None):
         """
