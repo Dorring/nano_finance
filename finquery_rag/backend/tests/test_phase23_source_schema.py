@@ -37,3 +37,16 @@ def test_source_info_schema_documents_chunk_id():
 
     assert "chunk_id" in source_schema["properties"]
     assert "score" in source_schema["properties"]
+
+
+
+def test_main_api_pagination_helper_rejects_negative_values_static():
+    main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+    content = open(main_path, encoding="utf-8").read()
+
+    assert "def _normalize_api_pagination" in content
+    assert "limit must be >= 1" in content
+    assert "offset must be >= 0" in content
+    assert "created_after must be <= created_before" in content
+    assert "normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=20)" in content
+    assert "normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)" in content
