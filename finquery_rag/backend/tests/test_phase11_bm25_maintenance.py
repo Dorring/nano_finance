@@ -160,3 +160,13 @@ def test_search_caps_large_limits(tmp_path):
     results = retriever.search("revenue", k=1000, user_id=1)
 
     assert len(results) == retriever.MAX_SEARCH_LIMIT
+
+
+
+def test_search_rejects_non_string_and_blank_queries(tmp_path):
+    retriever = SqliteBM25Retriever(db_path=str(tmp_path / "bm25.db"))
+    retriever.add_chunks([_chunk("r.pdf::1")], user_id=1)
+
+    assert retriever.search(None, user_id=1) == []
+    assert retriever.search(123, user_id=1) == []
+    assert retriever.search("   ", user_id=1) == []

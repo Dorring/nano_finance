@@ -36,6 +36,11 @@ class SqliteBM25Retriever:
             return 0
         return min(limit, self.MAX_SEARCH_LIMIT)
 
+    def _normalize_query(self, query) -> str:
+        if not isinstance(query, str):
+            return ""
+        return query.strip()
+
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -127,7 +132,11 @@ class SqliteBM25Retriever:
         if limit <= 0:
             return []
 
-        clean_query = self._clean_query(query)
+        normalized_query = self._normalize_query(query)
+        if not normalized_query:
+            return []
+
+        clean_query = self._clean_query(normalized_query)
         if not clean_query.strip():
             return []
 
