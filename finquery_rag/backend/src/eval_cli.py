@@ -149,9 +149,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "compare":
-        baseline = json.loads(Path(args.baseline).read_text(encoding="utf-8"))
-        candidate = json.loads(Path(args.candidate).read_text(encoding="utf-8"))
-        comparison = compare_reports(baseline, candidate, regression_tolerance=args.tolerance)
+        tolerance = _normalize_non_negative_float(args.tolerance, "tolerance")
+        if isinstance(tolerance, str):
+            print(tolerance, file=sys.stderr)
+            return 2
+        try:
+            baseline = _load_json_object(args.baseline, "baseline")
+            candidate = _load_json_object(args.candidate, "candidate")
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        comparison = compare_reports(baseline, candidate, regression_tolerance=tolerance)
         payload = json.dumps(comparison, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, comparison)
@@ -271,6 +279,28 @@ def _normalize_non_negative_int(value, name: str):
     if parsed < 0:
         return f"{name} must be >= 0"
     return parsed
+
+
+def _normalize_non_negative_float(value, name: str):
+    try:
+        parsed = float(value or 0.0)
+    except (TypeError, ValueError):
+        return f"{name} must be a number"
+    if parsed < 0:
+        return f"{name} must be >= 0"
+    return parsed
+
+
+def _load_json_object(path: str, label: str) -> dict:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"{label} report cannot be read: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label} report must be valid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} report must be a JSON object")
+    return payload
 
 
 def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dict:
