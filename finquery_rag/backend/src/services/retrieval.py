@@ -311,26 +311,36 @@ class SqliteBM25Retriever:
         duplicate_rows_count = sum(int(row[1]) - 1 for row in duplicate_rows)
         orphan_doc_ids = [row[0] for row in orphan_rows]
 
+        issue_count = len(missing_doc_ids) + len(duplicate_doc_ids) + len(orphan_doc_ids)
         return {
-            "ok": not missing_doc_ids and not duplicate_doc_ids and not orphan_doc_ids,
+            "ok": issue_count == 0,
+            "scope": "tenant" if user_id is not None else "global",
             "user_id": user_id,
+            "global_orphan_check": user_id is None,
             "chunk_store_count": int(chunk_count),
             "fts_count": int(fts_count),
             "missing_fts_count": len(missing_doc_ids),
             "duplicate_doc_id_count": len(duplicate_doc_ids),
             "duplicate_fts_rows": duplicate_rows_count,
             "orphan_fts_count": len(orphan_doc_ids),
+            "issue_count": issue_count,
             "missing_doc_ids": missing_doc_ids[:50],
             "duplicate_doc_ids": duplicate_doc_ids[:50],
             "orphan_doc_ids": orphan_doc_ids[:50],
+            "missing_doc_ids_truncated": len(missing_doc_ids) > 50,
+            "duplicate_doc_ids_truncated": len(duplicate_doc_ids) > 50,
+            "orphan_doc_ids_truncated": len(orphan_doc_ids) > 50,
         }
 
     def rebuild_fts_index(self, user_id: int = None) -> Dict:
         """Rebuild FTS rows from chunk_store and return the post-rebuild report."""
+        deleted_fts_rows = 0
+        rebuilt_fts_rows = 0
         with sqlite3.connect(self.db_path, timeout=10) as conn:
             cursor = conn.cursor()
             if user_id is None:
                 cursor.execute("DELETE FROM fts_index")
+                deleted_fts_rows = max(0, int(cursor.rowcount or 0))
                 rows = cursor.execute(
                     "SELECT doc_id, content FROM chunk_store ORDER BY doc_id"
                 ).fetchall()
@@ -345,6 +355,7 @@ class SqliteBM25Retriever:
                         f"DELETE FROM fts_index WHERE doc_id IN ({placeholders})",
                         doc_ids,
                     )
+                    deleted_fts_rows = max(0, int(cursor.rowcount or 0))
                 rows = cursor.execute(
                     "SELECT doc_id, content FROM chunk_store WHERE user_id = ? ORDER BY doc_id",
                     (user_id,),
@@ -356,9 +367,17 @@ class SqliteBM25Retriever:
                     "INSERT INTO fts_index(content, doc_id) VALUES (?, ?);",
                     (tokenized_content, doc_id),
                 )
+                rebuilt_fts_rows += 1
             conn.commit()
 
-        return self.integrity_report(user_id=user_id)
+        report = self.integrity_report(user_id=user_id)
+        report["rebuild"] = {
+            "scope": "tenant" if user_id is not None else "global",
+            "user_id": user_id,
+            "deleted_fts_rows": deleted_fts_rows,
+            "rebuilt_fts_rows": rebuilt_fts_rows,
+        }
+        return report
 
 
 def rrf(ranked_lists, k: int = 60):

@@ -289,10 +289,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "bm25-check":
+        user_id = _normalize_optional_positive_int(args.user_id, "user-id")
+        if isinstance(user_id, str):
+            print(user_id, file=sys.stderr)
+            return 2
         from .services.retrieval import SqliteBM25Retriever
 
         retriever = SqliteBM25Retriever(db_path=args.db)
-        report = retriever.integrity_report(user_id=args.user_id)
+        report = retriever.integrity_report(user_id=user_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, report)
@@ -300,10 +304,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report["ok"] else 1
 
     if args.command == "bm25-rebuild":
+        user_id = _normalize_optional_positive_int(args.user_id, "user-id")
+        if isinstance(user_id, str):
+            print(user_id, file=sys.stderr)
+            return 2
         from .services.retrieval import SqliteBM25Retriever
 
         retriever = SqliteBM25Retriever(db_path=args.db)
-        report = retriever.rebuild_fts_index(user_id=args.user_id)
+        report = retriever.rebuild_fts_index(user_id=user_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, report)
@@ -344,6 +352,12 @@ def _normalize_positive_int(value, name: str):
     if parsed < 1:
         return f"{name} must be >= 1"
     return parsed
+
+
+def _normalize_optional_positive_int(value, name: str):
+    if value is None:
+        return None
+    return _normalize_positive_int(value, name)
 
 
 def _normalize_non_negative_float(value, name: str):
