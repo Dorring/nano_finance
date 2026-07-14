@@ -1,4 +1,4 @@
-"""
+﻿"""
 Structured tracing for RAG queries.
 
 Logs query lifecycle: rewrite, filter, candidates, scores, context, model info, timing.
@@ -11,9 +11,9 @@ import os
 import time
 import uuid
 import re
-from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+from .evaluation import write_jsonl
 from .sqlite_migrations import ensure_column, run_component_migrations, table_exists
 
 SCHEMA_VERSION = 2
@@ -219,17 +219,14 @@ class TraceLogger:
             + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         )
         params.extend([limit, offset])
-        rows = self._conn().execute(sql, params).fetchall()
+        with self._conn() as conn:
+            rows = conn.execute(sql, params).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
     def export_traces_jsonl(self, tenant_id, output_path, **query_kwargs):
         """Export tenant-scoped traces as JSONL and return exported count."""
         rows = self.query_traces(tenant_id=tenant_id, **query_kwargs)
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        with out.open("w", encoding="utf-8") as fh:
-            for row in rows:
-                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        write_jsonl(output_path, rows)
         return len(rows)
 
     def cleanup_older_than(self, cutoff_created_at, tenant_id=None):
