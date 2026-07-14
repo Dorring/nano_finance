@@ -163,23 +163,29 @@ class DocumentRegistry:
         rows = self._conn().execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC", (tenant_id,)).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
-    def list_all(self, tenant_id, status=None):
-        """List registry rows for one tenant, optionally filtered by status."""
+    def list_all(self, tenant_id, status=None, limit=None, offset=0):
+        """List registry rows for one tenant, optionally filtered by status and paginated."""
         if tenant_id is None:
             return []
         if status is not None and status not in VALID_TRANSITIONS:
             return []
+        try:
+            normalized_offset = max(0, int(offset or 0))
+            normalized_limit = None if limit is None else max(0, int(limit))
+        except (TypeError, ValueError):
+            return []
+
+        sql = "SELECT * FROM document_registry WHERE tenant_id = ?"
+        params = [tenant_id]
+        if status is not None:
+            sql += " AND status = ?"
+            params.append(status)
+        sql += " ORDER BY updated_at DESC"
+        if normalized_limit is not None:
+            sql += " LIMIT ? OFFSET ?"
+            params.extend([normalized_limit, normalized_offset])
         with self._conn() as conn:
-            if status is None:
-                rows = conn.execute(
-                    "SELECT * FROM document_registry WHERE tenant_id = ? ORDER BY updated_at DESC",
-                    (tenant_id,),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM document_registry WHERE tenant_id = ? AND status = ? ORDER BY updated_at DESC",
-                    (tenant_id, status),
-                ).fetchall()
+            rows = conn.execute(sql, params).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
     def status_counts(self, tenant_id):

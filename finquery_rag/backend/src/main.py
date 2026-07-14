@@ -335,15 +335,29 @@ async def list_documents(current_user: User = Depends(get_current_user)):
     )
 
 @app.get("/document-registry")
-async def list_document_registry(status: str | None = None, current_user: User = Depends(get_current_user)):
+async def list_document_registry(
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+):
     """List current user's document lifecycle registry rows."""
     if status is not None and status not in VALID_TRANSITIONS:
         raise api_error(400, "invalid_document_status", f"Invalid document status: {status}")
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)
 
-    rows = document_registry.list_all(current_user.id, status=status)
+    rows = document_registry.list_all(
+        current_user.id,
+        status=status,
+        limit=normalized_limit,
+        offset=normalized_offset,
+    )
     return {
         "documents": [_public_registry_document(row) for row in rows],
+        "total_returned": len(rows),
         "total_documents": len(rows),
+        "limit": normalized_limit,
+        "offset": normalized_offset,
         "status_counts": document_registry.status_counts(current_user.id),
     }
 
