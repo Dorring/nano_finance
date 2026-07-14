@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, getApiErrorMessage } from '../api';
+import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, listSessions, clearAllSessions, getApiErrorMessage } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -17,6 +17,7 @@ const createSessionId = () => {
 const sessionStorageKey = (email) => `finquery_session_id:${email || 'anonymous'}`;
 const RETRIEVAL_K_STORAGE_KEY = 'finquery_retrieval_k';
 const RETRIEVAL_K_OPTIONS = [3, 5, 8, 12, 20];
+const SESSION_LIST_LIMIT = 20;
 
 const loadRetrievalK = () => {
   const stored = Number(localStorage.getItem(RETRIEVAL_K_STORAGE_KEY));
@@ -28,6 +29,10 @@ function Dashboard() {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [sessionSummary, setSessionSummary] = useState(null);
+  const [isSessionsLoading, setIsSessionsLoading] = useState(false);
+  const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
   const [retrievalK, setRetrievalK] = useState(loadRetrievalK);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -40,6 +45,43 @@ function Dashboard() {
   const isQueryDisabled = isLoading || readyDocumentCount === 0;
 
 
+  const mapHistoryToMessages = useCallback((historyMessages = []) => (
+    historyMessages.map((message) => {
+      const metadata = message.metadata || {};
+      return {
+        role: message.role,
+        content: message.content,
+        sources: metadata.sources || message.sources || [],
+        diagnostics: metadata.diagnostics || message.diagnostics || null,
+      };
+    })
+  ), []);
+
+  const fetchSessions = useCallback(async ({ silent = false } = {}) => {
+    setIsSessionsLoading(true);
+    try {
+      const data = await listSessions({ limit: SESSION_LIST_LIMIT, offset: 0 });
+      setSessions(data.sessions || []);
+      setSessionSummary(data.summary || null);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      if (!silent) {
+        toast.error(getApiErrorMessage(error, 'Failed to load sessions'));
+      }
+    } finally {
+      setIsSessionsLoading(false);
+    }
+  }, []);
+
+  const loadSessionMessages = useCallback(async (targetSessionId, { replaceExisting = false } = {}) => {
+    const data = await getSessionHistory(targetSessionId);
+    const restoredMessages = mapHistoryToMessages(data.messages || []);
+    setMessages((currentMessages) => {
+      if (!replaceExisting && currentMessages.length > 0) return currentMessages;
+      return restoredMessages;
+    });
+    return restoredMessages;
+  }, [mapHistoryToMessages]);
   const fetchDocuments = useCallback(async ({ silent = false } = {}) => {
     try {
       let nextDocuments;
@@ -83,6 +125,11 @@ function Dashboard() {
   }, [fetchDocuments]);
 
   useEffect(() => {
+    if (!user) return;
+    fetchSessions({ silent: true });
+  }, [fetchSessions, user]);
+
+  useEffect(() => {
     if (!hasProcessingDocuments) return undefined;
 
     const intervalId = window.setInterval(() => {
@@ -112,21 +159,8 @@ function Dashboard() {
 
     const restoreSession = async () => {
       try {
-        const data = await getSessionHistory(sessionId);
+        await loadSessionMessages(sessionId);
         if (cancelled) return;
-
-        setMessages((currentMessages) => {
-          if (currentMessages.length > 0) return currentMessages;
-          return (data.messages || []).map((message) => {
-            const metadata = message.metadata || {};
-            return {
-              role: message.role,
-              content: message.content,
-              sources: metadata.sources || message.sources || [],
-              diagnostics: metadata.diagnostics || message.diagnostics || null,
-            };
-          });
-        });
       } catch (error) {
         console.warn('Failed to restore session history:', error);
       }
@@ -137,7 +171,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [loadSessionMessages, sessionId]);
 
   const ensureSessionId = () => {
     if (sessionId) return sessionId;
@@ -303,6 +337,7 @@ function Dashboard() {
       toast.error(getApiErrorMessage(error, 'Failed to get response'));
     } finally {
       setIsLoading(false);
+      fetchSessions({ silent: true });
     }
   };
 
@@ -316,12 +351,42 @@ function Dashboard() {
     if (previousSessionId) {
       try {
         await clearSession(previousSessionId);
+        await fetchSessions({ silent: true });
       } catch (error) {
         console.warn('Failed to clear previous session:', error);
       }
     }
 
     toast.success('Started a new chat');
+  };
+
+  const handleSelectSession = async (nextSessionId) => {
+    if (!nextSessionId || nextSessionId === sessionId) return;
+    localStorage.setItem(sessionStorageKey(user?.email), nextSessionId);
+    setSessionId(nextSessionId);
+    setMessages([]);
+    try {
+      await loadSessionMessages(nextSessionId, { replaceExisting: true });
+      toast.success('Loaded chat history');
+    } catch (error) {
+      console.error('Failed to load selected session:', error);
+      toast.error(getApiErrorMessage(error, 'Failed to load selected session'));
+    }
+  };
+
+  const handleClearAllSessions = async () => {
+    try {
+      const result = await clearAllSessions();
+      const nextSessionId = createSessionId();
+      localStorage.setItem(sessionStorageKey(user?.email), nextSessionId);
+      setSessionId(nextSessionId);
+      setMessages([]);
+      await fetchSessions({ silent: true });
+      toast.success(`Cleared ${result.deleted_messages || 0} stored message${result.deleted_messages === 1 ? '' : 's'}`);
+    } catch (error) {
+      console.error('Failed to clear all sessions:', error);
+      toast.error(getApiErrorMessage(error, 'Failed to clear all sessions'));
+    }
   };
 
   const handleLogout = () => {
@@ -353,6 +418,14 @@ function Dashboard() {
           retrievalKOptions={RETRIEVAL_K_OPTIONS}
           onRetrievalKChange={handleRetrievalKChange}
           onNewSession={handleNewSession}
+          sessions={sessions}
+          sessionSummary={sessionSummary}
+          sessionsLoading={isSessionsLoading}
+          isSessionPanelOpen={isSessionPanelOpen}
+          onToggleSessionPanel={() => setIsSessionPanelOpen((current) => !current)}
+          onRefreshSessions={() => fetchSessions()}
+          onSelectSession={handleSelectSession}
+          onClearAllSessions={handleClearAllSessions}
           queryDisabled={isQueryDisabled}
           queryDisabledReason={queryDisabledReason}
         />

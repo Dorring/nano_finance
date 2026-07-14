@@ -356,6 +356,13 @@
   cursor: not-allowed;
 }
 
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-history-btn,
 .new-session-btn {
   padding: 0.375rem 0.75rem;
   background-color: #ffffff;
@@ -368,15 +375,161 @@
   cursor: pointer;
 }
 
+.session-history-btn:hover:not(:disabled),
 .new-session-btn:hover:not(:disabled) {
   border-color: #000000;
 }
 
+.session-history-btn:disabled,
 .new-session-btn:disabled {
   color: #9ca3af;
   cursor: not-allowed;
 }
 
+
+.session-panel {
+  max-width: 900px;
+  margin: -0.25rem auto 1rem auto;
+  padding: 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.session-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.session-panel-title {
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.session-panel-subtitle {
+  margin-top: 0.125rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.session-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.session-panel-actions button {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.session-panel-actions button:hover:not(:disabled) {
+  border-color: #000000;
+  color: #000000;
+}
+
+.session-panel-actions button.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.session-panel-actions button.danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.session-panel-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.session-empty {
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.session-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  text-align: left;
+}
+
+.session-item:hover:not(:disabled) {
+  border-color: #000000;
+  background-color: #ffffff;
+}
+
+.session-item.active {
+  border-color: #000000;
+  background-color: #f3f4f6;
+  cursor: default;
+}
+
+.session-item:disabled:not(.active) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.session-item-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.session-item-id {
+  overflow: hidden;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-item-time {
+  color: #6b7280;
+  font-size: 0.6875rem;
+}
+
+.session-item-count {
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
 .chat-empty {
   display: flex;
   align-items: center;

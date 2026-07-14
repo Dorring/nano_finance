@@ -159,6 +159,20 @@ export const clearSession = async (sessionId) => {
   return response.data;
 };
 
+// List server-side conversation sessions for the current user.
+export const listSessions = async ({ limit = 20, offset = 0 } = {}) => {
+  const response = await api.get('/sessions', {
+    params: { limit, offset },
+  });
+  return response.data;
+};
+
+// Clear all server-side conversation sessions for the current user.
+export const clearAllSessions = async () => {
+  const response = await api.delete('/sessions');
+  return response.data;
+};
+
 const readErrorDetail = async (response) => {
   let text = '';
   try {
