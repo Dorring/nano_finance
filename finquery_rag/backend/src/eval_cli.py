@@ -125,9 +125,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "score":
-        cases = load_jsonl_cases(args.cases)
-        predictions = load_jsonl_predictions(args.predictions)
-        report = evaluate_predictions(cases, predictions)
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            report = evaluate_predictions(cases, predictions)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, report)
@@ -169,7 +173,11 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             return 2
-        comparison = compare_reports(baseline, candidate, regression_tolerance=tolerance)
+        try:
+            comparison = compare_reports(baseline, candidate, regression_tolerance=tolerance)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         payload = json.dumps(comparison, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, comparison)
