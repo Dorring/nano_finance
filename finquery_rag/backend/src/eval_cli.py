@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from html import escape
 import json
 from pathlib import Path
 import os
@@ -47,6 +48,17 @@ def main(argv: list[str] | None = None) -> int:
     compare.add_argument("--candidate", required=True, help="Candidate report JSON")
     compare.add_argument("--tolerance", type=float, default=0.0, help="Allowed negative metric delta")
     compare.add_argument("--out", help="Optional comparison JSON output path")
+
+    gate = sub.add_parser("gate", help="Score predictions and enforce CI-friendly eval thresholds")
+    gate.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    gate.add_argument("--predictions", required=True, help="Predictions JSONL")
+    gate.add_argument("--baseline", help="Optional baseline report JSON for regression comparison")
+    gate.add_argument("--tolerance", type=float, default=0.0, help="Allowed negative metric delta versus baseline")
+    gate.add_argument("--min-pass-rate", type=float, default=1.0, help="Minimum required pass_rate")
+    gate.add_argument("--max-missing", type=int, default=0, help="Maximum allowed missing predictions")
+    gate.add_argument("--out", help="Optional candidate report JSON output path")
+    gate.add_argument("--comparison-out", help="Optional comparison JSON output path when --baseline is provided")
+    gate.add_argument("--junit-out", help="Optional JUnit XML output path for CI annotations")
 
     traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
     traces.add_argument(
@@ -189,6 +201,45 @@ def main(argv: list[str] | None = None) -> int:
         if not comparison["passed"]:
             _print_compare_failure_summary(comparison)
         return 0 if comparison["passed"] else 1
+
+    if args.command == "gate":
+        tolerance = _normalize_non_negative_float(args.tolerance, "tolerance")
+        min_pass_rate = _normalize_fraction(args.min_pass_rate, "min-pass-rate")
+        max_missing = _normalize_non_negative_int(args.max_missing, "max-missing")
+        for error in (tolerance, min_pass_rate, max_missing):
+            if isinstance(error, str):
+                print(error, file=sys.stderr)
+                return 2
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            report = evaluate_predictions(cases, predictions)
+            comparison = None
+            if args.baseline:
+                baseline = _load_json_object(args.baseline, "baseline")
+                comparison = compare_reports(baseline, report, regression_tolerance=tolerance)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
+        gate_result = _build_gate_result(
+            report,
+            comparison=comparison,
+            min_pass_rate=min_pass_rate,
+            max_missing=max_missing,
+        )
+        if args.out:
+            write_json_file(args.out, report)
+        if args.comparison_out and comparison is not None:
+            write_json_file(args.comparison_out, comparison)
+        if args.junit_out:
+            _write_gate_junit(args.junit_out, gate_result)
+
+        payload = json.dumps(gate_result, ensure_ascii=False, indent=2, sort_keys=True)
+        print(payload)
+        if not gate_result["passed"]:
+            _print_gate_failure_summary(gate_result)
+        return 0 if gate_result["passed"] else 1
 
     if args.command == "traces":
         tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
@@ -382,6 +433,96 @@ def _load_json_object(path: str, label: str) -> dict:
     return payload
 
 
+def _normalize_fraction(value, name: str):
+    parsed = _normalize_non_negative_float(value, name)
+    if isinstance(parsed, str):
+        return parsed
+    if parsed > 1:
+        return f"{name} must be <= 1"
+    return parsed
+
+
+def _build_gate_result(
+    report: dict,
+    *,
+    comparison: dict | None,
+    min_pass_rate: float,
+    max_missing: int,
+) -> dict:
+    summary = report.get("summary") or {}
+    pass_rate = float(summary.get("pass_rate") or 0.0)
+    missing_predictions = int(summary.get("missing_predictions") or 0)
+    pass_rate_ok = pass_rate >= min_pass_rate
+    missing_ok = missing_predictions <= max_missing
+    checks = [
+        {
+            "name": "min_pass_rate",
+            "passed": pass_rate_ok,
+            "actual": pass_rate,
+            "expected": min_pass_rate,
+            "message": (
+                "pass_rate %.6f meets required %.6f"
+                if pass_rate_ok
+                else "pass_rate %.6f is below required %.6f"
+            ) % (pass_rate, min_pass_rate),
+        },
+        {
+            "name": "max_missing_predictions",
+            "passed": missing_ok,
+            "actual": missing_predictions,
+            "expected": max_missing,
+            "message": (
+                "missing_predictions %d is within allowed %d"
+                if missing_ok
+                else "missing_predictions %d exceeds allowed %d"
+            ) % (missing_predictions, max_missing),
+        },
+    ]
+    if comparison is not None:
+        comparison_ok = bool(comparison.get("passed"))
+        checks.append({
+            "name": "baseline_regression",
+            "passed": comparison_ok,
+            "actual": comparison.get("regressions", []),
+            "expected": [],
+            "message": (
+                "candidate matches baseline within tolerance"
+                if comparison_ok
+                else "; ".join(comparison.get("failure_reasons") or ["candidate regressed versus baseline"])
+            ),
+        })
+
+    failed_checks = [check for check in checks if not check["passed"]]
+    return {
+        "passed": not failed_checks,
+        "summary": summary,
+        "checks": checks,
+        "failed_checks": failed_checks,
+        "missing_case_ids": report.get("missing_case_ids", []),
+        "warnings": report.get("warnings", []),
+        "comparison": comparison,
+    }
+
+
+def _write_gate_junit(path: str | Path, gate_result: dict) -> None:
+    checks = gate_result.get("checks") or []
+    failures = [check for check in checks if not check.get("passed")]
+    body = [
+        '<?xml version="1.0" encoding="utf-8"?>',
+        '<testsuite name="finquery-eval-gate" tests="%d" failures="%d">' % (len(checks), len(failures)),
+    ]
+    for check in checks:
+        name = escape(str(check.get("name") or "check"), quote=True)
+        body.append('  <testcase classname="finquery.eval" name="%s">' % name)
+        if not check.get("passed"):
+            message = escape(str(check.get("message") or "evaluation gate check failed"), quote=True)
+            body.append('    <failure message="%s">%s</failure>' % (message, message))
+        body.append('  </testcase>')
+    body.append('</testsuite>')
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_text("\n".join(body) + "\n", encoding="utf-8")
+
+
 def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dict:
     normalized_limit = _normalize_limit(limit)
     if isinstance(normalized_limit, str):
@@ -403,6 +544,18 @@ def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dic
         "created_before": created_before,
     }
 
+
+
+def _print_gate_failure_summary(gate_result: dict) -> None:
+    """Print a compact human-readable gate failure summary to stderr."""
+    print("FinQuery eval gate failed:", file=sys.stderr)
+    for check in gate_result.get("failed_checks", [])[:10]:
+        print(f"- {check.get('name')}: {check.get('message')}", file=sys.stderr)
+    missing = gate_result.get("missing_case_ids") or []
+    if missing:
+        print("Missing predictions: " + ", ".join(str(item) for item in missing[:10]), file=sys.stderr)
+        if len(missing) > 10:
+            print(f"- ... {len(missing) - 10} more missing predictions", file=sys.stderr)
 
 
 def _print_compare_failure_summary(comparison: dict) -> None:
