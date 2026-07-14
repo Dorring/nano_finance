@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import Message from './Message';
+import EvalWorkbench from './EvalWorkbench';
 
 const formatSessionTime = (timestamp) => {
   if (!timestamp) return 'Unknown time';
@@ -144,6 +145,8 @@ const ChatArea = ({
               </button>
             </div>
           </div>
+
+          <EvalWorkbench />
 
           {sessions.length === 0 ? (
             <div className="session-empty">
