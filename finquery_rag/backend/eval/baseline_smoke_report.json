@@ -1,0 +1,94 @@
+{
+  "cases": [
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_revenue",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.82,
+      "latency_ms": 12.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "number",
+        "citation"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_no_answer",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.82,
+      "latency_ms": 8.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "no_answer"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "financial_calculation",
+      "id": "smoke_growth_calc",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.9,
+      "latency_ms": 5.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "financial_calculation",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "calculation",
+        "growth"
+      ]
+    }
+  ],
+  "extra_prediction_ids": [],
+  "missing_case_ids": [],
+  "summary": {
+    "answer_calculation_consistency": 1.0,
+    "answer_contains": 1.0,
+    "calculation_accuracy": 1.0,
+    "citation_precision": 1.0,
+    "citation_recall": 1.0,
+    "extra_predictions": 0,
+    "intent_accuracy": 1.0,
+    "missing_predictions": 0,
+    "no_answer_accuracy": 1.0,
+    "number_accuracy": 1.0,
+    "p95_latency_ms": 11.6,
+    "pass_rate": 1.0,
+    "retrieval_precision": 1.0,
+    "retrieval_recall": 1.0,
+    "scored_cases": 3,
+    "total_cases": 3,
+    "total_predictions": 3
+  },
+  "warnings": []
+}
