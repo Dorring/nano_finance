@@ -84,11 +84,37 @@ export const listDocuments = async () => {
   return response.data;
 };
 
-// List document lifecycle registry entries
-export const listDocumentRegistry = async (status = null) => {
-  const params = status ? { status } : undefined;
+// List one page of document lifecycle registry entries
+export const listDocumentRegistry = async (status = null, { limit = 100, offset = 0 } = {}) => {
+  const params = { limit, offset };
+  if (status) params.status = status;
   const response = await api.get('/document-registry', { params });
   return response.data;
+};
+
+// List all document lifecycle registry entries, following backend pagination.
+export const listAllDocumentRegistry = async (status = null, pageSize = 100) => {
+  const documents = [];
+  let offset = 0;
+  let statusCounts = null;
+
+  while (true) {
+    const page = await listDocumentRegistry(status, { limit: pageSize, offset });
+    const pageDocuments = page.documents || [];
+    documents.push(...pageDocuments);
+    statusCounts = page.status_counts || statusCounts;
+
+    const totalReturned = page.total_returned ?? pageDocuments.length;
+    if (totalReturned < pageSize || pageDocuments.length === 0) break;
+    offset += totalReturned;
+  }
+
+  return {
+    documents,
+    total_returned: documents.length,
+    total_documents: documents.length,
+    status_counts: statusCounts || {},
+  };
 };
 
 // Get one query trace

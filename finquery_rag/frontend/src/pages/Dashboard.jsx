@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, getApiErrorMessage } from '../api';
+import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, getApiErrorMessage } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -44,7 +44,7 @@ function Dashboard() {
     try {
       let nextDocuments;
       try {
-        const registryData = await listDocumentRegistry();
+        const registryData = await listAllDocumentRegistry();
         nextDocuments = registryData.documents.map((doc) => ({
           ...doc,
           name: doc.filename,
@@ -149,7 +149,7 @@ function Dashboard() {
   };
 
   const handleUpload = async (file) => {
-    if (!file.name.endsWith('.pdf')) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
       toast.error('Please upload a PDF file');
       return;
     }
