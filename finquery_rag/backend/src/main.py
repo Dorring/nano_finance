@@ -290,6 +290,7 @@ async def readyz():
     snapshot = collect_health_snapshot(
         document_registry=document_registry,
         session_manager=session_manager,
+        feedback_store=feedback_store,
     )
     status_code = 200 if snapshot["ready"] else 503
     return JSONResponse(status_code=status_code, content=snapshot)
