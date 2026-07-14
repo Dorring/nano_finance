@@ -162,8 +162,8 @@ def _validate_session_id(session_id: str) -> str:
     return session_id
 
 
-def _safe_upload_filename(filename: str) -> str:
-    """Normalize uploaded PDF filenames before they touch local paths or indexes."""
+def _safe_document_filename(filename: str, *, require_pdf: bool = True) -> str:
+    """Normalize document filenames before they touch local paths, URLs, or indexes."""
     if not isinstance(filename, str):
         raise api_error(400, "invalid_filename", "Invalid filename")
     safe_filename = os.path.basename(filename).strip()
@@ -176,9 +176,14 @@ def _safe_upload_filename(filename: str) -> str:
         or "\\" in safe_filename
     ):
         raise api_error(400, "invalid_filename", "Invalid filename")
-    if not safe_filename.lower().endswith(".pdf"):
+    if require_pdf and not safe_filename.lower().endswith(".pdf"):
         raise api_error(400, "invalid_file_type", "Only PDF files are supported")
     return safe_filename
+
+
+def _safe_upload_filename(filename: str) -> str:
+    """Normalize uploaded PDF filenames before they touch local paths or indexes."""
+    return _safe_document_filename(filename, require_pdf=True)
 
 
 def _assistant_session_metadata(result=None, sources=None, trace_id=None, context_sufficient=None,
@@ -285,6 +290,7 @@ async def readyz():
     snapshot = collect_health_snapshot(
         document_registry=document_registry,
         session_manager=session_manager,
+        feedback_store=feedback_store,
     )
     status_code = 200 if snapshot["ready"] else 503
     return JSONResponse(status_code=status_code, content=snapshot)
@@ -942,6 +948,7 @@ async def delete_document(doc_name: str, current_user: User = Depends(get_curren
     Raises:
         HTTPException: 如果指定文档不存在，抛出 404 异常。
     """
+    doc_name = _safe_document_filename(doc_name, require_pdf=False)
     success = delete_document_collection(doc_name, current_user.id)
 
     if not success:

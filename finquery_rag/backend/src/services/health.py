@@ -18,7 +18,20 @@ BM25_DB_PATH = "rag_bm25.db"
 CHROMA_PATH = "./chroma_db"
 DOCUMENT_REGISTRY_DB_PATH = "document_registry.db"
 TRACE_DB_PATH = "trace_log.db"
+FEEDBACK_DB_PATH = "feedback.db"
 GLOBAL_COLLECTION_NAME = "rag_global_knowledge_base"
+
+RUNTIME_LIMITS = {
+    "query_question_min_chars": 2,
+    "query_n_results_min": 1,
+    "query_n_results_max": 20,
+    "session_id_max_chars": 128,
+    "trace_id_max_chars": 128,
+    "upload_filename_max_chars": 180,
+    "feedback_comment_max_chars": 2000,
+    "trace_text_max_chars": 50000,
+    "trace_json_max_chars": 50000,
+}
 
 
 def _runtime_path(env_name: str, default: str) -> str:
@@ -187,10 +200,12 @@ def collect_config_snapshot() -> dict[str, Any]:
             "bm25_db_path": _runtime_path("BM25_DB_PATH", BM25_DB_PATH),
             "sessions_db_path": os.getenv("SESSIONS_DB_PATH", "sessions.db"),
             "trace_db_path": _runtime_path("TRACE_DB_PATH", TRACE_DB_PATH),
+            "feedback_db_path": _runtime_path("FEEDBACK_DB_PATH", FEEDBACK_DB_PATH),
         },
         "sessions": {
             "ttl_seconds": session_ttl,
         },
+        "limits": RUNTIME_LIMITS,
     }
 
 
@@ -198,8 +213,10 @@ def collect_health_snapshot(
     *,
     document_registry: Any | None = None,
     session_manager: Any | None = None,
+    feedback_store: Any | None = None,
     bm25_db_path: str | None = None,
     trace_db_path: str | None = None,
+    feedback_db_path: str | None = None,
 ) -> dict[str, Any]:
     """Return a readiness snapshot without reading tenant content."""
     config = collect_config_snapshot()
@@ -210,6 +227,11 @@ def collect_health_snapshot(
     )
     session_path = getattr(
         session_manager, "db_path", os.getenv("SESSIONS_DB_PATH", "sessions.db")
+    )
+    feedback_path = getattr(
+        feedback_store,
+        "db_path",
+        feedback_db_path or _runtime_path("FEEDBACK_DB_PATH", FEEDBACK_DB_PATH),
     )
     bm25_path = bm25_db_path or _runtime_path("BM25_DB_PATH", BM25_DB_PATH)
     trace_path = trace_db_path or _runtime_path("TRACE_DB_PATH", TRACE_DB_PATH)
@@ -242,6 +264,10 @@ def collect_health_snapshot(
         },
         "trace": {
             **_sqlite_check(trace_path, required_tables=("trace_log",)),
+            "required": False,
+        },
+        "feedback": {
+            **_sqlite_check(feedback_path, required_tables=("answer_feedback",)),
             "required": False,
         },
     }

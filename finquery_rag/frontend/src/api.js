@@ -242,7 +242,7 @@ export const queryDocumentsStream = async (question, documentNames, sessionId, n
 
 // Delete document
 export const deleteDocument = async (docName) => {
-  const response = await api.delete(`/documents/${docName}`);
+  const response = await api.delete(`/documents/${encodeURIComponent(docName)}`);
   return response.data;
 };
 
