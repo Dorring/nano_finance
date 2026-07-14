@@ -361,15 +361,25 @@ def evaluate_predictions(
     predictions: dict[str, Prediction],
 ) -> dict[str, Any]:
     """Aggregate case-level scores into a stable report."""
+    case_list = list(cases)
     case_scores: list[dict[str, Any]] = []
     missing: list[str] = []
+    seen_case_ids: set[str] = set()
 
-    for case in cases:
+    for case in case_list:
+        seen_case_ids.add(case.case_id)
         pred = predictions.get(case.case_id)
         if pred is None:
             missing.append(case.case_id)
             continue
         case_scores.append(score_prediction(case, pred))
+
+    extra_prediction_ids = sorted(set(predictions) - seen_case_ids)
+    warnings = []
+    if not case_list:
+        warnings.append("no evaluation cases loaded")
+    if extra_prediction_ids:
+        warnings.append(f"{len(extra_prediction_ids)} predictions did not match any evaluation case")
 
     latencies = [
         score["latency_ms"]
@@ -379,9 +389,11 @@ def evaluate_predictions(
 
     return {
         "summary": {
-            "total_cases": len(case_scores) + len(missing),
+            "total_cases": len(case_list),
             "scored_cases": len(case_scores),
             "missing_predictions": len(missing),
+            "extra_predictions": len(extra_prediction_ids),
+            "total_predictions": len(predictions),
             "pass_rate": _avg(score["passed"] for score in case_scores),
             "citation_precision": _avg(score["citation_precision"] for score in case_scores),
             "citation_recall": _avg(score["citation_recall"] for score in case_scores),
@@ -398,6 +410,8 @@ def evaluate_predictions(
             "p95_latency_ms": _percentile(latencies, 95),
         },
         "missing_case_ids": missing,
+        "extra_prediction_ids": extra_prediction_ids,
+        "warnings": warnings,
         "cases": case_scores,
     }
 
@@ -505,6 +519,8 @@ def compare_reports(
     The comparison is intentionally deterministic and schema-stable so it can
     be used as a CI quality gate once project-specific thresholds are defined.
     """
+    _validate_report_shape(baseline, "baseline")
+    _validate_report_shape(candidate, "candidate")
     tolerance = float(regression_tolerance)
     if tolerance < 0:
         raise ValueError("regression_tolerance must be >= 0")
@@ -848,6 +864,18 @@ def _filename_from_doc_id(doc_id: str) -> str | None:
         if len(parts) > 2:
             return "_".join(parts[2:])
     return prefix or None
+
+
+def _validate_report_shape(report: dict[str, Any], label: str) -> None:
+    if not isinstance(report.get("summary", {}), dict):
+        raise ValueError(f"{label} report summary must be an object")
+    if not isinstance(report.get("cases", []), list):
+        raise ValueError(f"{label} report cases must be a list")
+    for idx, case in enumerate(report.get("cases", [])):
+        if not isinstance(case, dict):
+            raise ValueError(f"{label} report cases[{idx}] must be an object")
+        if not case.get("id"):
+            raise ValueError(f"{label} report cases[{idx}] missing id")
 
 
 def _ensure_unique_case_ids(cases: Iterable[EvaluationCase], label: str) -> None:
