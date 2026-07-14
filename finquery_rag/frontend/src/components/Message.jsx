@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { getQueryTrace, submitAnswerFeedback } from '../api';
 
+const EMPTY_VALUE = '-';
+
+const asNumber = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 const formatPercent = (value) => {
-  if (typeof value !== 'number') return null;
-  return `${Math.round(value * 100)}%`;
+  const numeric = asNumber(value);
+  if (numeric === null) return null;
+  return `${Math.round(numeric * 100)}%`;
 };
 
 const shortText = (value, limit = 220) => {
-  if (!value) return '—';
-  return value.length > limit ? `${value.slice(0, limit)}...` : value;
+  if (!value) return EMPTY_VALUE;
+  const text = String(value);
+  return text.length > limit ? `${text.slice(0, limit)}...` : text;
 };
 
 const getSourceChunkId = (source) => source.chunk_id || source.doc_id || null;
@@ -22,14 +35,14 @@ const sourceKey = (source) => [
 const formatSourceLabel = (source) => {
   const filename = source.filename || source.doc_name || source.source || 'source';
   const page = source.page !== undefined && source.page !== null ? ` p.${source.page}` : '';
-  const type = source.type && source.type !== 'text' ? ` · ${source.type}` : '';
+  const type = source.type && source.type !== 'text' ? ` - ${source.type}` : '';
   return `${filename}${page}${type}`;
 };
 
 const formatChunkLabel = (chunkId) => {
   if (!chunkId) return null;
   const suffix = chunkId.split('::').slice(-2).join('::') || chunkId;
-  return suffix.length > 28 ? `…${suffix.slice(-28)}` : suffix;
+  return suffix.length > 28 ? `...${suffix.slice(-28)}` : suffix;
 };
 
 const formatTraceScope = (filterConditions) => {
@@ -45,11 +58,11 @@ const formatTraceScope = (filterConditions) => {
 
 const formatTraceTopK = (filterConditions) => {
   const nResults = filterConditions?.n_results;
-  return typeof nResults === 'number' ? String(nResults) : '—';
+  return typeof nResults === 'number' ? String(nResults) : EMPTY_VALUE;
 };
 
 const formatTraceContext = (diagnostics) => {
-  if (typeof diagnostics?.context_sufficient !== 'boolean') return '—';
+  if (typeof diagnostics?.context_sufficient !== 'boolean') return EMPTY_VALUE;
   return diagnostics.context_sufficient ? 'sufficient' : 'weak';
 };
 
@@ -63,14 +76,33 @@ const uniqueSources = (sources = []) => {
   });
 };
 
+const getReliability = (diagnostics, citationCount) => {
+  if (!diagnostics) return null;
+  if (diagnostics.streamError) {
+    return { label: 'Stream error', className: 'error', help: diagnostics.streamError };
+  }
+  if (diagnostics.contextSufficient === false) {
+    return { label: 'Insufficient context', className: 'warn', help: 'The answer was generated as a refusal or should be reviewed.' };
+  }
+  const confidence = asNumber(diagnostics.retrievalConfidence);
+  if (confidence !== null && confidence < 0.35) {
+    return { label: 'Low retrieval confidence', className: 'warn', help: 'Retrieved context may be weak for this answer.' };
+  }
+  if (citationCount === 0 && diagnostics.intent !== 'conversation') {
+    return { label: 'No citations', className: 'warn', help: 'No source chunks were returned with this answer.' };
+  }
+  return { label: 'Grounded', className: 'ok', help: 'Context passed the reliability checks available to the UI.' };
+};
+
 const Message = ({ message }) => {
   const isUser = message.role === 'user';
   const diagnostics = message.diagnostics;
-  const intentConfidence = diagnostics ? formatPercent(diagnostics.intentConfidence) : null;
-  const retrievalConfidence = diagnostics ? formatPercent(diagnostics.retrievalConfidence) : null;
-  const allCitations = uniqueSources(message.sources);
+  const allCitations = useMemo(() => uniqueSources(message.sources), [message.sources]);
   const citations = allCitations.slice(0, 5);
   const extraCitationCount = Math.max(0, allCitations.length - citations.length);
+  const intentConfidence = diagnostics ? formatPercent(diagnostics.intentConfidence) : null;
+  const retrievalConfidence = diagnostics ? formatPercent(diagnostics.retrievalConfidence) : null;
+  const reliability = getReliability(diagnostics, allCitations.length);
   const [copiedTraceId, setCopiedTraceId] = useState(false);
   const [copiedChunkId, setCopiedChunkId] = useState(null);
   const [traceDetails, setTraceDetails] = useState(null);
@@ -150,9 +182,7 @@ const Message = ({ message }) => {
   };
 
   const handleDownFeedbackClick = () => {
-    if (feedbackRating === 'down') {
-      return;
-    }
+    if (feedbackRating === 'down') return;
     setIsFeedbackCommentOpen(true);
     setFeedbackError(null);
   };
@@ -162,7 +192,12 @@ const Message = ({ message }) => {
       <div className="message-content">
         {!isUser && (
           <div className="message-sources">
-            FinQuery
+            <span>FinQuery</span>
+            {reliability && (
+              <span className={`answer-state ${reliability.className}`} title={reliability.help}>
+                {reliability.label}
+              </span>
+            )}
           </div>
         )}
         <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
@@ -232,7 +267,12 @@ const Message = ({ message }) => {
               )}
               {diagnostics.intent && (
                 <span className="diagnostic-chip">
-                  Intent {diagnostics.intent}{intentConfidence ? ` · ${intentConfidence}` : ''}
+                  Intent {diagnostics.intent}{intentConfidence ? ` - ${intentConfidence}` : ''}
+                </span>
+              )}
+              {diagnostics.streamError && (
+                <span className="diagnostic-chip error">
+                  Stream error
                 </span>
               )}
             </div>
@@ -244,16 +284,18 @@ const Message = ({ message }) => {
                   className={`feedback-btn ${feedbackRating === 'up' ? 'selected' : ''}`}
                   onClick={() => handleSubmitFeedback('up')}
                   disabled={isFeedbackSaving}
+                  title="Mark as helpful"
                 >
-                  ↑
+                  Up
                 </button>
                 <button
                   type="button"
                   className={`feedback-btn ${feedbackRating === 'down' ? 'selected' : ''}`}
                   onClick={handleDownFeedbackClick}
                   disabled={isFeedbackSaving}
+                  title="Mark as not helpful"
                 >
-                  ↓
+                  Down
                 </button>
                 {feedbackRating && <span className="feedback-status">Saved</span>}
                 {feedbackError && <span className="feedback-error">{feedbackError}</span>}
@@ -307,11 +349,11 @@ const Message = ({ message }) => {
                     <div className="trace-row trace-grid">
                       <div>
                         <span>Intent</span>
-                        <p>{traceDetails.intent || '—'}</p>
+                        <p>{traceDetails.intent || EMPTY_VALUE}</p>
                       </div>
                       <div>
                         <span>Latency</span>
-                        <p>{typeof traceDetails.latency_ms === 'number' ? `${Math.round(traceDetails.latency_ms)} ms` : '—'}</p>
+                        <p>{typeof traceDetails.latency_ms === 'number' ? `${Math.round(traceDetails.latency_ms)} ms` : EMPTY_VALUE}</p>
                       </div>
                       <div>
                         <span>Scope</span>
@@ -325,7 +367,7 @@ const Message = ({ message }) => {
                       </div>
                       <div>
                         <span>Retrieval</span>
-                        <p>{formatPercent(traceDetails.diagnostics?.confidence) || '—'}</p>
+                        <p>{formatPercent(traceDetails.diagnostics?.confidence) || EMPTY_VALUE}</p>
                       </div>
                       <div>
                         <span>Context</span>
