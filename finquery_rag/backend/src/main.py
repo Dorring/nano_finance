@@ -16,6 +16,7 @@ from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
 from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, make_stream_error_event, safe_log_query_trace
+from .services.evaluation import feedback_to_replay_case, trace_to_replay_case
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -270,6 +271,45 @@ def _tenant_ops_summary(user_id: int) -> dict:
         "generated_at": time.time(),
     }
 
+def _replay_cases_payload_from_traces(rows: list[dict]) -> dict:
+    """Convert trace rows to replay cases while tolerating invalid legacy traces."""
+    cases = []
+    skipped = []
+    for row in rows:
+        trace_id = row.get("trace_id")
+        try:
+            cases.append(trace_to_replay_case(row).to_dict())
+        except ValueError as exc:
+            skipped.append({"trace_id": trace_id, "reason": str(exc)})
+    return {
+        "cases": cases,
+        "total_returned": len(rows),
+        "total_cases": len(cases),
+        "skipped_traces": skipped,
+    }
+
+
+def _replay_cases_payload_from_feedback(feedback_rows: list[dict], trace_lookup) -> dict:
+    """Convert feedback rows to replay cases while skipping missing/legacy traces."""
+    cases = []
+    skipped = []
+    for feedback in feedback_rows:
+        trace_id = feedback.get("trace_id")
+        trace = trace_lookup(trace_id)
+        if trace is None:
+            skipped.append({"trace_id": trace_id, "reason": "trace_not_found"})
+            continue
+        try:
+            cases.append(feedback_to_replay_case(feedback, trace).to_dict())
+        except ValueError as exc:
+            skipped.append({"trace_id": trace_id, "reason": str(exc)})
+    return {
+        "cases": cases,
+        "total_returned": len(feedback_rows),
+        "total_cases": len(cases),
+        "skipped_feedback": skipped,
+    }
+
 
 ######################### API Endpoints #########################
 
@@ -429,6 +469,77 @@ async def get_query_trace(trace_id: str, current_user: User = Depends(get_curren
     if row is None:
         raise api_error(404, "trace_not_found", "Trace not found")
     return {"trace": _public_trace(row)}
+
+
+@app.get("/replay/traces")
+async def export_trace_replay_cases_api(
+    limit: int = 100,
+    offset: int = 0,
+    error_only: bool = False,
+    created_after: float | None = None,
+    created_before: float | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    """Return replay cases generated from current user's query traces without server-side file writes."""
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=100)
+    if created_after is not None and created_before is not None and created_after > created_before:
+        raise api_error(400, "invalid_time_range", "created_after must be <= created_before")
+    logger = get_rag_engine().trace_logger
+    rows = logger.query_traces(
+        tenant_id=current_user.id,
+        limit=normalized_limit,
+        offset=normalized_offset,
+        created_after=created_after,
+        created_before=created_before,
+        error_only=error_only,
+    )
+    total_traces = logger.count_traces(
+        tenant_id=current_user.id,
+        created_after=created_after,
+        created_before=created_before,
+        error_only=error_only,
+    )
+    payload = _replay_cases_payload_from_traces(rows)
+    payload.update({
+        "total_traces": total_traces,
+        "has_more": normalized_offset + len(rows) < total_traces,
+        "limit": normalized_limit,
+        "offset": normalized_offset,
+    })
+    return payload
+
+
+@app.get("/replay/feedback")
+async def export_feedback_replay_cases_api(
+    limit: int = 100,
+    offset: int = 0,
+    rating: str | None = "down",
+    current_user: User = Depends(get_current_user),
+):
+    """Return replay cases generated from feedback-linked traces for the current user."""
+    if rating is not None and rating not in FeedbackStore.VALID_RATINGS:
+        raise api_error(400, "invalid_rating", "Invalid rating")
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=100)
+    rows = feedback_store.list_for_tenant(
+        current_user.id,
+        limit=normalized_limit,
+        offset=normalized_offset,
+        rating=rating,
+    )
+    total_feedback = feedback_store.count_for_tenant(current_user.id, rating=rating)
+    logger = get_rag_engine().trace_logger
+    payload = _replay_cases_payload_from_feedback(
+        rows,
+        lambda trace_id: logger.get_trace_for_tenant(current_user.id, trace_id),
+    )
+    payload.update({
+        "total_feedback": total_feedback,
+        "has_more": normalized_offset + len(rows) < total_feedback,
+        "limit": normalized_limit,
+        "offset": normalized_offset,
+        "rating": rating,
+    })
+    return payload
 
 
 @app.post("/feedback", response_model=FeedbackResponse)

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, listSessions, clearAllSessions, getOpsSummary, getApiErrorMessage } from '../api';
+import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, listSessions, clearAllSessions, getOpsSummary, exportTraceReplayCases, exportFeedbackReplayCases, getApiErrorMessage } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -393,6 +393,41 @@ function Dashboard() {
       toast.error(getApiErrorMessage(error, 'Failed to clear all sessions'));
     }
   };
+  const downloadReplayCases = (payload, filename) => {
+    const cases = payload.cases || [];
+    const jsonl = cases.map((item) => JSON.stringify(item)).join('\n');
+    const blob = new Blob([jsonl ? `${jsonl}\n` : ''], { type: 'application/x-ndjson' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportTraceReplay = async () => {
+    try {
+      const payload = await exportTraceReplayCases({ limit: 100 });
+      downloadReplayCases(payload, 'finquery-trace-replay.jsonl');
+      toast.success(`Exported ${payload.total_cases || 0} trace replay case${payload.total_cases === 1 ? '' : 's'}`);
+    } catch (error) {
+      console.error('Failed to export trace replay cases:', error);
+      toast.error(getApiErrorMessage(error, 'Failed to export trace replay cases'));
+    }
+  };
+
+  const handleExportFeedbackReplay = async () => {
+    try {
+      const payload = await exportFeedbackReplayCases({ limit: 100, rating: 'down' });
+      downloadReplayCases(payload, 'finquery-feedback-replay.jsonl');
+      toast.success(`Exported ${payload.total_cases || 0} feedback replay case${payload.total_cases === 1 ? '' : 's'}`);
+    } catch (error) {
+      console.error('Failed to export feedback replay cases:', error);
+      toast.error(getApiErrorMessage(error, 'Failed to export feedback replay cases'));
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -432,6 +467,8 @@ function Dashboard() {
           onRefreshSessions={() => fetchSessions()}
           onSelectSession={handleSelectSession}
           onClearAllSessions={handleClearAllSessions}
+          onExportTraceReplay={handleExportTraceReplay}
+          onExportFeedbackReplay={handleExportFeedbackReplay}
           queryDisabled={isQueryDisabled}
           queryDisabledReason={queryDisabledReason}
         />

@@ -31,6 +31,8 @@ const ChatArea = ({
   onRefreshSessions,
   onSelectSession,
   onClearAllSessions,
+  onExportTraceReplay,
+  onExportFeedbackReplay,
   queryDisabled,
   queryDisabledReason,
 }) => {
@@ -115,6 +117,22 @@ const ChatArea = ({
             <div className="session-panel-actions">
               <button type="button" onClick={onRefreshSessions} disabled={sessionsLoading}>
                 {sessionsLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <button
+                type="button"
+                onClick={onExportTraceReplay}
+                disabled={sessionsLoading || !opsSummary?.traces?.total}
+                title="Download replay cases generated from recent traces"
+              >
+                Export traces
+              </button>
+              <button
+                type="button"
+                onClick={onExportFeedbackReplay}
+                disabled={sessionsLoading || !opsSummary?.feedback?.down}
+                title="Download replay cases generated from down-rated feedback"
+              >
+                Export feedback
               </button>
               <button
                 type="button"
