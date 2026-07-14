@@ -88,6 +88,18 @@ class QueryResponse(BaseModel):
     trace_id: str | None = None
     # 查询追踪ID（Phase 12）
 
+class EvalScoreRequest(BaseModel):
+    """Offline evaluation scoring request using in-memory JSON cases/predictions."""
+    cases: list[dict] = Field(..., min_length=1, max_length=1000)
+    predictions: list[dict] = Field(..., min_length=1, max_length=1000)
+
+
+class EvalCompareRequest(BaseModel):
+    """Evaluation report comparison request."""
+    baseline: dict
+    candidate: dict
+    regression_tolerance: float = Field(default=0.0, ge=0.0, le=1.0)
+
 class FeedbackRequest(BaseModel):
     """User answer feedback tied to a persisted query trace."""
     trace_id: str = Field(..., min_length=1, max_length=128)

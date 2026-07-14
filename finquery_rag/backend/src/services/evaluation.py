@@ -356,6 +356,17 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
     }
 
 
+def evaluate_payload(cases_payload: list[dict[str, Any]], predictions_payload: list[dict[str, Any]]) -> dict[str, Any]:
+    """Evaluate in-memory JSON-compatible cases and predictions."""
+    cases = [EvaluationCase.from_dict(item) for item in cases_payload]
+    predictions: dict[str, Prediction] = {}
+    for item in predictions_payload:
+        prediction = Prediction.from_dict(item)
+        if prediction.case_id in predictions:
+            raise ValueError(f"duplicate prediction id {prediction.case_id!r}")
+        predictions[prediction.case_id] = prediction
+    return evaluate_predictions(cases, predictions)
+
 def evaluate_predictions(
     cases: Iterable[EvaluationCase],
     predictions: dict[str, Prediction],

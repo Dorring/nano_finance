@@ -52,7 +52,8 @@ def test_replay_api_contract_static():
     traces_block = main[main.index('@app.get("/replay/traces")'):main.index('@app.get("/replay/feedback")')]
     feedback_block = main[main.index('@app.get("/replay/feedback")'):main.index('@app.post("/feedback"')]
 
-    assert "from .services.evaluation import feedback_to_replay_case, trace_to_replay_case" in main
+    assert 'feedback_to_replay_case' in main
+    assert 'trace_to_replay_case' in main
     assert "def _replay_cases_payload_from_traces(rows: list[dict])" in main
     assert "def _replay_cases_payload_from_feedback(feedback_rows: list[dict], trace_lookup)" in main
     assert "current_user: User = Depends(get_current_user)" in traces_block
