@@ -1,17 +1,54 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+
+QUERY_QUESTION_MAX_CHARS = 4000
+QUERY_DOCUMENT_NAMES_MAX_ITEMS = 20
+QUERY_DOCUMENT_NAME_MAX_CHARS = 180
 
 class QueryRequest(BaseModel):
     """
     查询请求模型，用于封装用户发起的查询请求参数。
     """
-    question: str = Field(..., min_length=2)
+    question: str = Field(..., min_length=2, max_length=QUERY_QUESTION_MAX_CHARS)
     # 查询的问题内容，最小长度为2
-    document_names: list[str] | None = Field(None, description="List of docs to search. If null, searches all docs.")
+    document_names: list[str] | None = Field(None, max_length=QUERY_DOCUMENT_NAMES_MAX_ITEMS, description="List of docs to search. If null, searches all docs.")
     # 指定要搜索的文档名称列表。如果为None，则搜索所有文档
     n_results: int = Field(default=5, ge=1, le=20)
     # 返回的结果数量，默认为5，取值范围在1到20之间
     session_id: str | None = Field(None, min_length=1, max_length=128, description="Session ID for conversation memory. If null, no history is used.")
+
+    @field_validator("question")
+    @classmethod
+    def normalize_question(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("question must contain at least 2 non-whitespace characters")
+        return value
+
+    @field_validator("document_names")
+    @classmethod
+    def normalize_document_names(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        normalized = []
+        seen = set()
+        for raw_name in value:
+            if not isinstance(raw_name, str):
+                raise ValueError("document_names must contain strings")
+            name = raw_name.strip()
+            if (
+                not name
+                or len(name) > QUERY_DOCUMENT_NAME_MAX_CHARS
+                or any(ord(ch) < 32 for ch in name)
+                or "/" in name
+                or "\\" in name
+            ):
+                raise ValueError("invalid document name")
+            if name not in seen:
+                seen.add(name)
+                normalized.append(name)
+        return normalized or None
+
     # 会话ID，用于多轮对话记忆。如果为None则不使用历史上下文
 
 

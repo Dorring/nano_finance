@@ -6,7 +6,10 @@ def _unique_names(names):
     """Return non-empty names once, preserving request order."""
     seen = set()
     unique = []
-    for name in names or []:
+    for raw_name in names or []:
+        if not isinstance(raw_name, str):
+            continue
+        name = raw_name.strip()
         if not name or name in seen:
             continue
         seen.add(name)
