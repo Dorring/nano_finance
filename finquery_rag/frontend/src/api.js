@@ -177,6 +177,21 @@ export const getOpsSummary = async () => {
   const response = await api.get('/ops/summary');
   return response.data;
 };
+// Export replay cases generated from recent tenant-scoped traces.
+export const exportTraceReplayCases = async ({ limit = 100, offset = 0, errorOnly = false } = {}) => {
+  const response = await api.get('/replay/traces', {
+    params: { limit, offset, error_only: errorOnly },
+  });
+  return response.data;
+};
+
+// Export replay cases generated from feedback-linked traces.
+export const exportFeedbackReplayCases = async ({ limit = 100, offset = 0, rating = 'down' } = {}) => {
+  const response = await api.get('/replay/feedback', {
+    params: { limit, offset, rating },
+  });
+  return response.data;
+};
 
 const readErrorDetail = async (response) => {
   let text = '';
