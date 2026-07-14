@@ -25,6 +25,7 @@ class SessionManager:
     MAX_SESSION_ID_LENGTH = 128
     MAX_CONTENT_CHARS = 20000
     MAX_METADATA_JSON_CHARS = 20000
+    MAX_QUERY_LIMIT = 1000
 
     def __init__(self, db_path: str = None, max_history: int = None, ttl_seconds: int = None):
         import os
@@ -33,7 +34,7 @@ class SessionManager:
         if ttl_seconds is None:
             ttl_seconds = int(os.getenv("SESSION_TTL_SECONDS", str(self.DEFAULT_TTL_SECONDS)))
         self.db_path = db_path
-        self.max_history = max_history or self.DEFAULT_MAX_HISTORY
+        self.max_history = max(1, int(max_history or self.DEFAULT_MAX_HISTORY))
         self.ttl_seconds = max(0, int(ttl_seconds or 0))
         self._local = threading.local()
         self._init_db()
@@ -121,6 +122,7 @@ class SessionManager:
             (session_id, user_id, role, self._bounded_content(content), metadata_json, time.time()),
         )
         conn.commit()
+        self.prune_session_history(session_id, user_id)
 
     def cleanup_expired(self, now: float = None) -> int:
         """Delete expired session messages and return deleted row count.
@@ -146,7 +148,10 @@ class SessionManager:
             return 0
         if max_messages is None:
             max_messages = self.max_history * 2
-        max_messages = max(0, int(max_messages))
+        try:
+            max_messages = max(0, min(int(max_messages), self.MAX_QUERY_LIMIT))
+        except (TypeError, ValueError):
+            return 0
         conn = self._get_conn()
         rows = conn.execute(
             """SELECT id FROM conversations
@@ -187,6 +192,10 @@ class SessionManager:
 
         if n_pairs is None:
             n_pairs = self.max_history
+        try:
+            n_pairs = max(0, min(int(n_pairs), self.MAX_QUERY_LIMIT // 2))
+        except (TypeError, ValueError):
+            return []
 
         limit = n_pairs * 2
         conn = self._get_conn()
@@ -246,6 +255,79 @@ class SessionManager:
             (session_id, user_id),
         ).fetchone()
         return row["cnt"]
+
+    def list_sessions(self, user_id: int, limit: int = 50, offset: int = 0) -> list:
+        """List session summaries for one tenant ordered by latest activity."""
+        if user_id is None:
+            return []
+        self.cleanup_expired()
+        try:
+            normalized_limit = max(1, min(int(limit or 50), self.MAX_QUERY_LIMIT))
+            normalized_offset = max(0, int(offset or 0))
+        except (TypeError, ValueError):
+            return []
+        conn = self._get_conn()
+        rows = conn.execute(
+            """SELECT session_id, COUNT(*) AS message_count,
+                      MIN(created_at) AS created_at, MAX(created_at) AS updated_at
+               FROM conversations
+               WHERE user_id = ?
+               GROUP BY session_id
+               ORDER BY updated_at DESC
+               LIMIT ? OFFSET ?""",
+            (user_id, normalized_limit, normalized_offset),
+        ).fetchall()
+        return [
+            {
+                "session_id": row["session_id"],
+                "message_count": int(row["message_count"]),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+            for row in rows
+        ]
+
+    def count_sessions(self, user_id: int) -> int:
+        """Return number of sessions with at least one message for one tenant."""
+        if user_id is None:
+            return 0
+        self.cleanup_expired()
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM conversations WHERE user_id = ? GROUP BY session_id)",
+            (user_id,),
+        ).fetchone()
+        return int(row["cnt"] or 0)
+
+    def clear_all_for_user(self, user_id: int) -> int:
+        """Delete all session messages for one tenant and return deleted rows."""
+        if user_id is None:
+            return 0
+        conn = self._get_conn()
+        cursor = conn.execute("DELETE FROM conversations WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount
+
+    def storage_summary(self, user_id: int = None) -> dict:
+        """Return compact storage diagnostics without message content."""
+        self.cleanup_expired()
+        conn = self._get_conn()
+        if user_id is None:
+            row = conn.execute(
+                "SELECT COUNT(*) AS messages, COUNT(DISTINCT session_id) AS sessions FROM conversations"
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT COUNT(*) AS messages, COUNT(DISTINCT session_id) AS sessions FROM conversations WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        return {
+            "user_id": user_id,
+            "sessions": int(row["sessions"] or 0),
+            "messages": int(row["messages"] or 0),
+            "ttl_seconds": self.ttl_seconds,
+            "max_history_pairs": self.max_history,
+        }
 
     def close(self):
         """Close the thread-local database connection."""

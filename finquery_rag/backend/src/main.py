@@ -681,10 +681,11 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
         engine = get_rag_engine()
 
         # Phase 4: Load conversation history for query rewriting
+        session_id = _validate_session_id(request.session_id) if request.session_id else None
         conversation_history = None
-        if request.session_id:
+        if session_id:
             conversation_history = session_manager.get_recent_messages(
-                request.session_id, current_user.id
+                session_id, current_user.id
             )
 
         resolved_doc_names = _resolve_query_document_names_for_user(
@@ -703,10 +704,10 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
 
         # Phase 4: Save messages to session
         rewritten = result.get("rewritten_question")
-        if request.session_id:
-            session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+        if session_id:
+            session_manager.add_message(session_id, current_user.id, "user", request.question)
             session_manager.add_message(
-                request.session_id,
+                session_id,
                 current_user.id,
                 "assistant",
                 result["answer"],
@@ -718,7 +719,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             sources=result["sources"],
             question=request.question,
             searched_docs=result["searched_docs"],
-            session_id=request.session_id,
+            session_id=session_id,
             rewritten_question=rewritten,
             confidence=result.get("confidence"),
             context_sufficient=result.get("context_sufficient"),
@@ -753,6 +754,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
         trace_id = None
         try:
             engine = get_rag_engine()
+            session_id = _validate_session_id(request.session_id) if request.session_id else None
             started_at = time.time()
             trace_data = {
                 "tenant_id": current_user.id,
@@ -784,9 +786,9 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             # Phase 4: Load conversation history and rewrite query
             question = request.question
             conversation_history = None
-            if request.session_id:
+            if session_id:
                 conversation_history = session_manager.get_recent_messages(
-                    request.session_id, current_user.id
+                    session_id, current_user.id
                 )
             if conversation_history:
                 question = await engine._rewrite_query_with_context(question, conversation_history)
@@ -835,17 +837,17 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             # Phase 3: If context is insufficient, return refusal without calling LLM
             if not is_sufficient:
                 refusal = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
-                if request.session_id:
-                    session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+                if session_id:
+                    session_manager.add_message(session_id, current_user.id, "user", request.question)
                 diagnostics = {
                     "confidence": confidence,
                     "context_sufficient": False,
                     "intent_confidence": intent["confidence"],
                 }
                 trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
-                if request.session_id:
+                if session_id:
                     session_manager.add_message(
-                        request.session_id,
+                        session_id,
                         current_user.id,
                         "assistant",
                         refusal,
@@ -863,8 +865,8 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 return
 
             # Phase 4: Save user question to session
-            if request.session_id:
-                session_manager.add_message(request.session_id, current_user.id, "user", request.question)
+            if session_id:
+                session_manager.add_message(session_id, current_user.id, "user", request.question)
 
             # Stream LLM response
             full_answer = ""
@@ -880,9 +882,9 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
 
             # Phase 4: Save assistant answer to session with trace/source metadata.
-            if request.session_id:
+            if session_id:
                 session_manager.add_message(
-                    request.session_id,
+                    session_id,
                     current_user.id,
                     "assistant",
                     full_answer,
@@ -926,6 +928,30 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
 
 # <---------------------- Session endpoints (Phase 4) ---------------------->
 
+@app.get("/sessions")
+async def list_sessions(
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+):
+    """List current user's conversation sessions without message content."""
+    normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)
+    sessions = session_manager.list_sessions(
+        current_user.id,
+        limit=normalized_limit,
+        offset=normalized_offset,
+    )
+    total_sessions = session_manager.count_sessions(current_user.id)
+    return {
+        "sessions": sessions,
+        "total_returned": len(sessions),
+        "total_sessions": total_sessions,
+        "has_more": normalized_offset + len(sessions) < total_sessions,
+        "limit": normalized_limit,
+        "offset": normalized_offset,
+        "summary": session_manager.storage_summary(current_user.id),
+    }
+
 @app.post("/sessions/clear")
 async def clear_session(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
@@ -946,6 +972,16 @@ async def get_session_history(session_id: str, current_user: User = Depends(get_
     messages = session_manager.get_recent_messages(session_id, current_user.id)
     count = session_manager.get_session_count(session_id, current_user.id)
     return {"session_id": session_id, "messages": messages, "total_messages": count}
+
+@app.delete("/sessions")
+async def clear_all_sessions(current_user: User = Depends(get_current_user)):
+    """Clear all conversation sessions for the current user."""
+    deleted_messages = session_manager.clear_all_for_user(current_user.id)
+    return {
+        "message": "All sessions cleared",
+        "deleted_messages": deleted_messages,
+        "summary": session_manager.storage_summary(current_user.id),
+    }
 
 
 # <---------------------- DELETE requests ---------------------->
