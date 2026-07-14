@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List
 from .sqlite_migrations import run_component_migrations
 
 SCHEMA_VERSION = 1
+MAX_ERROR_MESSAGE_CHARS = 2000
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -45,6 +46,7 @@ VALID_TRANSITIONS = {
     "ready":     set(),
     "failed":    {"pending"},
 }
+VALID_STATUSES = set(VALID_TRANSITIONS)
 
 def validate_transition(current, target):
     allowed = VALID_TRANSITIONS.get(current)
@@ -110,6 +112,12 @@ class DocumentRegistry:
     def register(self, document_id, tenant_id, filename, file_hash,
                  content_hash=None, chunk_count=0, page_count=0,
                  status="pending", parser_version=None, splitter_version=None, embedding_version=None):
+        if status not in VALID_STATUSES:
+            raise ValueError("Invalid document status: %r" % (status,))
+        if tenant_id is None:
+            raise ValueError("tenant_id is required")
+        if not document_id or not filename or not file_hash:
+            raise ValueError("document_id, filename, and file_hash are required")
         now = time.time()
         existing = self.get_latest_version(tenant_id, filename)
         version = (existing["version"] + 1) if existing else 1
@@ -128,7 +136,7 @@ class DocumentRegistry:
                 raise ValueError("Document %r not found" % (document_id,))
             validate_transition(row[0], target_status)
             now = time.time()
-            conn.execute("UPDATE document_registry SET status = ?, updated_at = ?, error_message = ? WHERE document_id = ?", (target_status, now, error_message, document_id))
+            conn.execute("UPDATE document_registry SET status = ?, updated_at = ?, error_message = ? WHERE document_id = ?", (target_status, now, self._clean_error(error_message), document_id))
             conn.commit()
 
     def mark_indexing(self, document_id):
@@ -160,7 +168,10 @@ class DocumentRegistry:
             return cur.rowcount
 
     def list_documents(self, tenant_id):
-        rows = self._conn().execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC", (tenant_id,)).fetchall()
+        if tenant_id is None:
+            return []
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC", (tenant_id,)).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
     def list_all(self, tenant_id, status=None, limit=None, offset=0):
@@ -188,6 +199,39 @@ class DocumentRegistry:
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
+    def count_all(self, tenant_id, status=None):
+        """Count registry rows for one tenant, optionally filtered by status."""
+        if tenant_id is None:
+            return 0
+        if status is not None and status not in VALID_TRANSITIONS:
+            return 0
+        sql = "SELECT COUNT(*) FROM document_registry WHERE tenant_id = ?"
+        params = [tenant_id]
+        if status is not None:
+            sql += " AND status = ?"
+            params.append(status)
+        with self._conn() as conn:
+            return int(conn.execute(sql, params).fetchone()[0])
+
+    def status_summary(self, tenant_id):
+        """Return zero-filled lifecycle counts plus aggregate totals."""
+        counts = self.status_counts(tenant_id)
+        if not counts:
+            return {
+                "counts": {},
+                "total": 0,
+                "active": 0,
+                "ready": 0,
+                "failed": 0,
+            }
+        return {
+            "counts": counts,
+            "total": sum(counts.values()),
+            "active": counts.get("pending", 0) + counts.get("parsing", 0) + counts.get("indexing", 0),
+            "ready": counts.get("ready", 0),
+            "failed": counts.get("failed", 0),
+        }
+
     def status_counts(self, tenant_id):
         """Return lifecycle status counts for one tenant."""
         if tenant_id is None:
@@ -201,12 +245,34 @@ class DocumentRegistry:
         counts.update({row[0]: row[1] for row in rows})
         return counts
 
-    def get_pending_for_retry(self, tenant_id=None):
+    def get_pending_for_retry(self, tenant_id=None, limit=100, offset=0):
+        try:
+            normalized_limit = max(1, min(int(limit or 100), 1000))
+            normalized_offset = max(0, int(offset or 0))
+        except (TypeError, ValueError):
+            return []
         if tenant_id is not None:
-            rows = self._conn().execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'failed'", (tenant_id,)).fetchall()
+            with self._conn() as conn:
+                rows = conn.execute(
+                    "SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'failed' ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    (tenant_id, normalized_limit, normalized_offset),
+                ).fetchall()
         else:
-            rows = self._conn().execute("SELECT * FROM document_registry WHERE status = 'failed'").fetchall()
+            with self._conn() as conn:
+                rows = conn.execute(
+                    "SELECT * FROM document_registry WHERE status = 'failed' ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    (normalized_limit, normalized_offset),
+                ).fetchall()
         return [self._row_to_dict(r) for r in rows]
+
+    @staticmethod
+    def _clean_error(error_message):
+        if error_message is None:
+            return None
+        cleaned = " ".join(str(error_message).replace("\x00", " ").split())
+        if not cleaned:
+            return None
+        return cleaned[:MAX_ERROR_MESSAGE_CHARS]
 
     @staticmethod
     def _row_to_dict(row):
