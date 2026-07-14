@@ -8,6 +8,10 @@ from typing import Any, Iterable
 from .evaluation import EvaluationCase, load_jsonl_cases, write_jsonl
 
 
+EVAL_RUN_N_RESULTS_MIN = 1
+EVAL_RUN_N_RESULTS_MAX = 20
+
+
 async def run_case(
     case: EvaluationCase,
     rag_engine: Any,
@@ -15,6 +19,8 @@ async def run_case(
     n_results: int = 5,
 ) -> dict[str, Any]:
     """Run one EvaluationCase through a RAGEngine-compatible object."""
+    user_id = _validate_user_id(user_id)
+    n_results = validate_n_results(n_results)
     start = time.time()
     result = rag_engine.query(
         question=case.question,
@@ -53,6 +59,8 @@ async def run_cases(
     user_id: int,
     n_results: int = 5,
 ) -> list[dict[str, Any]]:
+    user_id = _validate_user_id(user_id)
+    n_results = validate_n_results(n_results)
     predictions = []
     for case in cases:
         predictions.append(
@@ -74,7 +82,31 @@ async def run_jsonl_cases(
     n_results: int = 5,
 ) -> list[dict[str, Any]]:
     """Load JSONL cases, run the RAG engine, and write predictions JSONL."""
+    user_id = _validate_user_id(user_id)
+    n_results = validate_n_results(n_results)
     cases = load_jsonl_cases(cases_path)
     predictions = await run_cases(cases, rag_engine, user_id=user_id, n_results=n_results)
     write_jsonl(output_path, predictions)
     return predictions
+
+
+def validate_n_results(value: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("n_results must be an integer") from exc
+    if parsed < EVAL_RUN_N_RESULTS_MIN:
+        raise ValueError(f"n_results must be >= {EVAL_RUN_N_RESULTS_MIN}")
+    if parsed > EVAL_RUN_N_RESULTS_MAX:
+        raise ValueError(f"n_results must be <= {EVAL_RUN_N_RESULTS_MAX}")
+    return parsed
+
+
+def _validate_user_id(value: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("user_id must be an integer") from exc
+    if parsed < 1:
+        raise ValueError("user_id must be >= 1")
+    return parsed

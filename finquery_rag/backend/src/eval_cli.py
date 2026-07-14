@@ -24,7 +24,7 @@ from .services.evaluation import (
 )
 from .services.feedback import FeedbackStore
 from .services.trace import TraceLogger
-from .services.eval_runner import run_jsonl_cases
+from .services.eval_runner import run_jsonl_cases, validate_n_results
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -135,6 +135,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
+        user_id = _normalize_positive_int(args.user_id, "user-id")
+        if isinstance(user_id, str):
+            print(user_id, file=sys.stderr)
+            return 2
+        try:
+            n_results = validate_n_results(args.n_results)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
         # Import lazily because main initializes FastAPI globals and the OpenAI client.
         from .main import get_rag_engine
 
@@ -142,8 +152,8 @@ def main(argv: list[str] | None = None) -> int:
             args.cases,
             args.out,
             get_rag_engine(),
-            user_id=args.user_id,
-            n_results=args.n_results,
+            user_id=user_id,
+            n_results=n_results,
         ))
         print(f"wrote {len(predictions)} predictions to {args.out}")
         return 0
@@ -286,6 +296,16 @@ def _normalize_non_negative_int(value, name: str):
         return f"{name} must be an integer"
     if parsed < 0:
         return f"{name} must be >= 0"
+    return parsed
+
+
+def _normalize_positive_int(value, name: str):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return f"{name} must be an integer"
+    if parsed < 1:
+        return f"{name} must be >= 1"
     return parsed
 
 
