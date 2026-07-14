@@ -1,6 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import Message from './Message';
 
+const formatSessionTime = (timestamp) => {
+  if (!timestamp) return 'Unknown time';
+  const date = new Date(Number(timestamp) * 1000);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
 const ChatArea = ({
   messages,
   isLoading,
@@ -10,6 +22,14 @@ const ChatArea = ({
   retrievalKOptions,
   onRetrievalKChange,
   onNewSession,
+  sessions,
+  sessionSummary,
+  sessionsLoading,
+  isSessionPanelOpen,
+  onToggleSessionPanel,
+  onRefreshSessions,
+  onSelectSession,
+  onClearAllSessions,
   queryDisabled,
   queryDisabledReason,
 }) => {
@@ -26,9 +46,9 @@ const ChatArea = ({
   // Example questions
   const exampleQuestions = [
     "Hi, what's up?",
-    "What do you do?",
-    "What was my highest expense?",
-    "How much did I spend at bokku?",
+    'What do you do?',
+    'What was my highest expense?',
+    'How much did I spend at bokku?',
   ];
 
   return (
@@ -51,15 +71,85 @@ const ChatArea = ({
             </select>
           </label>
         </div>
-        <button
-          type="button"
-          className="new-session-btn"
-          onClick={onNewSession}
-          disabled={isLoading}
-        >
-          New chat
-        </button>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="session-history-btn"
+            onClick={onToggleSessionPanel}
+            disabled={isLoading}
+            aria-expanded={isSessionPanelOpen}
+          >
+            Sessions
+          </button>
+          <button
+            type="button"
+            className="new-session-btn"
+            onClick={onNewSession}
+            disabled={isLoading}
+          >
+            New chat
+          </button>
+        </div>
       </div>
+
+      {isSessionPanelOpen && (
+        <div className="session-panel" role="region" aria-label="Conversation sessions">
+          <div className="session-panel-header">
+            <div>
+              <div className="session-panel-title">Conversation memory</div>
+              <div className="session-panel-subtitle">
+                {sessionSummary
+                  ? `${sessionSummary.sessions} sessions • ${sessionSummary.messages} messages stored`
+                  : 'Stored on the server for this account'}
+              </div>
+            </div>
+            <div className="session-panel-actions">
+              <button type="button" onClick={onRefreshSessions} disabled={sessionsLoading}>
+                {sessionsLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={onClearAllSessions}
+                disabled={sessionsLoading || sessions.length === 0}
+              >
+                Clear all
+              </button>
+            </div>
+          </div>
+
+          {sessions.length === 0 ? (
+            <div className="session-empty">
+              {sessionsLoading ? 'Loading sessions...' : 'No stored sessions yet'}
+            </div>
+          ) : (
+            <div className="session-list">
+              {sessions.map((session) => {
+                const active = session.session_id === sessionId;
+                return (
+                  <button
+                    type="button"
+                    key={session.session_id}
+                    className={`session-item ${active ? 'active' : ''}`}
+                    onClick={() => onSelectSession(session.session_id)}
+                    disabled={active || isLoading}
+                    title={session.session_id}
+                  >
+                    <span className="session-item-main">
+                      <span className="session-item-id">{session.session_id.slice(0, 12)}</span>
+                      <span className="session-item-time">{formatSessionTime(session.updated_at)}</span>
+                    </span>
+                    <span className="session-item-count">
+                      {session.message_count} msg{session.message_count === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {messages.length === 0 ? (
         <div className="chat-empty">
           <div className="chat-empty-icon">
@@ -79,9 +169,9 @@ const ChatArea = ({
           <div className="example-questions">
             <div className="example-title">Try asking:</div>
             <div className="example-grid">
-              {exampleQuestions.map((question, idx) => (
+              {exampleQuestions.map((question) => (
                 <button
-                  key={idx}
+                  key={question}
                   className="example-button"
                   onClick={() => onExampleClick(question)}
                   disabled={queryDisabled}
@@ -96,7 +186,7 @@ const ChatArea = ({
       ) : (
         <>
           {messages.map((message, index) => (
-            <Message key={index} message={message} />
+            <Message key={`${message.role}-${index}`} message={message} />
           ))}
           {isLoading && (
             <div className="loading-message">

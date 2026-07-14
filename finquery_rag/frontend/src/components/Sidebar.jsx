@@ -190,7 +190,7 @@ const Sidebar = ({
                   <div className="document-meta">
                     <div className="document-stats">
                       <span>{doc.pages || 0} pages</span>
-                      <span>•</span>
+                      <span aria-hidden="true">•</span>
                       <span>{doc.count || 0} chunks</span>
                     </div>
                     {doc.error_message && (
