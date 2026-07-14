@@ -85,6 +85,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     replay.add_argument("--tenant-id", type=int, required=True)
     replay.add_argument("--limit", type=int, default=100)
+    replay.add_argument("--offset", type=int, default=0)
+    replay.add_argument("--created-after", type=float)
+    replay.add_argument("--created-before", type=float)
+    replay.add_argument("--error-only", action="store_true")
     replay.add_argument("--out", required=True, help="Output replay JSONL")
 
     feedback_replay = sub.add_parser("feedback-to-replay", help="Export feedback-linked trace replay cases")
@@ -187,13 +191,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if comparison["passed"] else 1
 
     if args.command == "traces":
+        tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
+        if isinstance(tenant_id, str):
+            print(tenant_id, file=sys.stderr)
+            return 2
         bounds = _normalize_trace_bounds(args.limit, args.offset, args.created_after, args.created_before)
         if bounds["error"]:
             print(bounds["error"], file=sys.stderr)
             return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
         count = logger.export_traces_jsonl(
-            tenant_id=args.tenant_id,
+            tenant_id=tenant_id,
             output_path=args.out,
             limit=bounds["limit"],
             offset=bounds["offset"],
@@ -209,8 +217,14 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(ttl_seconds, str):
             print(ttl_seconds, file=sys.stderr)
             return 2
+        tenant_id = None
+        if args.tenant_id is not None:
+            tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
+            if isinstance(tenant_id, str):
+                print(tenant_id, file=sys.stderr)
+                return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
-        report = logger.cleanup_by_ttl(ttl_seconds, tenant_id=args.tenant_id)
+        report = logger.cleanup_by_ttl(ttl_seconds, tenant_id=tenant_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, report)
@@ -218,12 +232,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "replay-from-traces":
-        limit = _normalize_limit(args.limit)
-        if isinstance(limit, str):
-            print(limit, file=sys.stderr)
+        tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
+        if isinstance(tenant_id, str):
+            print(tenant_id, file=sys.stderr)
+            return 2
+        bounds = _normalize_trace_bounds(args.limit, args.offset, args.created_after, args.created_before)
+        if bounds["error"]:
+            print(bounds["error"], file=sys.stderr)
             return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
-        traces = logger.query_traces(tenant_id=args.tenant_id, limit=limit)
+        traces = logger.query_traces(
+            tenant_id=tenant_id,
+            limit=bounds["limit"],
+            offset=bounds["offset"],
+            created_after=bounds["created_after"],
+            created_before=bounds["created_before"],
+            error_only=args.error_only,
+        )
         try:
             cases = export_replay_cases_from_traces(traces, args.out)
         except ValueError as exc:
@@ -233,6 +258,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "feedback-to-replay":
+        tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
+        if isinstance(tenant_id, str):
+            print(tenant_id, file=sys.stderr)
+            return 2
         limit = _normalize_limit(args.limit)
         offset = _normalize_non_negative_int(args.offset, "offset")
         for error in (limit, offset):
@@ -242,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
         feedback_store = FeedbackStore(db_path=args.feedback_db)
         trace_logger = TraceLogger(db_path=args.trace_db, sample_rate=1.0, redact_content=True)
         feedback_rows = feedback_store.list_for_tenant(
-            tenant_id=args.tenant_id,
+            tenant_id=tenant_id,
             limit=limit,
             offset=offset,
             rating=args.rating,
@@ -250,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             cases = export_replay_cases_from_feedback(
                 feedback_rows,
-                lambda trace_id: trace_logger.get_trace_for_tenant(args.tenant_id, trace_id),
+                lambda trace_id: trace_logger.get_trace_for_tenant(tenant_id, trace_id),
                 args.out,
             )
         except ValueError as exc:
