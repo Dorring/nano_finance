@@ -503,6 +503,10 @@ def compare_reports(
     The comparison is intentionally deterministic and schema-stable so it can
     be used as a CI quality gate once project-specific thresholds are defined.
     """
+    tolerance = float(regression_tolerance)
+    if tolerance < 0:
+        raise ValueError("regression_tolerance must be >= 0")
+
     baseline_summary = baseline.get("summary", {})
     candidate_summary = candidate.get("summary", {})
     metric_names = [
@@ -532,14 +536,14 @@ def compare_reports(
             "baseline": base_value,
             "candidate": cand_value,
             "delta": delta,
-            "allowed_drop": regression_tolerance,
+            "allowed_drop": tolerance,
         }
         metrics[name] = {
             "baseline": base_value,
             "candidate": cand_value,
             "delta": delta,
         }
-        if delta < -regression_tolerance:
+        if delta < -tolerance:
             regressions.append(name)
             regression_details.append(detail)
             failure_reasons.append(
