@@ -192,6 +192,21 @@ export const exportFeedbackReplayCases = async ({ limit = 100, offset = 0, ratin
   });
   return response.data;
 };
+// Score in-memory evaluation cases and predictions without server-side file writes.
+export const scoreEvaluationReport = async ({ cases, predictions }) => {
+  const response = await api.post('/eval/score', { cases, predictions });
+  return response.data;
+};
+
+// Compare two evaluation reports with an optional regression tolerance.
+export const compareEvaluationReports = async ({ baseline, candidate, regressionTolerance = 0 }) => {
+  const response = await api.post('/eval/compare', {
+    baseline,
+    candidate,
+    regression_tolerance: regressionTolerance,
+  });
+  return response.data;
+};
 
 const readErrorDetail = async (response) => {
   let text = '';

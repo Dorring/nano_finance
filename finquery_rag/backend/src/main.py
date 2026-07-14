@@ -16,7 +16,7 @@ from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
 from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, make_stream_error_event, safe_log_query_trace
-from .services.evaluation import feedback_to_replay_case, trace_to_replay_case
+from .services.evaluation import compare_reports, evaluate_payload, feedback_to_replay_case, trace_to_replay_case
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
@@ -310,6 +310,25 @@ def _replay_cases_payload_from_feedback(feedback_rows: list[dict], trace_lookup)
         "skipped_feedback": skipped,
     }
 
+def _eval_report_from_payload(cases_payload: list[dict], predictions_payload: list[dict]) -> dict:
+    """Build an evaluation report from in-memory JSON payloads."""
+    try:
+        report = evaluate_payload(cases_payload, predictions_payload)
+    except ValueError as exc:
+        raise api_error(400, "invalid_eval_payload", str(exc)) from exc
+    report["generated_at"] = time.time()
+    return report
+
+
+def _eval_comparison_from_payload(baseline: dict, candidate: dict, tolerance: float) -> dict:
+    """Compare two in-memory evaluation reports."""
+    try:
+        comparison = compare_reports(baseline, candidate, regression_tolerance=tolerance)
+    except ValueError as exc:
+        raise api_error(400, "invalid_eval_report", str(exc)) from exc
+    comparison["generated_at"] = time.time()
+    return comparison
+
 
 ######################### API Endpoints #########################
 
@@ -541,6 +560,23 @@ async def export_feedback_replay_cases_api(
     })
     return payload
 
+
+@app.post("/eval/score")
+async def score_eval_report(request: EvalScoreRequest, current_user: User = Depends(get_current_user)):
+    """Score offline evaluation predictions for an authenticated user without server-side file writes."""
+    _ = current_user
+    return _eval_report_from_payload(request.cases, request.predictions)
+
+
+@app.post("/eval/compare")
+async def compare_eval_reports(request: EvalCompareRequest, current_user: User = Depends(get_current_user)):
+    """Compare two evaluation reports as a lightweight authenticated quality gate."""
+    _ = current_user
+    return _eval_comparison_from_payload(
+        request.baseline,
+        request.candidate,
+        request.regression_tolerance,
+    )
 
 @app.post("/feedback", response_model=FeedbackResponse)
 async def submit_answer_feedback(request: FeedbackRequest, current_user: User = Depends(get_current_user)):
