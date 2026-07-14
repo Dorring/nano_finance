@@ -20,6 +20,7 @@ from .services.evaluation import (
     export_replay_cases_from_traces,
     load_jsonl_cases,
     load_jsonl_predictions,
+    write_json_file,
 )
 from .services.feedback import FeedbackStore
 from .services.trace import TraceLogger
@@ -129,9 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         report = evaluate_predictions(cases, predictions)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(payload + "\n", encoding="utf-8")
+            write_json_file(args.out, report)
         print(payload)
         return 0
 
@@ -155,9 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         comparison = compare_reports(baseline, candidate, regression_tolerance=args.tolerance)
         payload = json.dumps(comparison, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(payload + "\n", encoding="utf-8")
+            write_json_file(args.out, comparison)
         print(payload)
         if not comparison["passed"]:
             _print_compare_failure_summary(comparison)
@@ -190,9 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         report = logger.cleanup_by_ttl(ttl_seconds, tenant_id=args.tenant_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(payload + "\n", encoding="utf-8")
+            write_json_file(args.out, report)
         print(payload)
         return 0
 
@@ -237,9 +232,7 @@ def main(argv: list[str] | None = None) -> int:
         report = retriever.integrity_report(user_id=args.user_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(payload + "\n", encoding="utf-8")
+            write_json_file(args.out, report)
         print(payload)
         return 0 if report["ok"] else 1
 
@@ -250,9 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         report = retriever.rebuild_fts_index(user_id=args.user_id)
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(payload + "\n", encoding="utf-8")
+            write_json_file(args.out, report)
         print(payload)
         return 0 if report["ok"] else 1
 

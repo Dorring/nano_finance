@@ -10,7 +10,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import json
 import math
+import os
 import re
+import tempfile
 from statistics import mean
 from typing import Any, Iterable
 
@@ -253,11 +255,47 @@ def load_jsonl_predictions(path: str | Path) -> dict[str, Prediction]:
 
 
 def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+    """Write JSONL rows atomically.
+
+    The caller gets either the complete new file or the previous file remains
+    untouched. This matters for replay/eval artifacts because partial files can
+    silently poison later regression comparisons.
+    """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    tmp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=out.parent,
+            prefix=f".{out.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as fh:
+            tmp_name = fh.name
+            for row_no, row in enumerate(rows, 1):
+                if not isinstance(row, dict):
+                    raise ValueError(f"JSONL row {row_no} must be an object")
+                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        os.replace(tmp_name, out)
+    except Exception:
+        if tmp_name:
+            try:
+                Path(tmp_name).unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+
+
+def write_json_file(path: str | Path, payload: dict[str, Any]) -> None:
+    """Write a formatted JSON object atomically."""
+    if not isinstance(payload, dict):
+        raise ValueError("JSON payload must be an object")
+    _atomic_write_text(
+        path,
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
 
 
 def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, Any]:
@@ -574,6 +612,31 @@ def compare_reports(
 
 def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return [item for _, item in _read_jsonl_rows(path)]
+
+
+def _atomic_write_text(path: str | Path, content: str) -> None:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=out.parent,
+            prefix=f".{out.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as fh:
+            tmp_name = fh.name
+            fh.write(content)
+        os.replace(tmp_name, out)
+    except Exception:
+        if tmp_name:
+            try:
+                Path(tmp_name).unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
 
 
 def _read_jsonl_rows(path: str | Path) -> list[tuple[int, dict[str, Any]]]:
