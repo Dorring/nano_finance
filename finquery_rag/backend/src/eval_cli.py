@@ -206,7 +206,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         logger = TraceLogger(db_path=args.db, sample_rate=1.0, redact_content=True)
         traces = logger.query_traces(tenant_id=args.tenant_id, limit=limit)
-        cases = export_replay_cases_from_traces(traces, args.out)
+        try:
+            cases = export_replay_cases_from_traces(traces, args.out)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         print(f"exported {len(cases)} replay cases to {args.out}")
         return 0
 
@@ -225,11 +229,15 @@ def main(argv: list[str] | None = None) -> int:
             offset=offset,
             rating=args.rating,
         )
-        cases = export_replay_cases_from_feedback(
-            feedback_rows,
-            lambda trace_id: trace_logger.get_trace_for_tenant(args.tenant_id, trace_id),
-            args.out,
-        )
+        try:
+            cases = export_replay_cases_from_feedback(
+                feedback_rows,
+                lambda trace_id: trace_logger.get_trace_for_tenant(args.tenant_id, trace_id),
+                args.out,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         print(f"exported {len(cases)} feedback replay cases to {args.out}")
         return 0
 
