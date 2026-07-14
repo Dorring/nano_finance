@@ -352,13 +352,16 @@ async def list_document_registry(
         limit=normalized_limit,
         offset=normalized_offset,
     )
+    total_documents = document_registry.count_all(current_user.id, status=status)
     return {
         "documents": [_public_registry_document(row) for row in rows],
         "total_returned": len(rows),
-        "total_documents": len(rows),
+        "total_documents": total_documents,
+        "has_more": normalized_offset + len(rows) < total_documents,
         "limit": normalized_limit,
         "offset": normalized_offset,
         "status_counts": document_registry.status_counts(current_user.id),
+        "status_summary": document_registry.status_summary(current_user.id),
     }
 
 @app.get("/traces")

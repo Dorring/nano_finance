@@ -58,5 +58,6 @@ def test_document_registry_endpoint_uses_normalized_pagination_static():
     assert "limit=normalized_limit" in block
     assert "offset=normalized_offset" in block
     assert '"total_returned": len(rows)' in block
+    assert "total_documents = document_registry.count_all(current_user.id, status=status)" in block
     assert '"limit": normalized_limit' in block
     assert '"offset": normalized_offset' in block
