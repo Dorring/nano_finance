@@ -1,4 +1,4 @@
-﻿"""
+"""
 Structured tracing for RAG queries.
 
 Logs query lifecycle: rewrite, filter, candidates, scores, context, model info, timing.
@@ -223,6 +223,63 @@ class TraceLogger:
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
+    def count_traces(
+        self,
+        tenant_id,
+        created_after=None,
+        created_before=None,
+        error_only=False,
+    ):
+        """Count tenant-scoped traces matching the same filters as query_traces."""
+        if tenant_id is None:
+            return 0
+
+        where = ["tenant_id = ?"]
+        params = [tenant_id]
+        if created_after is not None:
+            where.append("created_at >= ?")
+            params.append(float(created_after))
+        if created_before is not None:
+            where.append("created_at <= ?")
+            params.append(float(created_before))
+        if error_only:
+            where.append("error_message IS NOT NULL")
+
+        sql = "SELECT COUNT(*) FROM trace_log WHERE " + " AND ".join(where)
+        with self._conn() as conn:
+            return int(conn.execute(sql, params).fetchone()[0])
+
+    def summary_for_tenant(self, tenant_id):
+        """Return compact tenant-scoped trace diagnostics without query content."""
+        if tenant_id is None:
+            return {
+                "total": 0,
+                "errors": 0,
+                "latest_created_at": None,
+                "avg_latency_ms": None,
+            }
+
+        with self._conn() as conn:
+            row = conn.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN error_message IS NOT NULL THEN 1 ELSE 0 END) AS errors,
+                    MAX(created_at) AS latest_created_at,
+                    AVG(latency_ms) AS avg_latency_ms
+                FROM trace_log
+                WHERE tenant_id = ?
+                """,
+                (tenant_id,),
+            ).fetchone()
+
+        avg_latency = row["avg_latency_ms"]
+        return {
+            "total": int(row["total"] or 0),
+            "errors": int(row["errors"] or 0),
+            "latest_created_at": row["latest_created_at"],
+            "avg_latency_ms": float(avg_latency) if avg_latency is not None else None,
+        }
     def export_traces_jsonl(self, tenant_id, output_path, **query_kwargs):
         """Export tenant-scoped traces as JSONL and return exported count."""
         rows = self.query_traces(tenant_id=tenant_id, **query_kwargs)

@@ -24,6 +24,7 @@ const ChatArea = ({
   onNewSession,
   sessions,
   sessionSummary,
+  opsSummary,
   sessionsLoading,
   isSessionPanelOpen,
   onToggleSessionPanel,
@@ -99,9 +100,17 @@ const ChatArea = ({
               <div className="session-panel-title">Conversation memory</div>
               <div className="session-panel-subtitle">
                 {sessionSummary
-                  ? `${sessionSummary.sessions} sessions • ${sessionSummary.messages} messages stored`
+                  ? `${sessionSummary.sessions} sessions - ${sessionSummary.messages} messages stored`
                   : 'Stored on the server for this account'}
               </div>
+              {opsSummary && (
+                <div className="ops-summary" aria-label="RAG operations summary">
+                  <span>{opsSummary.documents?.ready || 0} ready docs</span>
+                  <span>{opsSummary.traces?.total || 0} traces</span>
+                  <span>{opsSummary.traces?.errors || 0} errors</span>
+                  <span>{opsSummary.feedback?.total || 0} feedback</span>
+                </div>
+              )}
             </div>
             <div className="session-panel-actions">
               <button type="button" onClick={onRefreshSessions} disabled={sessionsLoading}>

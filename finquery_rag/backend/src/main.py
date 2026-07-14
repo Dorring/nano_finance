@@ -256,6 +256,20 @@ def _public_trace(row: dict) -> dict:
     trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}
     return trace
 
+def _tenant_ops_summary(user_id: int) -> dict:
+    """Return compact tenant-scoped RAG operations diagnostics without content."""
+    registry_summary = document_registry.status_summary(user_id)
+    session_summary = session_manager.storage_summary(user_id)
+    trace_summary = get_rag_engine().trace_logger.summary_for_tenant(user_id)
+    feedback_summary = feedback_store.summary_for_tenant(user_id)
+    return {
+        "documents": registry_summary,
+        "sessions": session_summary,
+        "traces": trace_summary,
+        "feedback": feedback_summary,
+        "generated_at": time.time(),
+    }
+
 
 ######################### API Endpoints #########################
 
@@ -294,6 +308,10 @@ async def readyz():
     )
     status_code = 200 if snapshot["ready"] else 503
     return JSONResponse(status_code=status_code, content=snapshot)
+@app.get("/ops/summary")
+async def get_ops_summary(current_user: User = Depends(get_current_user)):
+    """Return current user's compact RAG operations summary without document/query content."""
+    return _tenant_ops_summary(current_user.id)
 
 @app.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -385,9 +403,17 @@ async def list_query_traces(
         created_before=created_before,
         error_only=error_only,
     )
+    total_traces = get_rag_engine().trace_logger.count_traces(
+        tenant_id=current_user.id,
+        created_after=created_after,
+        created_before=created_before,
+        error_only=error_only,
+    )
     return {
         "traces": [_public_trace(row) for row in rows],
         "total_returned": len(rows),
+        "total_traces": total_traces,
+        "has_more": normalized_offset + len(rows) < total_traces,
         "limit": normalized_limit,
         "offset": normalized_offset,
     }
@@ -435,9 +461,12 @@ async def list_answer_feedback(
         raise api_error(400, "invalid_rating", "Invalid rating")
     normalized_limit, normalized_offset = _normalize_api_pagination(limit, offset, default_limit=50)
     rows = feedback_store.list_for_tenant(current_user.id, limit=normalized_limit, offset=normalized_offset, rating=rating)
+    total_feedback = feedback_store.count_for_tenant(current_user.id, rating=rating)
     return {
         "feedback": [_public_feedback(row) for row in rows],
         "total_returned": len(rows),
+        "total_feedback": total_feedback,
+        "has_more": normalized_offset + len(rows) < total_feedback,
         "limit": normalized_limit,
         "offset": normalized_offset,
     }

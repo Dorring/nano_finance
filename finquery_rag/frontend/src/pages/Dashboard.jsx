@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 import InputBar from '../components/InputBar';
-import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, listSessions, clearAllSessions, getApiErrorMessage } from '../api';
+import { uploadDocument, listDocuments, listAllDocumentRegistry, queryDocumentsStream, deleteDocument, getSessionHistory, clearSession, listSessions, clearAllSessions, getOpsSummary, getApiErrorMessage } from '../api';
 import { useAuth } from '../context/useAuth';
 import '../App.css';
 
@@ -31,6 +31,7 @@ function Dashboard() {
   const [sessionId, setSessionId] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionSummary, setSessionSummary] = useState(null);
+  const [opsSummary, setOpsSummary] = useState(null);
   const [isSessionsLoading, setIsSessionsLoading] = useState(false);
   const [isSessionPanelOpen, setIsSessionPanelOpen] = useState(false);
   const [retrievalK, setRetrievalK] = useState(loadRetrievalK);
@@ -60,9 +61,13 @@ function Dashboard() {
   const fetchSessions = useCallback(async ({ silent = false } = {}) => {
     setIsSessionsLoading(true);
     try {
-      const data = await listSessions({ limit: SESSION_LIST_LIMIT, offset: 0 });
-      setSessions(data.sessions || []);
-      setSessionSummary(data.summary || null);
+      const [sessionsData, opsData] = await Promise.all([
+        listSessions({ limit: SESSION_LIST_LIMIT, offset: 0 }),
+        getOpsSummary(),
+      ]);
+      setSessions(sessionsData.sessions || []);
+      setSessionSummary(sessionsData.summary || null);
+      setOpsSummary(opsData || null);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       if (!silent) {
@@ -420,6 +425,7 @@ function Dashboard() {
           onNewSession={handleNewSession}
           sessions={sessions}
           sessionSummary={sessionSummary}
+          opsSummary={opsSummary}
           sessionsLoading={isSessionsLoading}
           isSessionPanelOpen={isSessionPanelOpen}
           onToggleSessionPanel={() => setIsSessionPanelOpen((current) => !current)}

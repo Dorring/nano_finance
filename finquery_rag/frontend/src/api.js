@@ -172,6 +172,11 @@ export const clearAllSessions = async () => {
   const response = await api.delete('/sessions');
   return response.data;
 };
+// Get compact tenant-scoped RAG operations diagnostics.
+export const getOpsSummary = async () => {
+  const response = await api.get('/ops/summary');
+  return response.data;
+};
 
 const readErrorDetail = async (response) => {
   let text = '';

@@ -166,3 +166,48 @@ class FeedbackStore:
         with self._conn() as conn:
             rows = conn.execute(sql, params).fetchall()
         return [dict(row) for row in rows]
+    def count_for_tenant(self, tenant_id, rating=None):
+        """Count tenant-scoped feedback rows, optionally filtered by rating."""
+        if tenant_id is None:
+            return 0
+        where = ["tenant_id = ?"]
+        params = [tenant_id]
+        if rating:
+            if rating not in self.VALID_RATINGS:
+                return 0
+            where.append("rating = ?")
+            params.append(rating)
+
+        sql = "SELECT COUNT(*) FROM answer_feedback WHERE " + " AND ".join(where)
+        with self._conn() as conn:
+            return int(conn.execute(sql, params).fetchone()[0])
+
+    def summary_for_tenant(self, tenant_id):
+        """Return compact tenant-scoped feedback diagnostics."""
+        if tenant_id is None:
+            return {"total": 0, "up": 0, "down": 0, "latest_created_at": None}
+
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT rating, COUNT(*) AS count, MAX(created_at) AS latest_created_at
+                FROM answer_feedback
+                WHERE tenant_id = ?
+                GROUP BY rating
+                """,
+                (tenant_id,),
+            ).fetchall()
+
+        summary = {"total": 0, "up": 0, "down": 0, "latest_created_at": None}
+        for row in rows:
+            rating = row["rating"]
+            count = int(row["count"] or 0)
+            if rating in self.VALID_RATINGS:
+                summary[rating] = count
+                summary["total"] += count
+            latest = row["latest_created_at"]
+            if latest is not None and (
+                summary["latest_created_at"] is None or latest > summary["latest_created_at"]
+            ):
+                summary["latest_created_at"] = latest
+        return summary
