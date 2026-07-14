@@ -414,9 +414,9 @@ def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
     if not trace_id or not question:
         raise ValueError("trace row missing trace_id or query_original")
 
-    filters = _loads_json(trace.get("filter_conditions")) or {}
-    sources = _loads_json(trace.get("sources_json")) or []
-    diagnostics = _loads_json(trace.get("diagnostics_json")) or {}
+    filters = _loads_json_field(trace.get("filter_conditions"), "filter_conditions", dict, {})
+    sources = _loads_json_field(trace.get("sources_json"), "sources_json", list, [])
+    diagnostics = _loads_json_field(trace.get("diagnostics_json"), "diagnostics_json", dict, {})
 
     return EvaluationCase(
         case_id=str(trace_id),
@@ -444,6 +444,7 @@ def export_replay_cases_from_traces(
     output_path: str | Path,
 ) -> list[EvaluationCase]:
     cases = [trace_to_replay_case(trace) for trace in traces]
+    _ensure_unique_case_ids(cases, "trace replay export")
     write_jsonl(output_path, (case.to_dict() for case in cases))
     return cases
 
@@ -489,6 +490,7 @@ def export_replay_cases_from_feedback(
         if trace is None:
             continue
         cases.append(feedback_to_replay_case(feedback, trace))
+    _ensure_unique_case_ids(cases, "feedback replay export")
     write_jsonl(output_path, (case.to_dict() for case in cases))
     return cases
 
@@ -846,6 +848,29 @@ def _filename_from_doc_id(doc_id: str) -> str | None:
         if len(parts) > 2:
             return "_".join(parts[2:])
     return prefix or None
+
+
+def _ensure_unique_case_ids(cases: Iterable[EvaluationCase], label: str) -> None:
+    seen: set[str] = set()
+    for case in cases:
+        if case.case_id in seen:
+            raise ValueError(f"duplicate replay case id {case.case_id!r} in {label}")
+        seen.add(case.case_id)
+
+
+def _loads_json_field(value: Any, label: str, expected_type: type, default: Any) -> Any:
+    if value is None or value == "":
+        return default
+    if isinstance(value, expected_type):
+        return value
+    try:
+        parsed = json.loads(value)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label} must be valid JSON") from exc
+    if not isinstance(parsed, expected_type):
+        type_name = "object" if expected_type is dict else "array"
+        raise ValueError(f"{label} must be a JSON {type_name}")
+    return parsed
 
 
 def _loads_json(value: Any) -> Any:
