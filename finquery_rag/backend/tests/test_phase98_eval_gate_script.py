@@ -16,11 +16,14 @@ def test_ci_eval_gate_script_writes_artifacts_to_env_dir(tmp_path, monkeypatch):
 
     code = module.main()
 
+    audit = json.loads((artifact_dir / "smoke_fixture_audit.json").read_text(encoding="utf-8"))
     report = json.loads((artifact_dir / "smoke_report.json").read_text(encoding="utf-8"))
     comparison = json.loads((artifact_dir / "smoke_comparison.json").read_text(encoding="utf-8"))
     junit = (artifact_dir / "smoke_gate.xml").read_text(encoding="utf-8")
     retrieval = json.loads((artifact_dir / "smoke_retrieval_diagnostics.json").read_text(encoding="utf-8"))
     assert code == 0
+    assert audit["passed"] is True
+    assert audit["summary"]["total_cases"] == 3
     assert report["summary"]["pass_rate"] == 1.0
     assert comparison["passed"] is True
     assert retrieval["summary"]["recall_at_k"] == {"1": 1.0, "3": 1.0, "5": 1.0}

@@ -24,6 +24,26 @@ def main() -> int:
     artifacts.mkdir(parents=True, exist_ok=True)
     cases = ROOT / "eval" / "golden_smoke.jsonl"
     predictions = ROOT / "eval" / "predictions_smoke.jsonl"
+    audit_code = eval_cli_main([
+        "audit-fixtures",
+        "--cases",
+        str(cases),
+        "--min-cases",
+        "3",
+        "--required-tag",
+        "smoke",
+        "--required-tag",
+        "citation",
+        "--required-tag",
+        "no_answer",
+        "--required-tag",
+        "calculation",
+        "--require-expected-intent",
+        "--out",
+        str(artifacts / "smoke_fixture_audit.json"),
+    ])
+    if audit_code != 0:
+        return audit_code
     gate_code = eval_cli_main([
         "gate",
         "--cases",

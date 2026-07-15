@@ -15,6 +15,7 @@ import os
 import sys
 
 from .services.evaluation import (
+    audit_evaluation_fixtures,
     compare_reports,
     diagnose_retrieval,
     evaluate_predictions,
@@ -75,6 +76,14 @@ def main(argv: list[str] | None = None) -> int:
     retrieval_diag.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
     retrieval_diag.add_argument("--worst-limit", type=int, default=10, help="Maximum worst cases to include")
     retrieval_diag.add_argument("--out", help="Optional diagnostics JSON output path")
+
+    audit = sub.add_parser("audit-fixtures", help="Audit evaluation fixture coverage and quality")
+    audit.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    audit.add_argument("--min-cases", type=int, default=1, help="Minimum required case count")
+    audit.add_argument("--required-tag", dest="required_tags", action="append", default=[], help="Tag that must appear at least once; repeatable")
+    audit.add_argument("--require-expected-source", action="store_true", help="Fail cases without expected_sources")
+    audit.add_argument("--require-expected-intent", action="store_true", help="Fail cases without expected_intent")
+    audit.add_argument("--out", help="Optional audit JSON output path")
 
     traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
     traces.add_argument(
@@ -292,6 +301,27 @@ def main(argv: list[str] | None = None) -> int:
             write_json_file(args.out, report)
         print(payload)
         return 0
+
+    if args.command == "audit-fixtures":
+        try:
+            cases = load_jsonl_cases(args.cases)
+            audit_report = audit_evaluation_fixtures(
+                cases,
+                min_cases=args.min_cases,
+                required_tags=args.required_tags,
+                require_expected_source=args.require_expected_source,
+                require_expected_intent=args.require_expected_intent,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.dumps(audit_report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, audit_report)
+        print(payload)
+        if not audit_report["passed"]:
+            _print_fixture_audit_failure_summary(audit_report)
+        return 0 if audit_report["passed"] else 1
 
     if args.command == "traces":
         tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
@@ -596,6 +626,17 @@ def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dic
         "created_before": created_before,
     }
 
+
+
+def _print_fixture_audit_failure_summary(audit_report: dict) -> None:
+    """Print a compact fixture audit failure summary to stderr."""
+    print("FinQuery fixture audit failed:", file=sys.stderr)
+    for issue in audit_report.get("errors", [])[:10]:
+        case = issue.get("case_id") or "fixture"
+        print(f"- {case}: {issue.get('message')}", file=sys.stderr)
+    errors = audit_report.get("errors", [])
+    if len(errors) > 10:
+        print(f"- ... {len(errors) - 10} more errors", file=sys.stderr)
 
 
 def _print_doctor_failure_summary(snapshot: dict) -> None:

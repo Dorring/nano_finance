@@ -427,6 +427,130 @@ def evaluate_predictions(
     }
 
 
+def audit_evaluation_fixtures(
+    cases: Iterable[EvaluationCase],
+    *,
+    min_cases: int = 1,
+    required_tags: Iterable[str] = (),
+    require_expected_source: bool = False,
+    require_expected_intent: bool = False,
+) -> dict[str, Any]:
+    """Return quality and coverage diagnostics for golden/replay fixtures."""
+    if min_cases < 0:
+        raise ValueError("min_cases must be >= 0")
+    required_tag_set = {str(tag) for tag in required_tags if str(tag)}
+    case_list = list(cases)
+    tag_counts: dict[str, int] = {}
+    intent_counts: dict[str, int] = {}
+    coverage = {
+        "expected_sources": 0,
+        "expected_answer_contains": 0,
+        "expected_numbers": 0,
+        "expected_no_answer": 0,
+        "expected_calculations": 0,
+        "expected_intent": 0,
+        "document_names": 0,
+    }
+    issues: list[dict[str, Any]] = []
+
+    for case in case_list:
+        for tag in case.tags:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        if case.expected_intent:
+            intent_counts[case.expected_intent] = intent_counts.get(case.expected_intent, 0) + 1
+        if case.expected_sources:
+            coverage["expected_sources"] += 1
+        if case.expected_answer_contains:
+            coverage["expected_answer_contains"] += 1
+        if case.expected_numbers:
+            coverage["expected_numbers"] += 1
+        if case.expected_no_answer:
+            coverage["expected_no_answer"] += 1
+        if case.expected_calculations:
+            coverage["expected_calculations"] += 1
+        if case.expected_intent:
+            coverage["expected_intent"] += 1
+        if case.document_names:
+            coverage["document_names"] += 1
+
+        expected_signal_count = sum(
+            bool(value)
+            for value in (
+                case.expected_sources,
+                case.expected_answer_contains,
+                case.expected_numbers,
+                case.expected_no_answer,
+                case.expected_calculations,
+                case.expected_intent,
+            )
+        )
+        if expected_signal_count == 0:
+            issues.append({
+                "severity": "warning",
+                "case_id": case.case_id,
+                "code": "missing_expected_signal",
+                "message": "case has no expected sources, answer checks, numbers, no-answer flag, calculations, or intent",
+            })
+        if require_expected_source and not case.expected_sources:
+            issues.append({
+                "severity": "error",
+                "case_id": case.case_id,
+                "code": "missing_expected_source",
+                "message": "case is missing expected_sources",
+            })
+        if require_expected_intent and not case.expected_intent:
+            issues.append({
+                "severity": "error",
+                "case_id": case.case_id,
+                "code": "missing_expected_intent",
+                "message": "case is missing expected_intent",
+            })
+
+    if len(case_list) < min_cases:
+        issues.append({
+            "severity": "error",
+            "case_id": None,
+            "code": "min_cases_not_met",
+            "message": f"fixture has {len(case_list)} cases; minimum is {min_cases}",
+        })
+
+    missing_required_tags = sorted(required_tag_set - set(tag_counts))
+    for tag in missing_required_tags:
+        issues.append({
+            "severity": "error",
+            "case_id": None,
+            "code": "missing_required_tag",
+            "tag": tag,
+            "message": f"required tag {tag!r} is not represented",
+        })
+
+    errors = [item for item in issues if item["severity"] == "error"]
+    warnings = [item for item in issues if item["severity"] == "warning"]
+    total = len(case_list)
+    coverage_rates = {
+        key: (value / total if total else 0.0)
+        for key, value in coverage.items()
+    }
+    return {
+        "passed": not errors,
+        "summary": {
+            "total_cases": total,
+            "min_cases": min_cases,
+            "tag_counts": dict(sorted(tag_counts.items())),
+            "intent_counts": dict(sorted(intent_counts.items())),
+            "coverage_counts": coverage,
+            "coverage_rates": coverage_rates,
+            "error_count": len(errors),
+            "warning_count": len(warnings),
+        },
+        "required_tags": sorted(required_tag_set),
+        "missing_required_tags": missing_required_tags,
+        "issues": issues,
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
 def diagnose_retrieval(
     cases: Iterable[EvaluationCase],
     predictions: dict[str, Prediction],

@@ -32,7 +32,7 @@ python scripts/ci_eval_gate.py
 ```
 
 Set `FINQUERY_EVAL_ARTIFACT_DIR=/path/to/artifacts` when CI should collect the
-generated report, comparison, retrieval diagnostics, and JUnit XML. Without it,
+generated fixture audit, report, comparison, retrieval diagnostics, and JUnit XML. Without it,
 artifacts are written to the system temp directory. The backend GitHub Actions
 workflow sets this variable and uploads the generated files as the
 `finquery-eval-gate` artifact.
@@ -60,6 +60,18 @@ The JUnit output is intentionally small: one testcase per gate check. This makes
 GitHub Actions and other CI systems annotate the failed threshold instead of only
 showing a generic command failure.
 
+## Fixture audit
+
+Before a golden set becomes a merge gate, audit its coverage and taxonomy:
+
+```bash
+python -m src.eval_cli audit-fixtures   --cases eval/golden_smoke.jsonl   --min-cases 3   --required-tag smoke   --required-tag citation   --required-tag no_answer   --required-tag calculation   --require-expected-intent   --out /tmp/finquery_fixture_audit.json
+```
+
+The audit reports tag counts, intent counts, coverage rates, missing required
+tags, and per-case quality issues. It exits with `1` when configured fixture
+policy fails, and `2` when the JSONL itself is malformed.
+
 ## Retrieval diagnostics
 
 When answer quality drops, run retrieval diagnostics before changing prompts. The
@@ -78,9 +90,10 @@ when you need to debug final cited sources instead of raw retrieval candidates.
 1. Create a project-specific golden JSONL with expected sources, phrases, numbers,
    intent labels, calculations, and no-answer cases.
 2. Run `python -m src.eval_cli run --cases <cases.jsonl> --out <predictions.jsonl> --user-id <id>`.
-3. Run retrieval diagnostics to confirm expected sources are in the candidate set.
-4. Score the predictions or run the `gate` command directly.
-5. Compare candidate reports against a checked baseline before merging retrieval or
+3. Run fixture audit whenever the golden set changes.
+4. Run retrieval diagnostics to confirm expected sources are in the candidate set.
+5. Score the predictions or run the `gate` command directly.
+6. Compare candidate reports against a checked baseline before merging retrieval or
    prompt changes.
 
 ## Calculation consistency
