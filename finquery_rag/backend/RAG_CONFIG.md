@@ -98,6 +98,21 @@ FEEDBACK_DB_PATH=/var/lib/finquery/feedback.db
 When unset, FinQuery keeps the existing development defaults under the backend
 working directory.
 
+## Deployment preflight
+
+Before a server cutover, run the aggregate preflight command. It combines
+readiness checks, migration audit, fixture audit, eval gate, baseline comparison,
+and retrieval diagnostics into one JSON report without calling LLMs or embedding
+models:
+
+```bash
+python -m src.eval_cli preflight   --cases eval/golden_smoke.jsonl   --predictions eval/predictions_smoke.jsonl   --baseline eval/baseline_smoke_report.json   --bm25-db "$BM25_DB_PATH"   --registry-db "$DOCUMENT_REGISTRY_DB_PATH"   --chroma-path "$CHROMA_PATH"   --trace-db "$TRACE_DB_PATH"   --feedback-db "$FEEDBACK_DB_PATH"   --out /tmp/finquery_preflight.json
+```
+
+Use `--warn-only` for exploratory runs on partially initialized environments.
+A normal non-zero exit means at least one section failed and should be reviewed
+before serving production traffic.
+
 ## Migration readiness audit
 
 Before deploying code that relies on tenant-scoped chunk IDs against existing
