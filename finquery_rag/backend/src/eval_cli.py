@@ -76,6 +76,24 @@ def main(argv: list[str] | None = None) -> int:
     migration.add_argument("--out", help="Optional migration audit JSON output path")
     migration.add_argument("--warn-only", action="store_true", help="Return 0 even when high-risk migration issues are found")
 
+    preflight = sub.add_parser("preflight", help="Run deployment preflight checks without model calls")
+    preflight.add_argument("--cases", default="eval/golden_smoke.jsonl", help="Golden/replay cases JSONL")
+    preflight.add_argument("--predictions", default="eval/predictions_smoke.jsonl", help="Predictions JSONL")
+    preflight.add_argument("--baseline", default="eval/baseline_smoke_report.json", help="Optional baseline report JSON; use empty string to skip")
+    preflight.add_argument("--bm25-db", help="Override BM25 SQLite DB path")
+    preflight.add_argument("--registry-db", help="Override document registry SQLite DB path")
+    preflight.add_argument("--chroma-path", help="Override Chroma directory path")
+    preflight.add_argument("--trace-db", help="Override TraceLogger SQLite DB path")
+    preflight.add_argument("--feedback-db", help="Override feedback SQLite DB path")
+    preflight.add_argument("--min-pass-rate", type=float, default=1.0)
+    preflight.add_argument("--max-missing", type=int, default=0)
+    preflight.add_argument("--tolerance", type=float, default=0.0, help="Allowed negative metric delta versus baseline")
+    preflight.add_argument("--min-cases", type=int, default=1)
+    preflight.add_argument("--required-tag", dest="required_tags", action="append", default=[])
+    preflight.add_argument("--require-expected-intent", action="store_true")
+    preflight.add_argument("--out", help="Optional preflight JSON output path")
+    preflight.add_argument("--warn-only", action="store_true", help="Return 0 even when preflight sections fail")
+
     retrieval_diag = sub.add_parser("retrieval-diagnostics", help="Explain expected-source retrieval coverage")
     retrieval_diag.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
     retrieval_diag.add_argument("--predictions", required=True, help="Predictions JSONL")
@@ -303,6 +321,37 @@ def main(argv: list[str] | None = None) -> int:
         print(payload)
         if not report["passed"]:
             _print_migration_audit_failure_summary(report)
+        return 0 if report["passed"] or args.warn_only else 1
+
+    if args.command == "preflight":
+        from .services.preflight import build_preflight_report
+
+        try:
+            report = build_preflight_report(
+                cases_path=args.cases,
+                predictions_path=args.predictions,
+                baseline_path=args.baseline or None,
+                bm25_db_path=args.bm25_db,
+                registry_db_path=args.registry_db,
+                chroma_path=args.chroma_path,
+                trace_db_path=args.trace_db,
+                feedback_db_path=args.feedback_db,
+                min_pass_rate=args.min_pass_rate,
+                max_missing=args.max_missing,
+                regression_tolerance=args.tolerance,
+                min_cases=args.min_cases,
+                required_tags=tuple(args.required_tags or ()),
+                require_expected_intent=args.require_expected_intent,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, report)
+        print(payload)
+        if not report["passed"]:
+            _print_preflight_failure_summary(report)
         return 0 if report["passed"] or args.warn_only else 1
 
     if args.command == "retrieval-diagnostics":
@@ -649,6 +698,13 @@ def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dic
         "created_before": created_before,
     }
 
+
+
+def _print_preflight_failure_summary(report: dict) -> None:
+    """Print a compact preflight failure summary to stderr."""
+    print("FinQuery preflight failed:", file=sys.stderr)
+    for section in report.get("summary", {}).get("failed_sections", [])[:10]:
+        print(f"- {section}", file=sys.stderr)
 
 
 def _print_migration_audit_failure_summary(report: dict) -> None:
