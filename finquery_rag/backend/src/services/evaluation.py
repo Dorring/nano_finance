@@ -427,6 +427,156 @@ def evaluate_predictions(
     }
 
 
+def diagnose_retrieval(
+    cases: Iterable[EvaluationCase],
+    predictions: dict[str, Prediction],
+    *,
+    ks: Iterable[int] = (1, 3, 5),
+    candidate_field: str = "retrieved_chunks",
+    worst_limit: int = 10,
+) -> dict[str, Any]:
+    """Return source-level retrieval diagnostics for saved predictions.
+
+    The report is intentionally answer-independent. It helps separate retrieval
+    failures from generation/validation failures by showing where expected
+    sources appeared in the retrieved candidate list.
+    """
+    normalized_ks = _normalize_retrieval_ks(ks)
+    if candidate_field not in {"retrieved_chunks", "sources"}:
+        raise ValueError("candidate_field must be 'retrieved_chunks' or 'sources'")
+    if worst_limit < 0:
+        raise ValueError("worst_limit must be >= 0")
+
+    case_list = list(cases)
+    diagnostics: list[dict[str, Any]] = []
+    total_expected_sources = 0
+    hits_at_k = {str(k): 0 for k in normalized_ks}
+    reciprocal_ranks: list[float] = []
+    full_recall_count = 0
+    cases_with_expected_sources = 0
+    missing_predictions: list[str] = []
+    no_expected_source_cases: list[str] = []
+
+    for case in case_list:
+        expected_sources = case.expected_sources
+        if not expected_sources:
+            no_expected_source_cases.append(case.case_id)
+            diagnostics.append({
+                "id": case.case_id,
+                "tags": list(case.tags),
+                "expected_source_count": 0,
+                "retrieved_count": 0,
+                "matched_expected_count": 0,
+                "full_recall": True,
+                "best_rank": None,
+                "reciprocal_rank": 0.0,
+                "hit_ranks": [],
+                "missed_expected_sources": [],
+                "missing_prediction": case.case_id not in predictions,
+            })
+            if case.case_id not in predictions:
+                missing_predictions.append(case.case_id)
+            continue
+
+        cases_with_expected_sources += 1
+        total_expected_sources += len(expected_sources)
+        prediction = predictions.get(case.case_id)
+        if prediction is None:
+            missing_predictions.append(case.case_id)
+            candidates: tuple[dict[str, Any], ...] = ()
+        else:
+            candidates = getattr(prediction, candidate_field)
+
+        expected_details = []
+        hit_ranks = []
+        for expected in expected_sources:
+            rank = _first_matching_rank(expected, candidates)
+            hit_ranks.append(rank)
+            expected_details.append({
+                "expected": _expected_source_to_dict(expected),
+                "rank": rank,
+                "matched": rank is not None,
+            })
+            if rank is not None:
+                for k in normalized_ks:
+                    if rank <= k:
+                        hits_at_k[str(k)] += 1
+
+        matched_count = sum(1 for rank in hit_ranks if rank is not None)
+        best_rank = min((rank for rank in hit_ranks if rank is not None), default=None)
+        reciprocal_rank = 1.0 / best_rank if best_rank else 0.0
+        reciprocal_ranks.append(reciprocal_rank)
+        full_recall = matched_count == len(expected_sources)
+        if full_recall:
+            full_recall_count += 1
+
+        diagnostics.append({
+            "id": case.case_id,
+            "tags": list(case.tags),
+            "expected_source_count": len(expected_sources),
+            "retrieved_count": len(candidates),
+            "matched_expected_count": matched_count,
+            "full_recall": full_recall,
+            "best_rank": best_rank,
+            "reciprocal_rank": reciprocal_rank,
+            "hit_ranks": hit_ranks,
+            "expected_sources": expected_details,
+            "missed_expected_sources": [
+                item["expected"] for item in expected_details if not item["matched"]
+            ],
+            "missing_prediction": prediction is None,
+        })
+
+    worst_cases = sorted(
+        (
+            item for item in diagnostics
+            if item["expected_source_count"] > 0
+        ),
+        key=lambda item: (
+            item["full_recall"],
+            item["best_rank"] is not None,
+            item["best_rank"] or 10**9,
+            -item["expected_source_count"],
+            item["id"],
+        ),
+    )[:worst_limit]
+
+    recall_at_k = {
+        key: (hits / total_expected_sources if total_expected_sources else 1.0)
+        for key, hits in hits_at_k.items()
+    }
+    mrr = sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else 1.0
+    full_recall_rate = (
+        full_recall_count / cases_with_expected_sources
+        if cases_with_expected_sources
+        else 1.0
+    )
+
+    return {
+        "summary": {
+            "total_cases": len(case_list),
+            "cases_with_expected_sources": cases_with_expected_sources,
+            "cases_without_expected_sources": len(no_expected_source_cases),
+            "cases_with_predictions": len(case_list) - len(missing_predictions),
+            "missing_predictions": len(missing_predictions),
+            "total_expected_sources": total_expected_sources,
+            "candidate_field": candidate_field,
+            "recall_at_k": recall_at_k,
+            "mrr": mrr,
+            "full_recall_rate": full_recall_rate,
+        },
+        "missing_case_ids": missing_predictions,
+        "no_expected_source_case_ids": no_expected_source_cases,
+        "cases": diagnostics,
+        "worst_cases": worst_cases,
+        "warnings": (
+            ["no expected sources found in evaluation cases"]
+            if total_expected_sources == 0
+            else []
+        ),
+    }
+
+
 def trace_to_replay_case(trace: dict[str, Any]) -> EvaluationCase:
     """Convert one TraceLogger row dict into a replay case.
 
@@ -642,6 +792,33 @@ def compare_reports(
         "baseline_missing_predictions": baseline_summary.get("missing_predictions", 0),
         "candidate_missing_predictions": candidate_summary.get("missing_predictions", 0),
     }
+
+def _normalize_retrieval_ks(ks: Iterable[int]) -> tuple[int, ...]:
+    normalized = sorted({int(k) for k in ks})
+    if not normalized:
+        raise ValueError("at least one k value is required")
+    if any(k < 1 for k in normalized):
+        raise ValueError("k values must be >= 1")
+    return tuple(normalized)
+
+
+def _first_matching_rank(
+    expected: ExpectedSource,
+    candidates: tuple[dict[str, Any], ...],
+) -> int | None:
+    for idx, candidate in enumerate(candidates, 1):
+        if expected.matches(candidate):
+            return idx
+    return None
+
+
+def _expected_source_to_dict(expected: ExpectedSource) -> dict[str, Any]:
+    return {
+        "filename": expected.filename,
+        "page": expected.page,
+        "chunk_id": expected.chunk_id,
+    }
+
 
 def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return [item for _, item in _read_jsonl_rows(path)]

@@ -16,6 +16,7 @@ import sys
 
 from .services.evaluation import (
     compare_reports,
+    diagnose_retrieval,
     evaluate_predictions,
     export_replay_cases_from_feedback,
     export_replay_cases_from_traces,
@@ -66,6 +67,14 @@ def main(argv: list[str] | None = None) -> int:
     doctor.add_argument("--feedback-db", help="Override feedback SQLite DB path")
     doctor.add_argument("--out", help="Optional health snapshot JSON output path")
     doctor.add_argument("--warn-only", action="store_true", help="Return 0 even when readiness is degraded")
+
+    retrieval_diag = sub.add_parser("retrieval-diagnostics", help="Explain expected-source retrieval coverage")
+    retrieval_diag.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    retrieval_diag.add_argument("--predictions", required=True, help="Predictions JSONL")
+    retrieval_diag.add_argument("--k", dest="ks", type=int, action="append", help="Recall@K cutoff; repeatable")
+    retrieval_diag.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
+    retrieval_diag.add_argument("--worst-limit", type=int, default=10, help="Maximum worst cases to include")
+    retrieval_diag.add_argument("--out", help="Optional diagnostics JSON output path")
 
     traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
     traces.add_argument(
@@ -263,6 +272,26 @@ def main(argv: list[str] | None = None) -> int:
         if not snapshot.get("ready"):
             _print_doctor_failure_summary(snapshot)
         return 0 if snapshot.get("ready") or args.warn_only else 1
+
+    if args.command == "retrieval-diagnostics":
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            report = diagnose_retrieval(
+                cases,
+                predictions,
+                ks=args.ks or (1, 3, 5),
+                candidate_field=args.candidate_field,
+                worst_limit=args.worst_limit,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, report)
+        print(payload)
+        return 0
 
     if args.command == "traces":
         tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
