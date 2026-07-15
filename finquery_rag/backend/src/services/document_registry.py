@@ -171,7 +171,7 @@ class DocumentRegistry:
         if tenant_id is None:
             return []
         with self._conn() as conn:
-            rows = conn.execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC", (tenant_id,)).fetchall()
+            rows = conn.execute("SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'ready' ORDER BY updated_at DESC, rowid DESC", (tenant_id,)).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
     def list_all(self, tenant_id, status=None, limit=None, offset=0):
@@ -191,7 +191,7 @@ class DocumentRegistry:
         if status is not None:
             sql += " AND status = ?"
             params.append(status)
-        sql += " ORDER BY updated_at DESC"
+        sql += " ORDER BY updated_at DESC, rowid DESC"
         if normalized_limit is not None:
             sql += " LIMIT ? OFFSET ?"
             params.extend([normalized_limit, normalized_offset])
@@ -254,13 +254,13 @@ class DocumentRegistry:
         if tenant_id is not None:
             with self._conn() as conn:
                 rows = conn.execute(
-                    "SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'failed' ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM document_registry WHERE tenant_id = ? AND status = 'failed' ORDER BY updated_at DESC, rowid DESC LIMIT ? OFFSET ?",
                     (tenant_id, normalized_limit, normalized_offset),
                 ).fetchall()
         else:
             with self._conn() as conn:
                 rows = conn.execute(
-                    "SELECT * FROM document_registry WHERE status = 'failed' ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM document_registry WHERE status = 'failed' ORDER BY updated_at DESC, rowid DESC LIMIT ? OFFSET ?",
                     (normalized_limit, normalized_offset),
                 ).fetchall()
         return [self._row_to_dict(r) for r in rows]

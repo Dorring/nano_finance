@@ -74,7 +74,19 @@ export FEEDBACK_DB_PATH=/var/lib/finquery/feedback.db
 
 ## Smoke checks before starting the UI
 
-Check the model adapter first:
+Check the model adapter first. The scripted check validates `/v1/models`,
+non-streaming chat, and streaming deltas:
+
+```bash
+python scripts/check_llm_adapter.py \
+  --base-url http://127.0.0.1:8500/v1 \
+  --model finquery-finance-sft1147 \
+  --api-key not-needed-for-local \
+  --stream \
+  --out /tmp/finquery_llm_adapter_smoke.json
+```
+
+Equivalent manual checks:
 
 ```bash
 curl http://127.0.0.1:8500/v1/models

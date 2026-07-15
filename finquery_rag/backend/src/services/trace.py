@@ -58,6 +58,7 @@ class TraceLogger:
         self.db_path = db_path
         self.sample_rate = max(0.0, min(1.0, sample_rate))
         self.redact_content = redact_content
+        self._last_created_at = 0.0
         self._init_schema()
 
     def _conn(self):
@@ -133,7 +134,8 @@ class TraceLogger:
             return None
 
         trace_id = uuid.uuid4().hex
-        now = time.time()
+        now = max(time.time(), self._last_created_at + 0.000001)
+        self._last_created_at = now
 
         q_orig = self.sanitize(query_original) if self.redact_content else query_original
         q_rewr = self.sanitize(query_rewritten) if self.redact_content and query_rewritten else query_rewritten
