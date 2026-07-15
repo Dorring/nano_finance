@@ -54,6 +54,17 @@ curl http://127.0.0.1:8000/readyz
 `/readyz` is intentionally cheap: it does not call the LLM, does not request
 embeddings, and does not read tenant document content.
 
+Run the same non-secret checks from a shell before deployment or after moving
+runtime data paths:
+
+```bash
+python -m src.eval_cli doctor   --bm25-db "$BM25_DB_PATH"   --out /tmp/finquery_doctor.json
+```
+
+`doctor` returns `0` when required stores are ready, `1` when readiness is
+degraded, and still writes a JSON snapshot suitable for support/debugging. Use
+`--warn-only` for non-blocking diagnostics in ad-hoc maintenance scripts.
+
 ## Intent routing
 
 FinQuery includes a deterministic intent router before retrieval. It is

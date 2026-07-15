@@ -55,18 +55,20 @@ jobs:
         run: uv sync
 
       - name: Compile Python files
-        run: uv run --with pytest python -m compileall -q src tests
+        run: uv run --with pytest python -m compileall -q src tests scripts
 
       - name: Run backend tests
         run: uv run --with pytest python -m pytest -q
 
-      - name: Run offline eval smoke
-        run: |
-          uv run python -m src.eval_cli score \
-            --cases eval/golden_smoke.jsonl \
-            --predictions eval/predictions_smoke.jsonl \
-            --out /tmp/finquery_eval_report.json
-          uv run python -m src.eval_cli compare \
-            --baseline /tmp/finquery_eval_report.json \
-            --candidate /tmp/finquery_eval_report.json \
-            --out /tmp/finquery_eval_compare.json
+      - name: Run eval gate smoke
+        env:
+          FINQUERY_EVAL_ARTIFACT_DIR: /tmp/finquery_eval_artifacts
+        run: uv run python scripts/ci_eval_gate.py
+
+      - name: Upload eval gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finquery-eval-gate
+          path: /tmp/finquery_eval_artifacts
+          if-no-files-found: ignore

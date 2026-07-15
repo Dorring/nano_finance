@@ -60,6 +60,13 @@ def main(argv: list[str] | None = None) -> int:
     gate.add_argument("--comparison-out", help="Optional comparison JSON output path when --baseline is provided")
     gate.add_argument("--junit-out", help="Optional JUnit XML output path for CI annotations")
 
+    doctor = sub.add_parser("doctor", help="Run non-secret FinQuery runtime readiness checks")
+    doctor.add_argument("--bm25-db", help="Override BM25 SQLite DB path")
+    doctor.add_argument("--trace-db", help="Override TraceLogger SQLite DB path")
+    doctor.add_argument("--feedback-db", help="Override feedback SQLite DB path")
+    doctor.add_argument("--out", help="Optional health snapshot JSON output path")
+    doctor.add_argument("--warn-only", action="store_true", help="Return 0 even when readiness is degraded")
+
     traces = sub.add_parser("traces", help="Export tenant-scoped trace rows as JSONL")
     traces.add_argument(
         "--db",
@@ -240,6 +247,22 @@ def main(argv: list[str] | None = None) -> int:
         if not gate_result["passed"]:
             _print_gate_failure_summary(gate_result)
         return 0 if gate_result["passed"] else 1
+
+    if args.command == "doctor":
+        from .services.health import collect_health_snapshot
+
+        snapshot = collect_health_snapshot(
+            bm25_db_path=args.bm25_db,
+            trace_db_path=args.trace_db,
+            feedback_db_path=args.feedback_db,
+        )
+        payload = json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, snapshot)
+        print(payload)
+        if not snapshot.get("ready"):
+            _print_doctor_failure_summary(snapshot)
+        return 0 if snapshot.get("ready") or args.warn_only else 1
 
     if args.command == "traces":
         tenant_id = _normalize_positive_int(args.tenant_id, "tenant-id")
@@ -544,6 +567,18 @@ def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dic
         "created_before": created_before,
     }
 
+
+
+def _print_doctor_failure_summary(snapshot: dict) -> None:
+    """Print a compact readiness failure summary to stderr."""
+    print("FinQuery doctor detected degraded readiness:", file=sys.stderr)
+    checks = snapshot.get("checks") or {}
+    for name, check in checks.items():
+        if not isinstance(check, dict) or check.get("ok", False):
+            continue
+        required = "required" if check.get("required", True) else "optional"
+        error = check.get("error") or ", ".join(check.get("errors") or []) or "check failed"
+        print(f"- {name} ({required}): {error}", file=sys.stderr)
 
 
 def _print_gate_failure_summary(gate_result: dict) -> None:
