@@ -20,7 +20,8 @@
       "tags": [
         "smoke",
         "number",
-        "citation"
+        "citation",
+        "single_doc"
       ]
     },
     {
@@ -42,7 +43,8 @@
       "retrieval_recall": 1.0,
       "tags": [
         "smoke",
-        "no_answer"
+        "no_answer",
+        "single_doc"
       ]
     },
     {
@@ -67,6 +69,217 @@
         "calculation",
         "growth"
       ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_gross_profit",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.84,
+      "latency_ms": 11.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "number",
+        "citation",
+        "single_doc"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "financial_calculation",
+      "id": "smoke_gross_margin_calc",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.91,
+      "latency_ms": 6.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "financial_calculation",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "calculation",
+        "margin"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_operating_expenses",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.83,
+      "latency_ms": 10.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "number",
+        "citation",
+        "single_doc"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "financial_calculation",
+      "id": "smoke_opex_sum_calc",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.9,
+      "latency_ms": 7.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "financial_calculation",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "calculation",
+        "sum"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_multi_doc_cash",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.86,
+      "latency_ms": 15.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "multi_doc",
+        "citation",
+        "number"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_total_assets",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.85,
+      "latency_ms": 9.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "number",
+        "citation",
+        "balance_sheet"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "financial_calculation",
+      "id": "smoke_scale_conversion",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.92,
+      "latency_ms": 6.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "financial_calculation",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "calculation",
+        "scale"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_risk_factor",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.81,
+      "latency_ms": 13.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "citation",
+        "risk"
+      ]
+    },
+    {
+      "answer_calculation_consistency": 1.0,
+      "answer_contains": 1.0,
+      "calculation_accuracy": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "expected_intent": "document_qa",
+      "id": "smoke_no_answer_filtered_docs",
+      "intent_accuracy": 1.0,
+      "intent_confidence": 0.8,
+      "latency_ms": 9.0,
+      "no_answer_accuracy": 1.0,
+      "number_accuracy": 1.0,
+      "passed": true,
+      "predicted_intent": "document_qa",
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "tags": [
+        "smoke",
+        "no_answer",
+        "filtered_docs"
+      ]
     }
   ],
   "extra_prediction_ids": [],
@@ -82,13 +295,13 @@
     "missing_predictions": 0,
     "no_answer_accuracy": 1.0,
     "number_accuracy": 1.0,
-    "p95_latency_ms": 11.6,
+    "p95_latency_ms": 13.899999999999999,
     "pass_rate": 1.0,
     "retrieval_precision": 1.0,
     "retrieval_recall": 1.0,
-    "scored_cases": 3,
-    "total_cases": 3,
-    "total_predictions": 3
+    "scored_cases": 12,
+    "total_cases": 12,
+    "total_predictions": 12
   },
   "warnings": []
 }

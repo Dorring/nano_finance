@@ -6,8 +6,8 @@ reporting, comparison, and CI gate behavior keep working.
 
 ## Files
 
-- `golden_smoke.jsonl` - minimal golden/replay cases.
-- `predictions_smoke.jsonl` - deterministic predictions matching the smoke cases.
+- `golden_smoke.jsonl` - expanded deterministic golden/replay cases.
+- `predictions_smoke.jsonl` - deterministic predictions matching all smoke cases.
 - `baseline_smoke_report.json` - checked scorer output used by the smoke regression gate.
 
 Do not commit real customer documents, trace databases, ChromaDB data, model outputs with
@@ -65,7 +65,7 @@ showing a generic command failure.
 Before a golden set becomes a merge gate, audit its coverage and taxonomy:
 
 ```bash
-python -m src.eval_cli audit-fixtures   --cases eval/golden_smoke.jsonl   --min-cases 3   --required-tag smoke   --required-tag citation   --required-tag no_answer   --required-tag calculation   --require-expected-intent   --out /tmp/finquery_fixture_audit.json
+python -m src.eval_cli audit-fixtures   --cases eval/golden_smoke.jsonl   --min-cases 12   --required-tag smoke   --required-tag citation   --required-tag no_answer   --required-tag calculation   --require-expected-intent   --out /tmp/finquery_fixture_audit.json
 ```
 
 The audit reports tag counts, intent counts, coverage rates, missing required
