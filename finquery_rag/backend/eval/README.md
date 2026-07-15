@@ -31,7 +31,10 @@ For the commit-safe smoke gate, run:
 python scripts/ci_eval_gate.py
 ```
 
-Set `FINQUERY_EVAL_ARTIFACT_DIR=/path/to/artifacts` when CI should collect the generated report, comparison, and JUnit XML. Without it, artifacts are written to the system temp directory.
+Set `FINQUERY_EVAL_ARTIFACT_DIR=/path/to/artifacts` when CI should collect the
+generated report, comparison, and JUnit XML. Without it, artifacts are written to
+the system temp directory. The backend GitHub Actions workflow sets this variable
+and uploads the generated files as the `finquery-eval-gate` artifact.
 
 Use `gate` directly when a retrieval, prompt, reranker, or answer-validation change needs a
 custom pass/fail signal in CI:
@@ -43,7 +46,7 @@ python -m src.eval_cli gate   --cases eval/golden_smoke.jsonl   --predictions ev
 For regression checks against a checked baseline report:
 
 ```bash
-python -m src.eval_cli gate   --cases eval/golden_smoke.jsonl   --predictions eval/predictions_smoke.jsonl   --baseline eval/baseline_report.json   --tolerance 0.01   --min-pass-rate 0.95   --max-missing 0   --comparison-out /tmp/finquery_eval_compare.json   --junit-out /tmp/finquery_eval_gate.xml
+python -m src.eval_cli gate   --cases eval/golden_smoke.jsonl   --predictions eval/predictions_smoke.jsonl   --baseline eval/baseline_smoke_report.json   --tolerance 0.01   --min-pass-rate 0.95   --max-missing 0   --comparison-out /tmp/finquery_eval_compare.json   --junit-out /tmp/finquery_eval_gate.xml
 ```
 
 Exit codes:
