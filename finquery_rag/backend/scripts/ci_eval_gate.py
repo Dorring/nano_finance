@@ -1,4 +1,4 @@
-﻿"""Run the commit-safe FinQuery evaluation smoke gate.
+"""Run the commit-safe FinQuery evaluation smoke gate.
 
 This script is intentionally dependency-light so GitHub Actions can call one
 stable entrypoint instead of duplicating eval_cli arguments in workflow YAML.
@@ -29,7 +29,7 @@ def main() -> int:
         "--cases",
         str(cases),
         "--min-cases",
-        "3",
+        "12",
         "--required-tag",
         "smoke",
         "--required-tag",

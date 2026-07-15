@@ -75,7 +75,7 @@ def main() -> int:
                 "--tolerance",
                 "0.0",
                 "--min-cases",
-                "3",
+                "12",
                 "--required-tag",
                 "smoke",
                 "--required-tag",
