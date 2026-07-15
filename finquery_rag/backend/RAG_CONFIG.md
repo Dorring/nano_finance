@@ -98,6 +98,24 @@ FEEDBACK_DB_PATH=/var/lib/finquery/feedback.db
 When unset, FinQuery keeps the existing development defaults under the backend
 working directory.
 
+## Migration readiness audit
+
+Before deploying code that relies on tenant-scoped chunk IDs against existing
+local data, run a non-content migration audit. It inspects identifiers, table
+shape, and aggregate counts only; it does not read chunk text or document
+content:
+
+```bash
+python -m src.eval_cli migration-audit   --bm25-db "$BM25_DB_PATH"   --registry-db "$DOCUMENT_REGISTRY_DB_PATH"   --chroma-path "$CHROMA_PATH"   --out /tmp/finquery_migration_audit.json
+```
+
+The command returns `1` when high-risk legacy patterns are found, such as
+unscoped BM25 `doc_id` values, missing `user_id`, mismatched user prefixes, or
+unscoped Chroma embedding IDs. Use `--warn-only` for exploratory audits that
+should not fail a maintenance script. High-risk findings usually mean the BM25
+and/or Chroma indexes should be rebuilt from tenant-scoped chunks before serving
+production queries.
+
 ## BM25 maintenance
 
 The sparse index stores canonical chunk rows in `chunk_store` and query rows in
