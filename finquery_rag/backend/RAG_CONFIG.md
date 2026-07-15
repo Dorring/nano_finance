@@ -222,3 +222,24 @@ curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8000/document-registry
 ```
 
 Responses intentionally omit file and content hashes.
+
+## LLM backend: local SFT1147 adapter
+
+FinQuery uses the OpenAI SDK client in `src.main`, so any OpenAI-compatible
+chat-completions endpoint can be used as the answer generator. For the current
+finance-demo baseline, use the nanochat SFT1147 adapter:
+
+```bash
+export LLM_API_BASE_URL=http://127.0.0.1:8500/v1
+export LLM_MODEL_NAME=finquery-finance-sft1147
+export LLM_API_KEY=not-needed-for-local
+```
+
+The corresponding model-side command is documented in
+[`docs/SFT1147_RAG_DEMO.md`](docs/SFT1147_RAG_DEMO.md). The adapter provides
+`GET /v1/models` and `POST /v1/chat/completions`, including streaming deltas, so
+no RAG main-flow code change is required.
+
+Keep the RAG layer responsible for citation/source validation, no-answer gating,
+confidence, and traceability. The SFT model is the grounded answer generator,
+not the source of truth outside retrieved context.
