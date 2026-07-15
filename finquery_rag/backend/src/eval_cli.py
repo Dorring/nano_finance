@@ -69,6 +69,13 @@ def main(argv: list[str] | None = None) -> int:
     doctor.add_argument("--out", help="Optional health snapshot JSON output path")
     doctor.add_argument("--warn-only", action="store_true", help="Return 0 even when readiness is degraded")
 
+    migration = sub.add_parser("migration-audit", help="Audit local stores for legacy unscoped index data")
+    migration.add_argument("--bm25-db", help="Override BM25 SQLite DB path")
+    migration.add_argument("--registry-db", help="Override document registry SQLite DB path")
+    migration.add_argument("--chroma-path", help="Override Chroma directory path")
+    migration.add_argument("--out", help="Optional migration audit JSON output path")
+    migration.add_argument("--warn-only", action="store_true", help="Return 0 even when high-risk migration issues are found")
+
     retrieval_diag = sub.add_parser("retrieval-diagnostics", help="Explain expected-source retrieval coverage")
     retrieval_diag.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
     retrieval_diag.add_argument("--predictions", required=True, help="Predictions JSONL")
@@ -281,6 +288,22 @@ def main(argv: list[str] | None = None) -> int:
         if not snapshot.get("ready"):
             _print_doctor_failure_summary(snapshot)
         return 0 if snapshot.get("ready") or args.warn_only else 1
+
+    if args.command == "migration-audit":
+        from .services.migration_audit import audit_migration_readiness
+
+        report = audit_migration_readiness(
+            bm25_db_path=args.bm25_db,
+            registry_db_path=args.registry_db,
+            chroma_path=args.chroma_path,
+        )
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, report)
+        print(payload)
+        if not report["passed"]:
+            _print_migration_audit_failure_summary(report)
+        return 0 if report["passed"] or args.warn_only else 1
 
     if args.command == "retrieval-diagnostics":
         try:
@@ -626,6 +649,16 @@ def _normalize_trace_bounds(limit, offset, created_after, created_before) -> dic
         "created_before": created_before,
     }
 
+
+
+def _print_migration_audit_failure_summary(report: dict) -> None:
+    """Print a compact migration audit failure summary to stderr."""
+    print("FinQuery migration audit detected high-risk legacy data:", file=sys.stderr)
+    high_risks = [risk for risk in report.get("risks", []) if risk.get("severity") == "high"]
+    for risk in high_risks[:10]:
+        print(f"- {risk.get('store')}: {risk.get('message')}", file=sys.stderr)
+    if len(high_risks) > 10:
+        print(f"- ... {len(high_risks) - 10} more high-risk issues", file=sys.stderr)
 
 
 def _print_fixture_audit_failure_summary(audit_report: dict) -> None:
