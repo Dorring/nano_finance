@@ -72,3 +72,16 @@ jobs:
           name: finquery-eval-gate
           path: /tmp/finquery_eval_artifacts
           if-no-files-found: ignore
+
+      - name: Run deployment preflight smoke
+        env:
+          FINQUERY_PREFLIGHT_ARTIFACT_DIR: /tmp/finquery_preflight_artifacts
+        run: uv run python scripts/ci_preflight_smoke.py
+
+      - name: Upload preflight artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finquery-preflight
+          path: /tmp/finquery_preflight_artifacts
+          if-no-files-found: ignore

@@ -216,7 +216,7 @@ class TraceLogger:
         sql = (
             "SELECT * FROM trace_log WHERE "
             + " AND ".join(where)
-            + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+            + " ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?"
         )
         params.extend([limit, offset])
         with self._conn() as conn:
