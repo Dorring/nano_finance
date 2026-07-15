@@ -22,12 +22,14 @@ def main() -> int:
     artifact_root = os.getenv("FINQUERY_EVAL_ARTIFACT_DIR")
     artifacts = Path(artifact_root) if artifact_root else Path(tempfile.gettempdir()) / "finquery_eval_artifacts"
     artifacts.mkdir(parents=True, exist_ok=True)
-    return eval_cli_main([
+    cases = ROOT / "eval" / "golden_smoke.jsonl"
+    predictions = ROOT / "eval" / "predictions_smoke.jsonl"
+    gate_code = eval_cli_main([
         "gate",
         "--cases",
-        str(ROOT / "eval" / "golden_smoke.jsonl"),
+        str(cases),
         "--predictions",
-        str(ROOT / "eval" / "predictions_smoke.jsonl"),
+        str(predictions),
         "--baseline",
         str(ROOT / "eval" / "baseline_smoke_report.json"),
         "--min-pass-rate",
@@ -42,6 +44,23 @@ def main() -> int:
         str(artifacts / "smoke_comparison.json"),
         "--junit-out",
         str(artifacts / "smoke_gate.xml"),
+    ])
+    if gate_code != 0:
+        return gate_code
+    return eval_cli_main([
+        "retrieval-diagnostics",
+        "--cases",
+        str(cases),
+        "--predictions",
+        str(predictions),
+        "--k",
+        "1",
+        "--k",
+        "3",
+        "--k",
+        "5",
+        "--out",
+        str(artifacts / "smoke_retrieval_diagnostics.json"),
     ])
 
 
