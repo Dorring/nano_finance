@@ -1004,6 +1004,38 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             else:
                 chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
 
+            front_matter_answer = engine.answer_front_matter_query(question, chunks)
+            if front_matter_answer:
+                chunks = front_matter_answer["chunks"]
+                context, sources = engine.build_context(chunks)
+                answer = front_matter_answer["answer"]
+                diagnostics = {
+                    "confidence": 1.0,
+                    "context_sufficient": True,
+                    "intent_confidence": intent["confidence"],
+                    "deterministic_answer": front_matter_answer["diagnostic"],
+                }
+                trace_id = finish_trace(answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
+                if session_id:
+                    session_manager.add_message(session_id, current_user.id, "user", request.question)
+                    session_manager.add_message(
+                        session_id,
+                        current_user.id,
+                        "assistant",
+                        answer,
+                        metadata=_assistant_session_metadata(
+                            sources=sources,
+                            trace_id=trace_id,
+                            context_sufficient=True,
+                            confidence=1.0,
+                            intent=intent["intent"],
+                            intent_confidence=intent["confidence"],
+                        ),
+                    )
+                yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
+                yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=1.0, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
+                return
+
             is_sufficient, best_score, avg_score = engine._check_context_sufficiency(chunks)
             confidence = engine._compute_confidence(chunks)
 
