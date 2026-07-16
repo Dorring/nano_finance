@@ -55,6 +55,10 @@ def mock_collection():
     def _match(meta, wf):
         if wf is None:
             return True
+        if "$and" in wf:
+            return all(_match(meta, clause) for clause in wf["$and"])
+        if "$or" in wf:
+            return any(_match(meta, clause) for clause in wf["$or"])
         for k, v in wf.items():
             if k.startswith("$"):
                 continue
