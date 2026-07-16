@@ -92,7 +92,7 @@ def get_rag_engine():
             llm_client,
             model_name=llm_model_name,
             use_hybrid=True,
-            reranker_name=os.getenv("RAG_RERANKER"),
+            reranker_name=os.getenv("RAG_RERANKER", "heuristic"),
             reranker_model=os.getenv("RAG_RERANKER_MODEL"),
             retrieval_candidate_multiplier=int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "2")),
         )
