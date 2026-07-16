@@ -102,6 +102,27 @@ def _reconstruct_page_to_markdown(page: pymupdf.Page, tab_bboxes: list, hierarch
     return "\n\n".join(md_lines)
 
 
+
+
+def _safe_find_table_bboxes(page: pymupdf.Page) -> list:
+    """Return PyMuPDF table bboxes, or an empty list when detection fails."""
+    try:
+        finder = page.find_tables()
+        tables = getattr(finder, "tables", []) or []
+    except Exception as exc:
+        print(f"PyMuPDF table detection failed on page {page.number + 1}: {exc}; continuing without table bboxes.")
+        return []
+
+    bboxes = []
+    for table in tables:
+        try:
+            bbox = getattr(table, "bbox", None)
+            if bbox:
+                bboxes.append(tuple(bbox))
+        except Exception as exc:
+            print(f"Skipping PyMuPDF table bbox on page {page.number + 1}: {exc}")
+    return bboxes
+
 def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
     """
     经济型结构化切分管线：基于规则重构Markdown，实现树状逻辑切分。
@@ -129,7 +150,7 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
         page = doc[page_num]
         actual_page_num = page_num + 1
 
-        tab_bboxes = [tab.bbox for tab in page.find_tables().tables]
+        tab_bboxes = _safe_find_table_bboxes(page)
         hierarchy_map = _analyze_font_hierarchy(page)
         page_md = _reconstruct_page_to_markdown(page, tab_bboxes, hierarchy_map)
 
