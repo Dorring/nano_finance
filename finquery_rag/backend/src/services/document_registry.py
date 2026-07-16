@@ -142,14 +142,17 @@ class DocumentRegistry:
     def mark_indexing(self, document_id):
         self.transition(document_id, "indexing")
 
-    def mark_ready(self, document_id, chunk_count, content_hash):
+    def mark_ready(self, document_id, chunk_count, content_hash, page_count=None):
         with self._conn() as conn:
             row = conn.execute("SELECT status FROM document_registry WHERE document_id = ?", (document_id,)).fetchone()
             if not row:
                 raise ValueError("Document %r not found" % (document_id,))
             validate_transition(row[0], "ready")
             now = time.time()
-            conn.execute("UPDATE document_registry SET status = ?, chunk_count = ?, content_hash = ?, updated_at = ?, error_message = NULL WHERE document_id = ?", ("ready", chunk_count, content_hash, now, document_id))
+            if page_count is None:
+                conn.execute("UPDATE document_registry SET status = ?, chunk_count = ?, content_hash = ?, updated_at = ?, error_message = NULL WHERE document_id = ?", ("ready", chunk_count, content_hash, now, document_id))
+            else:
+                conn.execute("UPDATE document_registry SET status = ?, chunk_count = ?, content_hash = ?, page_count = ?, updated_at = ?, error_message = NULL WHERE document_id = ?", ("ready", chunk_count, content_hash, page_count, now, document_id))
             conn.commit()
 
     def mark_failed(self, document_id, error_message):

@@ -133,6 +133,58 @@ class RAGEngine:
         )
         return selected
 
+
+    def _has_cjk(self, text: str) -> bool:
+        return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+    def _is_document_front_matter_query(self, query: str) -> bool:
+        normalized = (query or "").lower()
+        markers = (
+            "title", "author", "abstract", "paper name", "paper title",
+            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d", "\u4f5c\u8005", "\u6458\u8981", "\u8fd9\u7bc7\u8bba\u6587",
+        )
+        return any(marker in normalized for marker in markers)
+
+    def _expand_retrieval_query(self, query: str) -> str:
+        """Add lightweight English retrieval terms for common Chinese PDF questions."""
+        if not query:
+            return query
+        expansions = []
+        lowered = query.lower()
+        if self._has_cjk(query):
+            if any(term in query for term in ("\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d")):
+                expansions.append("paper title title of this paper")
+            if "\u4f5c\u8005" in query:
+                expansions.append("paper authors author affiliation")
+            if "\u6458\u8981" in query:
+                expansions.append("abstract summary")
+            if any(term in query for term in ("\u4e3b\u8981", "\u8d21\u732e", "\u7814\u7a76", "\u89e3\u51b3")):
+                expansions.append("main contribution problem method approach")
+            if any(term in query for term in ("\u9875", "\u51e0\u9875", "\u591a\u5c11\u9875")):
+                expansions.append("number of pages page count")
+        if "title" in lowered and "paper title" not in lowered:
+            expansions.append("paper title")
+        if not expansions:
+            return query
+        return f"{query}\n" + "\n".join(dict.fromkeys(expansions))
+
+    def _boost_front_matter_chunks(self, query: str, chunks: list) -> list:
+        """Prefer page-1 evidence for title/author/abstract style questions."""
+        if not chunks or not self._is_document_front_matter_query(query):
+            return chunks
+        boosted = []
+        for chunk in chunks:
+            item = dict(chunk)
+            metadata = dict(item.get("metadata") or {})
+            item["metadata"] = metadata
+            score = float(item.get("score", 0) or 0)
+            if metadata.get("page") == 1:
+                item["score"] = score + 0.02
+                item["front_matter_boost"] = 0.02
+            boosted.append(item)
+        boosted.sort(key=lambda item: item.get("score", 0), reverse=True)
+        return boosted
+
     @staticmethod
     def _summarize_retrieved_chunks(chunks: list) -> list:
         """Return eval-safe retrieval metadata without copying chunk content."""
@@ -152,24 +204,28 @@ class RAGEngine:
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
+        retrieval_query = self._expand_retrieval_query(query)
         if not self.use_hybrid:
-            results = query_collection(query_text=query, doc_name=doc_name, n_results=n_results, user_id=user_id)
+            results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=n_results, user_id=user_id)
             results = self._normalize_scores(results)
+            results = self._boost_front_matter_chunks(query, results)
             return self._apply_reranker(query, results, n_results)
 
         # Hybrid search
         candidate_k = n_results * self.retrieval_candidate_multiplier
-        dense_results = query_collection(query_text=query, doc_name=doc_name, n_results=candidate_k, user_id=user_id)
+        dense_results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=candidate_k, user_id=user_id)
 
         bm25_retriever = self._get_bm25_retriever(doc_name, user_id)
         if bm25_retriever:
             print(f"✓ BM25 retrieved for '{doc_name}'")
-            sparse_results = bm25_retriever.search(query, k=candidate_k, doc_name=doc_name, user_id=user_id)
+            sparse_results = bm25_retriever.search(retrieval_query, k=candidate_k, doc_name=doc_name, user_id=user_id)
             fused = rrf([dense_results, sparse_results])
             results = self._normalize_scores(fused)
+            results = self._boost_front_matter_chunks(query, results)
             return self._apply_reranker(query, results, n_results)
 
         results = self._normalize_scores(dense_results)
+        results = self._boost_front_matter_chunks(query, results)
         return self._apply_reranker(query, results, n_results)
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:

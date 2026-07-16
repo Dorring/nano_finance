@@ -810,7 +810,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             raise api_error(500, "indexing_error", f"Indexing error: {bm25_err}")
 
         # Mark ready in registry
-        document_registry.mark_ready(doc_id, len(chunks), ch)
+        document_registry.mark_ready(doc_id, len(chunks), ch, page_count=no_of_pages)
 
         os.remove(temp_path)
         os.rmdir(temp_dir)
