@@ -4,7 +4,7 @@ import os
 import re
 
 import asyncio
-from .vector_store import query_collection, list_all_documents
+from .vector_store import query_collection, list_all_documents, get_front_matter_chunks
 from .retrieval import SqliteBM25Retriever, rrf
 from .reranker import build_reranker
 from .intent import classify_query_intent
@@ -284,6 +284,15 @@ class RAGEngine:
             "diagnostic": "front_matter_title",
         }
 
+
+    def retrieve_front_matter_chunks(self, doc_names: list[str], query: str, user_id: int | None = None) -> list:
+        """Direct metadata lookup for deterministic front-matter questions."""
+        if not self._is_title_query(query) or not doc_names or user_id is None:
+            return []
+        chunks = []
+        for doc_name in doc_names:
+            chunks.extend(get_front_matter_chunks(doc_name=doc_name, user_id=user_id, subtype="title"))
+        return chunks
     def build_context(self, chunks: list) -> tuple:
         """Build context from retrieved chunks with dedup, score threshold, and token budget."""
         if not chunks:
@@ -657,11 +666,13 @@ class RAGEngine:
                 result["rewritten_question"] = question
             return result
 
-        # 1. Retrieve relevant chunks
-        if len(doc_names) == 1:
-            chunks = self.retrieve_single_document(doc_names[0], question, user_id, n_results)
-        else:
-            chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
+        # 1. Retrieve relevant chunks. Front-matter facts use direct metadata lookup first.
+        chunks = self.retrieve_front_matter_chunks(doc_names, question, user_id)
+        if not chunks:
+            if len(doc_names) == 1:
+                chunks = self.retrieve_single_document(doc_names[0], question, user_id, n_results)
+            else:
+                chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
 
         front_matter_answer = self.answer_front_matter_query(question, chunks)
         deterministic_answer = None

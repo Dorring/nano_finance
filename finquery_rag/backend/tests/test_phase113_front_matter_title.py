@@ -74,3 +74,48 @@ def test_front_matter_title_answer_strips_title_prefix(tmp_path):
 
     assert answer["answer"] == 'The title of the paper is "Rethinking Crack Segmentation".'
     assert answer["diagnostic"] == "front_matter_title"
+
+
+def test_retrieve_front_matter_chunks_uses_metadata_lookup_before_vector_search(monkeypatch, tmp_path):
+    def fake_front_matter(doc_name, user_id, subtype=None):
+        assert doc_name == "paper.pdf"
+        assert user_id == 7
+        assert subtype == "title"
+        return [{
+            "doc_id": "paper::front_matter_title",
+            "content": "Title: Correct Paper Title",
+            "metadata": {"type": "front_matter", "subtype": "title", "page": 1, "doc_name": "paper.pdf"},
+            "score": 1.0,
+        }]
+
+    monkeypatch.setattr("src.services.rag_engine.get_front_matter_chunks", fake_front_matter)
+    engine = RAGEngine(_DummyLLM(), bm25_db_path=str(tmp_path / "b.db"))
+
+    chunks = engine.retrieve_front_matter_chunks(["paper.pdf"], "What is the title of this paper?", user_id=7)
+    answer = engine.answer_front_matter_query("What is the title of this paper?", chunks)
+
+    assert chunks[0]["metadata"]["subtype"] == "title"
+    assert answer["answer"] == 'The title of the paper is "Correct Paper Title".'
+
+
+def test_query_uses_front_matter_title_without_llm_or_vector_search(monkeypatch, tmp_path):
+    class FailingLLM:
+        @property
+        def chat(self):
+            raise AssertionError("LLM should not be called for deterministic title answers")
+
+    engine = RAGEngine(FailingLLM(), use_hybrid=False, bm25_db_path=str(tmp_path / "b.db"))
+    monkeypatch.setattr(engine, "retrieve_front_matter_chunks", lambda doc_names, query, user_id: [{
+        "doc_id": "paper::front_matter_title",
+        "content": "Title: Deterministic Title",
+        "metadata": {"type": "front_matter", "subtype": "title", "page": 1, "doc_name": "paper.pdf"},
+        "score": 1.0,
+    }])
+    monkeypatch.setattr(engine, "retrieve_single_document", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("vector retrieval should not be used")))
+
+    result = __import__("asyncio").run(engine.query("What is the title of this paper?", doc_names=["paper.pdf"], user_id=1))
+
+    assert result["answer"] == 'The title of the paper is "Deterministic Title".'
+    assert result["confidence"] == 1.0
+    assert result["context_sufficient"] is True
+    assert result["retrieved_chunks"][0]["type"] == "front_matter"
