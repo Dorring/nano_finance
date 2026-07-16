@@ -38,6 +38,23 @@ python -m src.eval_cli score --cases <cases.jsonl> --predictions <candidate.json
 python -m src.eval_cli compare --baseline <baseline_report.json> --candidate <candidate_report.json>
 ```
 
+## Hierarchical indexing
+
+FinQuery indexes PDF text as small child chunks for retrieval, while carrying a
+bounded parent section/page excerpt in chunk metadata. At answer time,
+`build_context` expands matching child chunks back to their shared parent excerpt
+and merges sibling child hits from the same parent.
+
+This gives the retriever precise child-level matching while giving the generator
+enough local section context for titles, financial line items, and paragraph
+continuations. Source records keep the original child `chunk_id` plus
+`parent_id`, `section_path`, and `child_hit_count` for debugging.
+
+This metadata is written during ingestion. After changing this behavior or
+deploying it to an existing local store, re-upload documents or rebuild the
+Chroma/BM25 indexes from freshly ingested chunks so older rows receive
+`parent_id`, `section_path`, and `parent_excerpt`.
+
 ## Health and readiness probes
 
 The backend exposes two unauthenticated operational probes:

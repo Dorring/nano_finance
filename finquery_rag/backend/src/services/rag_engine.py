@@ -191,7 +191,7 @@ class RAGEngine:
         summary = []
         for chunk in chunks:
             meta = chunk.get("metadata", {}) or {}
-            summary.append({
+            item = {
                 "doc_id": chunk.get("doc_id", ""),
                 "filename": meta.get("doc_name"),
                 "page": meta.get("page"),
@@ -199,7 +199,12 @@ class RAGEngine:
                 "score": chunk.get("score", 0),
                 "rerank_score": chunk.get("rerank_score"),
                 "reranker": chunk.get("reranker"),
-            })
+            }
+            for key in ("parent_id", "section_path", "context_expanded_from"):
+                value = meta.get(key)
+                if value is not None:
+                    item[key] = value
+            summary.append(item)
         return summary
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
@@ -293,6 +298,93 @@ class RAGEngine:
         for doc_name in doc_names:
             chunks.extend(get_front_matter_chunks(doc_name=doc_name, user_id=user_id, subtype="title"))
         return chunks
+
+    @staticmethod
+    def _parent_context_key(chunk: dict) -> str | None:
+        metadata = chunk.get("metadata") or {}
+        parent_id = metadata.get("parent_id")
+        parent_excerpt = metadata.get("parent_excerpt")
+        if not isinstance(parent_id, str) or not parent_id.strip():
+            return None
+        if not isinstance(parent_excerpt, str) or not parent_excerpt.strip():
+            return None
+        return parent_id.strip()
+
+    def _merge_parent_context_chunks(self, chunks: list) -> list:
+        """Expand child hits to their parent section/page excerpt and merge siblings.
+
+        Retrieval still ranks small child chunks. The generation context sees a
+        bounded parent excerpt so answers have enough local section context.
+        """
+        merged = []
+        by_parent: dict[str, dict] = {}
+
+        for chunk in chunks:
+            parent_key = self._parent_context_key(chunk)
+            if not parent_key:
+                merged.append(chunk)
+                continue
+
+            metadata = dict(chunk.get("metadata") or {})
+            parent_excerpt = metadata.get("parent_excerpt")
+            existing = by_parent.get(parent_key)
+            if existing is None:
+                expanded = dict(chunk)
+                expanded_metadata = dict(metadata)
+                expanded_metadata["context_expanded_from"] = "parent_excerpt"
+                expanded_metadata["child_hit_count"] = 1
+                expanded_metadata["child_chunk_ids"] = [chunk.get("doc_id")]
+                expanded_metadata["matched_child_snippets"] = [
+                    self._compact_child_snippet(chunk.get("content", ""))
+                ]
+                expanded["metadata"] = expanded_metadata
+                expanded["content"] = self._compose_parent_context(
+                    parent_excerpt,
+                    expanded_metadata["matched_child_snippets"],
+                )
+                expanded["child_hit_count"] = 1
+                by_parent[parent_key] = expanded
+                merged.append(expanded)
+                continue
+
+            existing_score = float(existing.get("score", 0) or 0)
+            current_score = float(chunk.get("score", 0) or 0)
+            existing["score"] = max(existing_score, current_score)
+            existing["child_hit_count"] = int(existing.get("child_hit_count", 1)) + 1
+            existing_meta = existing.get("metadata") or {}
+            child_ids = list(existing_meta.get("child_chunk_ids") or [])
+            child_id = chunk.get("doc_id")
+            if child_id and child_id not in child_ids:
+                child_ids.append(child_id)
+            existing_meta["child_chunk_ids"] = child_ids
+            existing_meta["child_hit_count"] = existing["child_hit_count"]
+            snippets = list(existing_meta.get("matched_child_snippets") or [])
+            snippet = self._compact_child_snippet(chunk.get("content", ""))
+            if snippet and snippet not in snippets:
+                snippets.append(snippet)
+            existing_meta["matched_child_snippets"] = snippets
+            existing["content"] = self._compose_parent_context(
+                existing_meta.get("parent_excerpt", existing.get("content", "")),
+                snippets,
+            )
+
+        return merged
+
+    @staticmethod
+    def _compact_child_snippet(content: str, *, max_chars: int = 500) -> str:
+        text = re.sub(r"\s+", " ", content or "").strip()
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars].rstrip() + " [...]"
+
+    @staticmethod
+    def _compose_parent_context(parent_excerpt: str, child_snippets: list[str]) -> str:
+        snippets = [item for item in child_snippets if item]
+        if not snippets:
+            return parent_excerpt
+        evidence = "\n".join(f"- {item}" for item in snippets)
+        return f"{parent_excerpt}\n\nMatched child evidence:\n{evidence}"
+
     def build_context(self, chunks: list) -> tuple:
         """Build context from retrieved chunks with dedup, score threshold, and token budget."""
         if not chunks:
@@ -315,6 +407,8 @@ class RAGEngine:
         if not chunks:
             return "", []
 
+        chunks = self._merge_parent_context_chunks(chunks)
+
         context_parts = []
         sources = []
         current_tokens = 0
@@ -325,6 +419,9 @@ class RAGEngine:
             content = chunk["content"]
             chunk_type = chunk["metadata"].get("type")
             page = chunk["metadata"].get("page")
+            parent_id = chunk["metadata"].get("parent_id")
+            section_path = chunk["metadata"].get("section_path")
+            child_hit_count = chunk["metadata"].get("child_hit_count")
 
             # Parse filename from scoped chunk ID
             if "::" in doc_id:
@@ -363,6 +460,9 @@ class RAGEngine:
                         "filename": filename, "page": page,
                         "type": chunk_type, "score": chunk.get("score", 0),
                         "chunk_id": doc_id,
+                        "parent_id": parent_id,
+                        "section_path": section_path,
+                        "child_hit_count": child_hit_count,
                     })
                 break
 
@@ -372,6 +472,9 @@ class RAGEngine:
                 "filename": filename, "page": page,
                 "type": chunk_type, "score": chunk.get("score", 0),
                 "chunk_id": doc_id,
+                "parent_id": parent_id,
+                "section_path": section_path,
+                "child_hit_count": child_hit_count,
             })
 
         context_str = "\n\n---\n\n".join(context_parts)

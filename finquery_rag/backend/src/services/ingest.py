@@ -180,6 +180,65 @@ def _extract_title_from_first_page(page: pymupdf.Page) -> str | None:
     title = re.sub(r"\s+", " ", title).strip(" -")
     return title or None
 
+
+def _section_path_from_metadata(metadata: dict) -> str:
+    """Return a stable section path from MarkdownHeaderTextSplitter metadata."""
+    if not isinstance(metadata, dict):
+        return ""
+    headers = []
+    for key in ("Header 1", "Header 2", "Header 3"):
+        value = metadata.get(key)
+        if isinstance(value, str):
+            cleaned = re.sub(r"\s+", " ", value).strip(" #")
+            if cleaned and "PAGE_MARKER_" not in cleaned:
+                headers.append(cleaned)
+    return " > ".join(headers)
+
+
+def _compact_parent_excerpt(content: str, *, max_chars: int = 1400) -> str:
+    """Keep a bounded parent section excerpt for context expansion."""
+    text = re.sub(r"\s+", " ", content or "").strip()
+    if len(text) <= max_chars:
+        return text
+    head_budget = max_chars // 2
+    tail_budget = max_chars - head_budget - 16
+    return f"{text[:head_budget].rstrip()} [...] {text[-tail_budget:].lstrip()}"
+
+
+def _hierarchy_metadata(
+    metadata: dict,
+    *,
+    user_id: int | None,
+    doc_name: str,
+    page: int,
+    chunk_idx: int,
+    parent_content: str,
+) -> dict:
+    """Attach section-aware parent-child fields to a child chunk."""
+    section_path = _section_path_from_metadata(metadata)
+    parent_id = make_chunk_id(user_id, doc_name, f"page_{page}::parent_{chunk_idx}")
+    enriched = {
+        "parent_id": parent_id,
+        "parent_page": page,
+        "parent_excerpt": _compact_parent_excerpt(parent_content),
+        "parent_child": True,
+    }
+    if section_path:
+        enriched["section_path"] = section_path
+        enriched["section_title"] = section_path.split(" > ")[-1]
+    return enriched
+
+
+def _chunk_content_with_section(content: str, section_path: str) -> str:
+    """Prepend short section context to child text for lexical/vector retrieval."""
+    body = (content or "").strip()
+    if not section_path:
+        return body
+    prefix = f"Section: {section_path}"
+    if body.startswith(prefix):
+        return body
+    return f"{prefix}\n{body}"
+
 def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
     """
     经济型结构化切分管线：基于规则重构Markdown，实现树状逻辑切分。
@@ -257,15 +316,26 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
         if not content:
             continue
 
+        hierarchy_meta = _hierarchy_metadata(
+            metadata,
+            user_id=user_id,
+            doc_name=doc_name,
+            page=actual_page,
+            chunk_idx=chunk_idx,
+            parent_content=content,
+        )
+        section_path = hierarchy_meta.get("section_path", "")
+
         # 长章节二次切分（阈值降低适配短上下文）
         if len(content) > LONG_CHUNK_THRESHOLD:
             sub_docs = RECURSIVE_SPLITTER.split_documents([Document(page_content=content, metadata=metadata)])
             for sub_idx, sub_doc in enumerate(sub_docs):
                 doc_id = make_chunk_id(user_id, doc_name, f"page_{actual_page}::chunk_{chunk_idx}_{sub_idx}")
                 chunks.append({
-                    "content": sub_doc.page_content.strip(),
+                    "content": _chunk_content_with_section(sub_doc.page_content, section_path),
                     "metadata": {
                         **metadata,
+                        **hierarchy_meta,
                         "type": "text",
                         "page": actual_page,
                         "source": pdf_path,
@@ -275,9 +345,10 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
         else:
             doc_id = make_chunk_id(user_id, doc_name, f"page_{actual_page}::chunk_{chunk_idx}")
             chunks.append({
-                "content": content,
+                "content": _chunk_content_with_section(content, section_path),
                 "metadata": {
                     **metadata,
+                    **hierarchy_meta,
                     "type": "text",
                     "page": actual_page,
                     "source": pdf_path,
@@ -299,6 +370,7 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
             table_content = enhanced_table["content"]
             if enhanced_table["summary"]:
                 table_content = f"Summary: {enhanced_table['summary']}\n\n{table_content}"
+            table_parent_id = make_chunk_id(user_id, doc_name, f"page_{actual_page_num}::table_parent_{table_idx + 1}")
 
             chunks.append({
                 "content": table_content,
@@ -307,7 +379,11 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
                     "page": actual_page_num,
                     "source": pdf_path,
                     "doc_id": doc_id,
-                    "table_num": table_idx + 1
+                    "table_num": table_idx + 1,
+                    "parent_id": table_parent_id,
+                    "parent_page": actual_page_num,
+                    "parent_excerpt": _compact_parent_excerpt(table_content),
+                    "parent_child": True,
                 }
             })
 
