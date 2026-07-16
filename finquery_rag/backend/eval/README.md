@@ -85,6 +85,32 @@ python -m src.eval_cli retrieval-diagnostics   --cases eval/golden_smoke.jsonl  
 By default diagnostics inspect `retrieved_chunks`. Use `--candidate-field sources`
 when you need to debug final cited sources instead of raw retrieval candidates.
 
+## Interview/demo report
+
+For resume and interview demos, generate a compact report that groups the same
+offline metrics into answer quality, citation grounding, retrieval quality,
+no-answer behavior, and weak cases:
+
+```bash
+python -m src.eval_cli interview-report \
+  --cases eval/golden_smoke.jsonl \
+  --predictions eval/predictions_smoke.jsonl \
+  --k 1 --k 3 --k 5 \
+  --out /tmp/finquery_interview_report.json
+```
+
+Use the `resume_metrics` block for defensible project claims, for example:
+
+- Golden answer pass rate
+- Citation recall
+- Retrieval Recall@5 / MRR
+- No-answer accuracy
+
+These numbers are only meaningful for the dataset named in the report. For a
+real demo, create a small project-specific golden set from uploaded financial
+documents and regenerate this report after every retrieval, reranker, prompt, or
+model-service change.
+
 ## Real evaluation workflow
 
 1. Create a project-specific golden JSONL with expected sources, phrases, numbers,

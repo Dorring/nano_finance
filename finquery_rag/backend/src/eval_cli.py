@@ -16,6 +16,7 @@ import sys
 
 from .services.evaluation import (
     audit_evaluation_fixtures,
+    build_interview_report,
     compare_reports,
     diagnose_retrieval,
     evaluate_predictions,
@@ -101,6 +102,14 @@ def main(argv: list[str] | None = None) -> int:
     retrieval_diag.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
     retrieval_diag.add_argument("--worst-limit", type=int, default=10, help="Maximum worst cases to include")
     retrieval_diag.add_argument("--out", help="Optional diagnostics JSON output path")
+
+    interview = sub.add_parser("interview-report", help="Build a compact interview/demo metrics report")
+    interview.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    interview.add_argument("--predictions", required=True, help="Predictions JSONL")
+    interview.add_argument("--k", dest="ks", type=int, action="append", help="Recall@K cutoff; repeatable")
+    interview.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
+    interview.add_argument("--worst-limit", type=int, default=5, help="Maximum weak cases to include")
+    interview.add_argument("--out", help="Optional interview report JSON output path")
 
     audit = sub.add_parser("audit-fixtures", help="Audit evaluation fixture coverage and quality")
     audit.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
@@ -359,6 +368,26 @@ def main(argv: list[str] | None = None) -> int:
             cases = load_jsonl_cases(args.cases)
             predictions = load_jsonl_predictions(args.predictions)
             report = diagnose_retrieval(
+                cases,
+                predictions,
+                ks=args.ks or (1, 3, 5),
+                candidate_field=args.candidate_field,
+                worst_limit=args.worst_limit,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+        if args.out:
+            write_json_file(args.out, report)
+        print(payload)
+        return 0
+
+    if args.command == "interview-report":
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            report = build_interview_report(
                 cases,
                 predictions,
                 ks=args.ks or (1, 3, 5),

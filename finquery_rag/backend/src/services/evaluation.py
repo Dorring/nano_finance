@@ -427,6 +427,114 @@ def evaluate_predictions(
     }
 
 
+def build_interview_report(
+    cases: Iterable[EvaluationCase],
+    predictions: dict[str, Prediction],
+    *,
+    ks: Iterable[int] = (1, 3, 5),
+    candidate_field: str = "retrieved_chunks",
+    worst_limit: int = 5,
+) -> dict[str, Any]:
+    """Build a compact, demo-friendly quality report for interview/readme use.
+
+    The regular scorer is intentionally detailed and CI-oriented. This wrapper
+    keeps the same underlying metrics but groups them into an easier narrative:
+    answer correctness, citation grounding, retrieval recall, no-answer behavior,
+    and latency. It stays offline and deterministic so it can be generated from
+    saved JSONL predictions without a model service.
+    """
+    case_list = list(cases)
+    score_report = evaluate_predictions(case_list, predictions)
+    retrieval_report = diagnose_retrieval(
+        case_list,
+        predictions,
+        ks=ks,
+        candidate_field=candidate_field,
+        worst_limit=worst_limit,
+    )
+    summary = score_report.get("summary", {})
+    retrieval_summary = retrieval_report.get("summary", {})
+    recall_at_k = retrieval_summary.get("recall_at_k") or {}
+    recall_metric_k = _select_display_recall_k(recall_at_k)
+
+    no_answer_cases = [
+        item.case_id for item in case_list
+        if item.expected_no_answer
+    ]
+    citation_cases = [
+        item.case_id for item in case_list
+        if item.expected_sources
+    ]
+    calculation_cases = [
+        item.case_id for item in case_list
+        if item.expected_calculations or item.expected_numbers
+    ]
+
+    score_by_id = {
+        str(item.get("id")): item
+        for item in score_report.get("cases", [])
+        if item.get("id") is not None
+    }
+
+    return {
+        "summary": {
+            "total_cases": summary.get("total_cases", 0),
+            "scored_cases": summary.get("scored_cases", 0),
+            "missing_predictions": summary.get("missing_predictions", 0),
+            "answer_pass_rate": summary.get("pass_rate", 1.0),
+            "answer_contains": summary.get("answer_contains", 1.0),
+            "number_accuracy": summary.get("number_accuracy", 1.0),
+            "no_answer_accuracy": summary.get("no_answer_accuracy", 1.0),
+            "citation_recall": summary.get("citation_recall", 1.0),
+            "retrieval_recall": summary.get("retrieval_recall", 1.0),
+            "retrieval_recall_at_k": retrieval_summary.get("recall_at_k", {}),
+            "retrieval_mrr": retrieval_summary.get("mrr", 1.0),
+            "retrieval_full_recall_rate": retrieval_summary.get("full_recall_rate", 1.0),
+            "intent_accuracy": summary.get("intent_accuracy", 1.0),
+            "p95_latency_ms": summary.get("p95_latency_ms"),
+        },
+        "case_groups": {
+            "no_answer": no_answer_cases,
+            "citation": citation_cases,
+            "calculation_or_number": calculation_cases,
+        },
+        "resume_metrics": [
+            {
+                "name": "Golden answer pass rate",
+                "value": _format_percent(summary.get("pass_rate", 1.0)),
+                "source": "offline JSONL eval",
+            },
+            {
+                "name": "Citation recall",
+                "value": _format_percent(summary.get("citation_recall", 1.0)),
+                "source": "expected source match",
+            },
+            {
+                "name": f"Retrieval Recall@{recall_metric_k}",
+                "value": _format_percent(recall_at_k.get(str(recall_metric_k), 1.0)),
+                "source": f"{candidate_field} diagnostics",
+            },
+            {
+                "name": "Retrieval MRR",
+                "value": _format_decimal(retrieval_summary.get("mrr", 1.0)),
+                "source": f"{candidate_field} diagnostics",
+            },
+            {
+                "name": "No-answer accuracy",
+                "value": _format_percent(summary.get("no_answer_accuracy", 1.0)),
+                "source": "expected_no_answer cases",
+            },
+        ],
+        "weak_cases": _select_interview_weak_cases(
+            score_by_id,
+            retrieval_report.get("worst_cases", []),
+            limit=worst_limit,
+        ),
+        "score_report": score_report,
+        "retrieval_report": retrieval_report,
+    }
+
+
 def audit_evaluation_fixtures(
     cases: Iterable[EvaluationCase],
     *,
@@ -942,6 +1050,84 @@ def _expected_source_to_dict(expected: ExpectedSource) -> dict[str, Any]:
         "page": expected.page,
         "chunk_id": expected.chunk_id,
     }
+
+
+def _select_interview_weak_cases(
+    score_by_id: dict[str, dict[str, Any]],
+    worst_retrieval_cases: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Return a compact weak-case list for human review."""
+    if limit <= 0:
+        return []
+
+    weak_by_id: dict[str, dict[str, Any]] = {}
+    for case_id, score in score_by_id.items():
+        if score.get("passed"):
+            continue
+        weak_by_id[case_id] = {
+            "id": case_id,
+            "passed": False,
+            "citation_recall": score.get("citation_recall"),
+            "retrieval_recall": score.get("retrieval_recall"),
+            "answer_contains": score.get("answer_contains"),
+            "number_accuracy": score.get("number_accuracy"),
+            "no_answer_accuracy": score.get("no_answer_accuracy"),
+            "intent_accuracy": score.get("intent_accuracy"),
+            "tags": score.get("tags", []),
+            "reason": "score_failed",
+        }
+
+    for item in worst_retrieval_cases:
+        case_id = str(item.get("id"))
+        if not case_id or item.get("full_recall"):
+            continue
+        weak_by_id.setdefault(case_id, {
+            "id": case_id,
+            "passed": score_by_id.get(case_id, {}).get("passed"),
+            "best_rank": item.get("best_rank"),
+            "matched_expected_count": item.get("matched_expected_count"),
+            "expected_source_count": item.get("expected_source_count"),
+            "tags": item.get("tags", []),
+            "reason": "retrieval_miss",
+        })
+
+    return sorted(
+        weak_by_id.values(),
+        key=lambda item: (
+            item.get("passed") is True,
+            item.get("best_rank") is not None,
+            item.get("best_rank") or 10**9,
+            str(item.get("id")),
+        ),
+    )[:limit]
+
+
+def _format_percent(value: Any) -> str:
+    numeric = _optional_float(value)
+    if numeric is None:
+        numeric = 0.0
+    return f"{numeric * 100:.1f}%"
+
+
+def _format_decimal(value: Any) -> str:
+    numeric = _optional_float(value)
+    if numeric is None:
+        numeric = 0.0
+    return f"{numeric:.3f}"
+
+
+def _select_display_recall_k(recall_at_k: dict[str, Any]) -> int:
+    if "5" in recall_at_k:
+        return 5
+    numeric_ks = []
+    for key in recall_at_k:
+        try:
+            numeric_ks.append(int(key))
+        except (TypeError, ValueError):
+            continue
+    return max(numeric_ks) if numeric_ks else 5
 
 
 def _read_jsonl(path: str | Path) -> list[dict[str, Any]]:
