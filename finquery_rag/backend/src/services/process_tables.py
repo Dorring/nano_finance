@@ -1,18 +1,18 @@
 import camelot
-import re
 import os
+import re
+from typing import Any
+
 import requests
 
 
-def format_table(table):
-    """格式化表格并转换为 Markdown"""
+def format_table(table: Any) -> str:
+    """Format a Camelot table as Markdown."""
     if table.df.empty or len(table.df) < 1:
         return ""
 
-    # 清除单元格内的换行和制表符
-    formatted_table = table.df.apply(lambda x: x.str.replace('\n', '').str.replace('\t', ' '))
+    formatted_table = table.df.apply(lambda x: x.str.replace("\n", "").str.replace("\t", " "))
 
-    # 鲁棒性增强：尝试将第一行提升为表头，若失败则保留原状
     try:
         final_table = formatted_table.rename(columns=formatted_table.iloc[0]).drop(formatted_table.index[0]).reset_index(drop=True)
     except Exception:
@@ -21,64 +21,75 @@ def format_table(table):
     return final_table.to_markdown(index=False)
 
 
-def extract_tables_with_camelot(pdf_path: str, pages: str = "1-end") -> dict[int, list[dict]]:
-    """
-    使用 Camelot 从 PDF 提取表格，转为 Markdown，并保留边界框 (bbox)。
-    Returns: {page_num: [{"md": table1_md, "bbox": table1_bbox}, ...]}
-    """
-    tables_by_page = {}
-    tables = []
-
-    # 优先使用 stream 模式 (适合无边框表格，如银行流水)
+def _read_tables(pdf_path: str, pages: str) -> list[Any]:
+    """Best-effort Camelot extraction. Failures must not block PDF ingest."""
     try:
         tables = camelot.read_pdf(pdf_path, pages=pages, flavor="stream", edge_tol=50, row_tol=10)
-        if len(tables) == 0:
-            print("Stream mode found 0 tables, falling back to lattice.")
-            tables = camelot.read_pdf(pdf_path, pages=pages, flavor='lattice')
-    except Exception as e:
-        print(f"Stream mode failed: {e}, falling back to lattice.")
-        try:
-            tables = camelot.read_pdf(pdf_path, pages=pages, flavor='lattice')
-        except Exception as e2:
-            print(f"Lattice mode also failed: {e2}")
+        if len(tables) > 0:
+            return list(tables)
+        print("Stream mode found 0 tables, falling back to lattice.")
+    except Exception as exc:
+        print(f"Stream mode failed: {exc}, falling back to lattice.")
+
+    try:
+        return list(camelot.read_pdf(pdf_path, pages=pages, flavor="lattice"))
+    except Exception as exc:
+        print(f"Lattice mode also failed: {exc}; continuing without table chunks.")
+        return []
+
+
+def _safe_table_bbox(table: Any) -> tuple | None:
+    try:
+        bbox = getattr(table, "bbox", None)
+        if not bbox:
+            return None
+        return tuple(bbox)
+    except Exception as exc:
+        print(f"Skipping table bbox: {exc}")
+        return None
+
+
+def extract_tables_with_camelot(pdf_path: str, pages: str = "1-end") -> dict[int, list[dict]]:
+    """
+    Extract PDF tables with Camelot as a non-critical enhancement.
+
+    Returns: {page_num: [{"md": table_markdown, "bbox": optional_bbox}, ...]}.
+    A failure to detect tables should never fail document upload; text extraction
+    in ingest.py remains the primary ingestion path.
+    """
+    tables_by_page: dict[int, list[dict]] = {}
+    tables = _read_tables(pdf_path, pages)
 
     for table in tables:
-        page_num = int(table.page)
-        if page_num not in tables_by_page:
-            tables_by_page[page_num] = []
+        try:
+            page_num = int(table.page)
+            table_markdown = format_table(table=table)
+        except Exception as exc:
+            print(f"Skipping malformed table: {exc}")
+            continue
 
-        table_markdown = format_table(table=table)
         if not table_markdown:
             continue
 
-        tables_by_page[page_num].append({
+        tables_by_page.setdefault(page_num, []).append({
             "md": table_markdown,
-            "bbox": tuple(table.bbox)
+            "bbox": _safe_table_bbox(table),
         })
 
-    print(f"✓ Extracted {len(tables)} tables in total")
+    print(f"Extracted {sum(len(v) for v in tables_by_page.values())} usable tables in total")
     return tables_by_page
 
 
 def enhance_table_with_context(table_md: dict, page_text: str, page_num: int) -> dict:
     """
-    使用 NVIDIA 开放平台的 Llama-3.1-8B 模型对 Markdown 表格进行清洗和摘要。
-    离线数据清洗任务，不占用本地 GPU 资源。
-
-    Args:
-        table_md: 包含 "md" (markdown表格) 和 "bbox" 的字典
-        page_text: 同页面的上下文文本
-        page_num: 页码
-
-    Returns:
-        dict: {"summary": "表格摘要", "content": "清洗后的表格"}
+    Use the optional NVIDIA API to clean and summarize an extracted table.
+    Falls back to the original Markdown when the API is not configured or fails.
     """
     nvidia_api_key = os.getenv("NVIDIA_API_KEY")
     nvidia_model = os.getenv("NVIDIA_MODEL_NAME", "meta/llama-3.1-8b-instruct")
 
-    # 如果没有配置 NVIDIA API Key，跳过增强，直接返回原始表格
     if not nvidia_api_key:
-        print("⚠️ NVIDIA_API_KEY not set, skipping table enhancement")
+        print("NVIDIA_API_KEY not set, skipping table enhancement")
         return {"summary": "", "content": table_md["md"]}
 
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
@@ -114,13 +125,13 @@ CLEANED TABLE:
         "presence_penalty": 0,
         "max_tokens": 1024,
         "stream": False,
-        "messages": [{"role": "user", "content": prompt}]
+        "messages": [{"role": "user", "content": prompt}],
     }
 
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "Authorization": f"Bearer {nvidia_api_key}"
+        "Authorization": f"Bearer {nvidia_api_key}",
     }
 
     try:
@@ -129,10 +140,8 @@ CLEANED TABLE:
 
         enhanced = response_json["choices"][0]["message"]["content"].strip()
 
-        # 解析输出，分离摘要和表格
         summary = ""
-        cleaned_table = table_md["md"]  # 默认降级为原始表格
-
+        cleaned_table = table_md["md"]
         summary_match = re.search(r"TABLE SUMMARY:\s*(.*?)(?=\nCLEANED TABLE:)", enhanced, re.DOTALL)
         table_match = re.search(r"CLEANED TABLE:\s*(.*)", enhanced, re.DOTALL)
 
@@ -145,6 +154,6 @@ CLEANED TABLE:
 
         return {"summary": summary, "content": cleaned_table}
 
-    except Exception as e:
-        print(f"NVIDIA API table enhancement failed: {e}")
+    except Exception as exc:
+        print(f"NVIDIA API table enhancement failed: {exc}")
         return {"summary": "", "content": table_md["md"]}
