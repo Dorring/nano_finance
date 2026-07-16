@@ -1,6 +1,7 @@
 from .trace import TraceLogger
 import time
 import os
+import re
 
 import asyncio
 from .vector_store import query_collection, list_all_documents
@@ -79,6 +80,8 @@ class RAGEngine:
         self.bm25_retriever = SqliteBM25Retriever(db_path=bm25_db_path)
         self.trace_logger = TraceLogger(db_path=trace_db_path, sample_rate=1.0, redact_content=True)
         self.min_score_threshold = 0.0  # chunks below this score are discarded
+        self.rrf_sufficiency_threshold = float(os.getenv("RAG_RRF_SUFFICIENCY_THRESHOLD", "0.025"))
+        self.dense_sufficiency_threshold = float(os.getenv("RAG_DENSE_SUFFICIENCY_THRESHOLD", "0.15"))
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
@@ -323,7 +326,7 @@ class RAGEngine:
 
         Scores are mode-dependent:
         - Dense-only (cosine): 0-1 range, threshold 0.15
-        - Hybrid/RRF fused_score: ~0.01-0.05 range, threshold 0.008
+        - Hybrid/RRF fused_score: ~0.01-0.05 range, threshold from RAG_RRF_SUFFICIENCY_THRESHOLD
         """
         if not chunks:
             return False, 0.0, 0.0
@@ -336,11 +339,11 @@ class RAGEngine:
         # Dense cosine scores are typically 0-1
         max_possible_rrf = 0.05
         if best_score < max_possible_rrf:
-            # RRF mode — use calibrated threshold
-            SUFFICIENCY_THRESHOLD = 0.008
+            # RRF mode - require enough fused evidence to avoid low-confidence hallucination.
+            SUFFICIENCY_THRESHOLD = self.rrf_sufficiency_threshold
         else:
-            # Dense mode — use original threshold
-            SUFFICIENCY_THRESHOLD = 0.15
+            # Dense mode - use cosine threshold.
+            SUFFICIENCY_THRESHOLD = self.dense_sufficiency_threshold
 
         is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
         return is_sufficient, best_score, avg_score
@@ -361,40 +364,70 @@ class RAGEngine:
         confidence = 0.7 * best + 0.3 * avg
         return min(1.0, max(0.0, confidence))
 
+    def _looks_like_followup_question(self, question: str) -> bool:
+        """Return True only for questions that likely need conversation context."""
+        normalized = (question or "").strip().lower()
+        if not normalized:
+            return False
+
+        followup_markers = (
+            "it", "its", "they", "them", "that", "this", "those", "these",
+            "above", "previous", "same", "there", "what about", "how about",
+            "继续", "这个", "那个", "上述", "前面", "上一", "它", "他们", "这些", "那些",
+        )
+        standalone_markers = (
+            "title", "paper", "document", "pdf", "论文", "文档", "标题", "作者", "页", "多少",
+        )
+
+        has_followup = any(marker in normalized for marker in followup_markers)
+        has_standalone = any(marker in normalized for marker in standalone_markers)
+        return has_followup and not has_standalone
+
+    def _is_valid_rewritten_query(self, original: str, rewritten: str) -> bool:
+        """Reject LLM rewrite artifacts that would poison retrieval."""
+        if not rewritten:
+            return False
+        candidate = rewritten.strip()
+        if len(candidate) < 5 or len(candidate) > max(200, len(original) * 4):
+            return False
+        if "\n" in candidate:
+            return False
+        artifact_patterns = (
+            r"\bUser\s*:",
+            r"\bAssistant\s*:",
+            r"\[[^\]]+\.pdf\s*,\s*p\d+\]",
+            r"Context\s*:",
+            r"Answer\s*:",
+        )
+        if any(re.search(pattern, candidate, flags=re.IGNORECASE) for pattern in artifact_patterns):
+            return False
+        return True
+
     async def _rewrite_query_with_context(self, question: str, conversation_history: list) -> str:
         """
-        Phase 4: Rewrite a follow-up question into a standalone query using conversation context.
-
-        Uses a lightweight prompt to the LLM to resolve pronouns and implicit references.
-        Returns the original question if rewriting fails or history is empty.
-
-        Args:
-            question: The current user question (may be a follow-up)
-            conversation_history: List of {"role": ..., "content": ...} dicts
-
-        Returns:
-            Standalone version of the question, or original if rewriting fails
+        Rewrite only true follow-up questions. Bad rewrites are more harmful than
+        no rewrite because retrieval uses the rewritten text directly.
         """
         if not conversation_history or len(conversation_history) < 2:
-            return question  # no context to rewrite with
+            return question
+        if not self._looks_like_followup_question(question):
+            return question
 
-        # Build a compact conversation summary from recent messages
-        # Limit to last 4 messages (2 pairs) to stay within token budget
         recent = conversation_history[-4:]
         history_parts = []
         for msg in recent:
             role = "User" if msg["role"] == "user" else "Assistant"
-            # Truncate long messages to 200 chars to save tokens
-            content = msg["content"][:200]
+            content = (msg.get("content") or "")[:160]
             history_parts.append(f"{role}: {content}")
         history_text = "\n".join(history_parts)
 
         rewrite_prompt = (
-            f"Given this conversation:\n{history_text}\n\n"
-            f"Rewrite the following question as a standalone question "
-            f"that can be understood without the conversation context. "
-            f"Only output the rewritten question, nothing else.\n\n"
-            f"Question: {question}"
+            "Rewrite the current follow-up question into one standalone search query.\n"
+            "Use the conversation only to resolve pronouns or omitted subjects.\n"
+            "Do not include role labels, citations, page markers, or prior answers.\n\n"
+            f"Conversation:\n{history_text}\n\n"
+            f"Current question: {question}\n"
+            "Standalone search query:"
         )
 
         try:
@@ -409,11 +442,11 @@ class RAGEngine:
                 )
             )
             rewritten = response.choices[0].message.content
-            if rewritten and len(rewritten.strip()) > 5:
+            if self._is_valid_rewritten_query(question, rewritten):
                 return rewritten.strip()
             return question
         except Exception:
-            return question  # graceful fallback: use original question
+            return question
 
     async def generate_answer(self, context: str, query: str) -> str:
         """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
