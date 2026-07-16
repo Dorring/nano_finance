@@ -1,7 +1,7 @@
 import pymupdf
 import re
 import os
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from .process_tables import enhance_table_with_context, extract_tables_with_camelot

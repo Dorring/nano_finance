@@ -9,7 +9,7 @@ mock_st_ef = MagicMock()
 mock_st_ef.SentenceTransformerEmbeddingFunction.return_value = mock_embed_fn
 for _mod in [
     "chromadb", "chromadb.utils", "chromadb.utils.embedding_functions",
-    "camelot", "pymupdf", "langchain", "langchain.schema",
+    "camelot", "pymupdf", "langchain", "langchain_core", "langchain_core.documents",
     "langchain_text_splitters", "jieba_fast",
 ]:
     if _mod not in sys.modules:
