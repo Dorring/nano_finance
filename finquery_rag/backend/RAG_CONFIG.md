@@ -4,7 +4,7 @@ Runtime configuration is read from environment variables.
 
 ## Reranking
 
-Reranking is disabled by default.
+The FastAPI backend enables the dependency-free heuristic reranker by default. Set `RAG_RERANKER=off` to disable it for baseline comparisons.
 
 ```bash
 RAG_RERANKER=heuristic
@@ -13,8 +13,9 @@ RAG_CANDIDATE_MULTIPLIER=2
 
 Available rerankers:
 
-- unset / `none` / `off` — disabled, preserves existing retrieval behavior.
-- `heuristic` — dependency-free lexical fallback for local experiments.
+- unset — uses the FastAPI default `heuristic` reranker.
+- `none` / `off` — disables reranking for baseline comparisons.
+- `heuristic` — dependency-free lexical reranker; recommended default for local English and simple Chinese demos.
 - `cross-encoder` — optional model-backed reranker.
 
 Cross-encoder reranking must also set a model name or local path:

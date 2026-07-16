@@ -191,7 +191,7 @@ def collect_config_snapshot() -> dict[str, Any]:
         "retrieval": {
             "hybrid_enabled": True,
             "candidate_multiplier": candidate_multiplier,
-            "reranker": os.getenv("RAG_RERANKER") or "none",
+            "reranker": os.getenv("RAG_RERANKER", "heuristic"),
             "reranker_model_configured": bool(os.getenv("RAG_RERANKER_MODEL")),
         },
         "storage": {
