@@ -251,6 +251,39 @@ class RAGEngine:
 
         return self._apply_reranker(query, all_results, n_results)
 
+    def _is_title_query(self, query: str) -> bool:
+        normalized = (query or "").lower()
+        return any(marker in normalized for marker in (
+            "title", "paper title", "name of this paper",
+            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d",
+        ))
+
+    def answer_front_matter_query(self, query: str, chunks: list) -> dict | None:
+        """Answer deterministic front-matter questions from structured chunks."""
+        if not self._is_title_query(query):
+            return None
+        title_chunks = [
+            chunk for chunk in (chunks or [])
+            if (chunk.get("metadata") or {}).get("type") == "front_matter"
+            and (chunk.get("metadata") or {}).get("subtype") == "title"
+            and (chunk.get("content") or "").strip()
+        ]
+        if not title_chunks:
+            return None
+        title_chunks.sort(key=lambda chunk: (chunk.get("metadata") or {}).get("page", 999))
+        title_chunk = dict(title_chunks[0])
+        title = re.sub(r"\s+", " ", title_chunk.get("content", "")).strip()
+        title = re.sub(r"^title\s*:\s*", "", title, flags=re.IGNORECASE).strip()
+        if not title:
+            return None
+        title_chunk["score"] = max(float(title_chunk.get("score", 0) or 0), 1.0)
+        title_chunk["deterministic_answer"] = "front_matter_title"
+        return {
+            "answer": f'The title of the paper is "{title}".',
+            "chunks": [title_chunk],
+            "diagnostic": "front_matter_title",
+        }
+
     def build_context(self, chunks: list) -> tuple:
         """Build context from retrieved chunks with dedup, score threshold, and token budget."""
         if not chunks:
@@ -630,18 +663,30 @@ class RAGEngine:
         else:
             chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
 
-        # Phase 3: Check context sufficiency
-        is_sufficient, best_score, avg_score = self._check_context_sufficiency(chunks)
-        confidence = self._compute_confidence(chunks)
-
-        # 2. Build context (with dedup and score threshold)
-        context, sources = self.build_context(chunks)
-
-        # 3. Generate answer (skip LLM if context is insufficient)
-        if not is_sufficient:
-            answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+        front_matter_answer = self.answer_front_matter_query(question, chunks)
+        deterministic_answer = None
+        if front_matter_answer:
+            chunks = front_matter_answer["chunks"]
+            context, sources = self.build_context(chunks)
+            answer = front_matter_answer["answer"]
+            is_sufficient = True
+            best_score = 1.0
+            avg_score = 1.0
+            confidence = 1.0
+            deterministic_answer = front_matter_answer["diagnostic"]
         else:
-            answer = await self.generate_answer(context, question)
+            # Phase 3: Check context sufficiency
+            is_sufficient, best_score, avg_score = self._check_context_sufficiency(chunks)
+            confidence = self._compute_confidence(chunks)
+
+            # 2. Build context (with dedup and score threshold)
+            context, sources = self.build_context(chunks)
+
+            # 3. Generate answer (skip LLM if context is insufficient)
+            if not is_sufficient:
+                answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+            else:
+                answer = await self.generate_answer(context, question)
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000
@@ -663,6 +708,7 @@ class RAGEngine:
                 "confidence": confidence,
                 "context_sufficient": is_sufficient,
                 "intent_confidence": intent["confidence"],
+                "deterministic_answer": deterministic_answer,
             },
             "model_name": self.model_name,
             "latency_ms": elapsed_ms,

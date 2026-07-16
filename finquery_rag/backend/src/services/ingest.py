@@ -123,6 +123,63 @@ def _safe_find_table_bboxes(page: pymupdf.Page) -> list:
             print(f"Skipping PyMuPDF table bbox on page {page.number + 1}: {exc}")
     return bboxes
 
+def _clean_front_matter_line(text: str) -> str:
+    text = re.sub(r"\s+", " ", text or "").strip()
+    text = re.sub(r"^\d{1,4}\s+", "", text)
+    text = re.sub(r"\s+\d{1,4}$", "", text)
+    return text.strip()
+
+
+def _extract_title_from_first_page(page: pymupdf.Page) -> str | None:
+    """Extract a likely title from page 1 using font-size/layout signals."""
+    try:
+        blocks = page.get_text("dict").get("blocks", [])
+    except Exception:
+        return None
+
+    lines = []
+    for block in blocks:
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines", []):
+            spans = [span for span in line.get("spans", []) if span.get("text", "").strip()]
+            if not spans:
+                continue
+            raw_text = " ".join(span.get("text", "").strip() for span in spans)
+            clean_text = _clean_front_matter_line(raw_text)
+            if not clean_text or clean_text.isdigit():
+                continue
+            max_size = max(float(span.get("size", 0) or 0) for span in spans)
+            y0 = min(float(span.get("bbox", [0, 0, 0, 0])[1]) for span in spans)
+            lines.append({"text": clean_text, "size": max_size, "y0": y0})
+
+    if not lines:
+        return None
+
+    max_size = max(line["size"] for line in lines)
+    min_title_size = max(12.0, max_size * 0.75)
+    page_height = float(getattr(page.rect, "height", 1000) or 1000)
+    title_lines = []
+
+    for line in sorted(lines, key=lambda item: item["y0"]):
+        lower = line["text"].lower()
+        if lower.startswith(("abstract", "keywords", "paper id", "anonymous")):
+            if title_lines:
+                break
+            continue
+        if line["y0"] > page_height * 0.45 and title_lines:
+            break
+        if line["size"] >= min_title_size:
+            title_lines.append(line["text"])
+        elif title_lines:
+            break
+
+    if not title_lines:
+        return None
+    title = " ".join(title_lines[:5])
+    title = re.sub(r"\s+", " ", title).strip(" -")
+    return title or None
+
 def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
     """
     经济型结构化切分管线：基于规则重构Markdown，实现树状逻辑切分。
@@ -142,6 +199,20 @@ def process_pdf(pdf_path: str, user_id: int = None) -> tuple[list[dict], int]:
     print(f"{'=' * 60}")
 
     tables_by_page = extract_tables_with_camelot(pdf_path)
+
+    title = _extract_title_from_first_page(doc[0]) if pages else None
+    if title:
+        title_doc_id = make_chunk_id(user_id, doc_name, "page_1::front_matter_title")
+        chunks.append({
+            "content": f"Title: {title}",
+            "metadata": {
+                "type": "front_matter",
+                "subtype": "title",
+                "page": 1,
+                "source": pdf_path,
+                "doc_id": title_doc_id,
+            },
+        })
 
     global_markdown_text = ""
     current_page_metadata = {"source": pdf_path}
