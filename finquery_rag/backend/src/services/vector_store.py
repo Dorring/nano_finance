@@ -236,6 +236,36 @@ def query_multiple_collections(
 
     return results
 
+
+def get_front_matter_chunks(doc_name: str, user_id: int, subtype: str | None = None) -> List[Dict]:
+    """Fetch structured front-matter chunks by metadata without vector search."""
+    if user_id is None:
+        return []
+    collection = get_or_create_collection()
+    clauses = [{"user_id": user_id}, {"doc_name": doc_name}, {"type": "front_matter"}]
+    if subtype is not None:
+        clauses.append({"subtype": subtype})
+    where_filter = _combine_where_clauses(*clauses)
+
+    try:
+        result = collection.get(include=["documents", "metadatas"], where=where_filter)
+    except Exception as exc:
+        print(f"Error fetching front matter chunks: {exc}")
+        return []
+
+    chunks = []
+    ids = result.get("ids") or []
+    documents = result.get("documents") or []
+    metadatas = result.get("metadatas") or []
+    for doc_id, content, metadata in zip(ids, documents, metadatas):
+        chunks.append({
+            "doc_id": doc_id,
+            "content": content,
+            "metadata": metadata or {},
+            "score": 1.0,
+        })
+    chunks.sort(key=lambda chunk: ((chunk.get("metadata") or {}).get("page", 999), chunk.get("doc_id", "")))
+    return chunks
 def list_all_documents(user_id: int = None) -> List[Dict]:
     """
     列出数据库中的所有文档信息。

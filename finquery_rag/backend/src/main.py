@@ -998,11 +998,13 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
                 return
 
-            # Phase 3: Retrieve chunks and check sufficiency
-            if len(doc_names) == 1:
-                chunks = engine.retrieve_single_document(doc_names[0], question, current_user.id, request.n_results)
-            else:
-                chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
+            # Phase 3: Retrieve chunks and check sufficiency. Front-matter facts use direct metadata lookup first.
+            chunks = engine.retrieve_front_matter_chunks(doc_names, question, current_user.id)
+            if not chunks:
+                if len(doc_names) == 1:
+                    chunks = engine.retrieve_single_document(doc_names[0], question, current_user.id, request.n_results)
+                else:
+                    chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
 
             front_matter_answer = engine.answer_front_matter_query(question, chunks)
             if front_matter_answer:
