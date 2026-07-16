@@ -1178,22 +1178,35 @@ async def delete_document(doc_name: str, current_user: User = Depends(get_curren
         HTTPException: 如果指定文档不存在，抛出 404 异常。
     """
     doc_name = _safe_document_filename(doc_name, require_pdf=False)
-    success = delete_document_collection(doc_name, current_user.id)
 
-    if not success:
+    # Failed uploads may have a registry row but no Chroma/BM25 chunks. Treat
+    # deletion as successful when any backing store had something to remove.
+    vector_deleted = delete_document_collection(doc_name, current_user.id)
+
+    engine = get_rag_engine()
+    try:
+        engine.bm25_retriever.delete_doc(doc_name, current_user.id)
+        bm25_deleted = True
+        print(f"✓ Deleted {doc_name} from BM25 index (user: {current_user.id})")
+    except Exception as e:
+        bm25_deleted = False
+        print(f"BM25 delete skipped/failed for {doc_name} (user: {current_user.id}): {e}")
+
+    registry_deleted = document_registry.delete(current_user.id, doc_name)
+    if registry_deleted:
+        print(f"✓ Deleted {doc_name} from document registry (user: {current_user.id})")
+
+    if not vector_deleted and not registry_deleted:
         raise api_error(404, "document_not_found", f"Document '{doc_name}' not found")
 
-    # Clear from SQLite FTS5 index
-    # 从 SQLite FTS5 索引中清除
-    engine = get_rag_engine()
-    engine.bm25_retriever.delete_doc(doc_name, current_user.id)
-    print(f"✓ Deleted {doc_name} from BM25 index (user: {current_user.id})")
-
-    # Sync document registry (remove orphaned entry)
-    document_registry.delete(current_user.id, doc_name)
-    print(f"✓ Deleted {doc_name} from document registry (user: {current_user.id})")
-
-    return {"message": f"Document '{doc_name}' deleted successfully"}
+    return {
+        "message": f"Document '{doc_name}' deleted successfully",
+        "deleted": {
+            "vectors": bool(vector_deleted),
+            "bm25_cleanup_attempted": bool(bm25_deleted),
+            "registry_rows": int(registry_deleted or 0),
+        },
+    }
 
 @app.delete("/documents")
 async def clear_all_documents(current_user: User = Depends(get_current_user)):

@@ -30,6 +30,40 @@ def get_chroma_client() -> chromadb.PersistentClient:
         _chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
     return _chroma_client
 
+
+
+def _combine_where_clauses(*clauses: dict | None) -> dict | None:
+    """Build a Chroma-compatible where filter.
+
+    Chroma accepts a single top-level operator when multiple predicates are
+    needed, so {"user_id": 1, "doc_name": "a.pdf"} is invalid on newer
+    versions. Use {"$and": [...]} for multi-clause filters.
+    """
+    active = [clause for clause in clauses if clause]
+    if not active:
+        return None
+    if len(active) == 1:
+        return active[0]
+    return {"$and": active}
+
+
+def _tenant_doc_where(user_id: int, doc_name: str | None = None) -> dict:
+    if user_id is None:
+        raise ValueError("user_id is required for Chroma where filters")
+    clauses = [{"user_id": user_id}]
+    if doc_name is not None:
+        clauses.append({"doc_name": doc_name})
+    return _combine_where_clauses(*clauses)
+
+
+def _tenant_docs_where(user_id: int, doc_names: List[str] | None = None) -> dict:
+    if user_id is None:
+        raise ValueError("user_id is required for Chroma where filters")
+    clauses = [{"user_id": user_id}]
+    if doc_names:
+        clauses.append({"doc_name": {"$in": doc_names}})
+    return _combine_where_clauses(*clauses)
+
 def get_or_create_collection() -> chromadb.Collection:
     """
     获取全局唯一的向量集合。
@@ -124,9 +158,7 @@ def query_collection(
     # 构建多租户过滤条件 - 无 user_id 时拒绝查询（fail closed）
     if user_id is None:
         return []
-    where_filter = {"user_id": user_id}
-    if doc_name:
-        where_filter["doc_name"] = doc_name
+    where_filter = _tenant_doc_where(user_id, doc_name)
 
     # 执行查询
     query_results = collection.query(
@@ -178,11 +210,7 @@ def query_multiple_collections(
     # 构建高级过滤条件 - 无 user_id 时拒绝查询（fail closed）
     if user_id is None:
         return []
-    where_filter = {"user_id": user_id}
-
-    # 核心优化点：单次 IO 解决跨文档查询
-    if doc_names:
-        where_filter["doc_name"] = {"$in": doc_names}
+    where_filter = _tenant_docs_where(user_id, doc_names)
 
     query_results = collection.query(
         query_texts=[query_text],
@@ -224,7 +252,7 @@ def list_all_documents(user_id: int = None) -> List[Dict]:
     # 获取集合中所有数据的元数据 (注意：如果数据量达到千万级，此操作较重)
     if user_id is None:
         return []
-    where_filter = {"user_id": user_id}
+    where_filter = _tenant_doc_where(user_id)
     all_metas = collection.get(include=["metadatas"], where=where_filter)["metadatas"]
 
     # 聚合统计文档信息
@@ -260,9 +288,7 @@ def delete_document_collection(doc_name: str, user_id: int) -> bool:
         raise ValueError("user_id is required for delete_document_collection")
     collection = get_or_create_collection()
 
-    where_filter = {"user_id": user_id}
-    if doc_name is not None:
-        where_filter["doc_name"] = doc_name
+    where_filter = _tenant_doc_where(user_id, doc_name)
 
     try:
         # Check existence before delete (fixes 404 semantics)
@@ -301,14 +327,11 @@ def get_collection_stats(doc_name: str = None, user_id: int = None) -> dict:
     """
     collection = get_or_create_collection()
 
-    where_filter = {}
-    if doc_name:
-        where_filter["doc_name"] = doc_name
     if user_id is None:
         return {"name": "", "count": 0, "exists": False}
-    where_filter["user_id"] = user_id
+    where_filter = _tenant_doc_where(user_id, doc_name)
 
-    count = collection.count() if not where_filter else len(collection.get(where=where_filter)["ids"])
+    count = len(collection.get(where=where_filter)["ids"])
 
     return {
         "name": collection.name,
