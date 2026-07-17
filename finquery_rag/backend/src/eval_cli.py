@@ -111,6 +111,13 @@ def main(argv: list[str] | None = None) -> int:
     interview.add_argument("--worst-limit", type=int, default=5, help="Maximum weak cases to include")
     interview.add_argument("--out", help="Optional interview report JSON output path")
 
+    retrieval_bundle = sub.add_parser("retrieval-eval-bundle", help="Write score, retrieval diagnostics, and interview reports together")
+    retrieval_bundle.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    retrieval_bundle.add_argument("--predictions", required=True, help="Predictions JSONL")
+    retrieval_bundle.add_argument("--k", dest="ks", type=int, action="append", help="Recall@K cutoff; repeatable")
+    retrieval_bundle.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
+    retrieval_bundle.add_argument("--out-dir", required=True, help="Directory for score.json, retrieval_diagnostics.json, interview_report.json, and manifest.json")
+
     audit = sub.add_parser("audit-fixtures", help="Audit evaluation fixture coverage and quality")
     audit.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
     audit.add_argument("--min-cases", type=int, default=1, help="Minimum required case count")
@@ -400,6 +407,50 @@ def main(argv: list[str] | None = None) -> int:
         payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
         if args.out:
             write_json_file(args.out, report)
+        print(payload)
+        return 0
+
+    if args.command == "retrieval-eval-bundle":
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            ks = args.ks or (1, 3, 5)
+            score_report = evaluate_predictions(cases, predictions)
+            retrieval_report = diagnose_retrieval(
+                cases,
+                predictions,
+                ks=ks,
+                candidate_field=args.candidate_field,
+            )
+            interview_report = build_interview_report(
+                cases,
+                predictions,
+                ks=ks,
+                candidate_field=args.candidate_field,
+            )
+            out_dir = Path(args.out_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            outputs = {
+                "score": out_dir / "score.json",
+                "retrieval_diagnostics": out_dir / "retrieval_diagnostics.json",
+                "interview_report": out_dir / "interview_report.json",
+                "manifest": out_dir / "manifest.json",
+            }
+            write_json_file(outputs["score"], score_report)
+            write_json_file(outputs["retrieval_diagnostics"], retrieval_report)
+            write_json_file(outputs["interview_report"], interview_report)
+            manifest = {
+                "cases": args.cases,
+                "predictions": args.predictions,
+                "candidate_field": args.candidate_field,
+                "ks": list(ks),
+                "outputs": {key: str(value) for key, value in outputs.items() if key != "manifest"},
+            }
+            write_json_file(outputs["manifest"], manifest)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True)
         print(payload)
         return 0
 

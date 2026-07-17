@@ -3,6 +3,7 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 import os
 from typing import List, Dict, Optional
 from .chunk_id import ensure_scoped_chunk_id
+from .retrieval_config import get_embedding_model_name
 
 # 使用环境变量配置 ChromaDB 路径
 CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
@@ -13,7 +14,7 @@ GLOBAL_COLLECTION_NAME = "rag_global_knowledge_base"
 # 初始化 Embedding 模型
 # 注意：all-MiniLM-L6-v2 对中文支持较弱，生产环境建议替换为中文友好模型或 OpenAI 接口
 embed_fn = SentenceTransformerEmbeddingFunction(
-    model_name="all-MiniLM-L6-v2"
+    model_name=get_embedding_model_name()
 )
 
 # <--------------- 重构：单集合 + 元数据过滤架构 ----------------->

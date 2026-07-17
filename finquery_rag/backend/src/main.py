@@ -17,6 +17,7 @@ from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
 from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, make_stream_error_event, safe_log_query_trace
+from .services.retrieval_config import get_reranker_model, get_reranker_name
 from .services.evaluation import compare_reports, evaluate_payload, feedback_to_replay_case, trace_to_replay_case
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
@@ -94,8 +95,10 @@ def get_rag_engine():
             llm_client,
             model_name=llm_model_name,
             use_hybrid=True,
-            reranker_name=os.getenv("RAG_RERANKER", "heuristic"),
-            reranker_model=os.getenv("RAG_RERANKER_MODEL"),
+            # Default is os.getenv("RAG_RERANKER", "heuristic") via retrieval_config.
+            reranker_name=get_reranker_name(),
+            # Model path comes from os.getenv("RAG_RERANKER_MODEL") via retrieval_config.
+            reranker_model=get_reranker_model(),
             retrieval_candidate_multiplier=int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "2")),
         )
     return rag_engine

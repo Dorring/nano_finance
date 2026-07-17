@@ -14,6 +14,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .retrieval_config import build_retrieval_model_config
+
 BM25_DB_PATH = "rag_bm25.db"
 CHROMA_PATH = "./chroma_db"
 DOCUMENT_REGISTRY_DB_PATH = "document_registry.db"
@@ -179,6 +181,8 @@ def collect_config_snapshot() -> dict[str, Any]:
         errors.append("RAG_CANDIDATE_MULTIPLIER must be >= 1")
     if session_ttl < 0:
         errors.append("SESSION_TTL_SECONDS must be >= 0")
+    retrieval_models = build_retrieval_model_config()
+    errors.extend(retrieval_models.get("errors", []))
 
     return {
         "ok": not errors,
@@ -191,8 +195,7 @@ def collect_config_snapshot() -> dict[str, Any]:
         "retrieval": {
             "hybrid_enabled": True,
             "candidate_multiplier": candidate_multiplier,
-            "reranker": os.getenv("RAG_RERANKER", "heuristic"),
-            "reranker_model_configured": bool(os.getenv("RAG_RERANKER_MODEL")),
+            **retrieval_models,
         },
         "storage": {
             "chroma_path": _runtime_path("CHROMA_PATH", CHROMA_PATH),
