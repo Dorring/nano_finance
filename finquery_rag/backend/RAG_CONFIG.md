@@ -4,12 +4,21 @@ Runtime configuration is read from environment variables.
 
 ## Reranking
 
-The FastAPI backend enables the dependency-free heuristic reranker by default. Set `RAG_RERANKER=off` to disable it for baseline comparisons.
+The FastAPI backend enables the dependency-free heuristic reranker by default.
+Embedding and reranker models are configurable, but CI/preflight checks do not
+download or load model weights.
 
 ```bash
+EMBEDDING_MODEL_NAME=all-MiniLM-L6-v2
 RAG_RERANKER=heuristic
 RAG_CANDIDATE_MULTIPLIER=2
 ```
+
+Recommended embedding overrides:
+
+- `BAAI/bge-small-en-v1.5` for English PDF demos.
+- `intfloat/multilingual-e5-small` for mixed English/simple Chinese demos.
+- `/local/path/to/embedding-model` for offline production-like runs.
 
 Available rerankers:
 
@@ -30,12 +39,28 @@ Use a local model path for production-like runs. If `RAG_RERANKER_MODEL` is
 missing, initialization fails explicitly instead of silently downloading a model
 or changing retrieval behavior.
 
+Check retrieval model configuration without loading model weights:
+
+```bash
+python -m src.eval_cli doctor --warn-only --out /tmp/finquery_doctor.json
+```
+
 For any reranker change, run an eval report before merging:
 
 ```bash
 python -m src.eval_cli run --cases <cases.jsonl> --out <candidate.jsonl> --user-id <id>
 python -m src.eval_cli score --cases <cases.jsonl> --predictions <candidate.jsonl> --out <candidate_report.json>
 python -m src.eval_cli compare --baseline <baseline_report.json> --candidate <candidate_report.json>
+```
+
+For a compact artifact bundle suitable for baseline/candidate comparison:
+
+```bash
+python -m src.eval_cli retrieval-eval-bundle \
+  --cases eval/golden_smoke.jsonl \
+  --predictions eval/predictions_smoke.jsonl \
+  --k 1 --k 3 --k 5 \
+  --out-dir /tmp/finquery_retrieval_eval
 ```
 
 ## Hierarchical indexing
