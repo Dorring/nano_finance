@@ -191,11 +191,15 @@ For interview metrics, build a small golden set from real uploaded PDFs:
 - every answerable case should include expected sources;
 - no-answer cases should set `expected_no_answer: true`.
 
-Template:
+Spreadsheet-friendly workflow:
 
 ```bash
-cp eval/real_eval_template.jsonl /tmp/finquery_real_eval.jsonl
+cp eval/real_eval_labeling_template.csv /tmp/finquery_real_eval.csv
 # edit expected answers and sources after manually inspecting the PDF
+python scripts/real_eval_csv_to_jsonl.py \
+  --csv /tmp/finquery_real_eval.csv \
+  --out /tmp/finquery_real_eval.jsonl
+
 python -m src.eval_cli run \
   --cases /tmp/finquery_real_eval.jsonl \
   --out /tmp/finquery_real_predictions.jsonl \
