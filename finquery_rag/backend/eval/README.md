@@ -9,6 +9,8 @@ reporting, comparison, and CI gate behavior keep working.
 - `golden_smoke.jsonl` - expanded deterministic golden/replay cases.
 - `predictions_smoke.jsonl` - deterministic predictions matching all smoke cases.
 - `baseline_smoke_report.json` - checked scorer output used by the smoke regression gate.
+- `real_eval_template.jsonl` - copy/edit template for real PDF evaluation. It
+  contains placeholders and must not be scored directly.
 
 Do not commit real customer documents, trace databases, ChromaDB data, model outputs with
 sensitive content, or large generated reports here.
@@ -121,6 +123,16 @@ model-service change.
 5. Score the predictions or run the `gate` command directly.
 6. Compare candidate reports against a checked baseline before merging retrieval or
    prompt changes.
+
+Start from the template when building interview metrics:
+
+```bash
+cp eval/real_eval_template.jsonl /tmp/finquery_real_eval.jsonl
+```
+
+Replace every `REPLACE_WITH_*` placeholder by manually inspecting the uploaded
+PDF. Do not report resume/interview metrics from unedited template fixtures or
+from synthetic smoke fixtures.
 
 ## Calculation consistency
 

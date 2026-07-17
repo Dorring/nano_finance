@@ -318,3 +318,9 @@ no RAG main-flow code change is required.
 Keep the RAG layer responsible for citation/source validation, no-answer gating,
 confidence, and traceability. The SFT model is the grounded answer generator,
 not the source of truth outside retrieved context.
+
+## Interview/demo runbook
+
+For a complete interview-oriented walkthrough, including the live question
+script, SFT adapter setup, evaluation workflow, and resume-safe metric wording,
+see [`docs/INTERVIEW_DEMO.md`](docs/INTERVIEW_DEMO.md).
