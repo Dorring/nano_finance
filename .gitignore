@@ -49,3 +49,8 @@ checkpoint*/
 *.npz
 .pytest_cache/
 .ruff_cache/
+
+.runtime/
+*.db
+*.sqlite
+*.sqlite3
