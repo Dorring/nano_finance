@@ -1054,6 +1054,37 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             # Phase 3: Build context
             context, sources = engine.build_context(chunks)
 
+            numeric_answer = engine.answer_numeric_query_from_context(question, context, sources)
+            if numeric_answer:
+                full_answer = numeric_answer["answer"]
+                diagnostics = {
+                    "confidence": confidence,
+                    "context_sufficient": True,
+                    "intent_confidence": intent["confidence"],
+                    "deterministic_answer": numeric_answer["diagnostic"],
+                }
+                if session_id:
+                    session_manager.add_message(session_id, current_user.id, "user", request.question)
+                trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
+                if session_id:
+                    session_manager.add_message(
+                        session_id,
+                        current_user.id,
+                        "assistant",
+                        full_answer,
+                        metadata=_assistant_session_metadata(
+                            sources=sources,
+                            trace_id=trace_id,
+                            context_sufficient=True,
+                            confidence=confidence,
+                            intent=intent["intent"],
+                            intent_confidence=intent["confidence"],
+                        ),
+                    )
+                yield f"data: {json.dumps({'type': 'token', 'content': full_answer})}\n\n"
+                yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
+                return
+
             # Phase 3: If context is insufficient, return refusal without calling LLM
             low_confidence_numeric_override = engine._should_generate_with_low_confidence(question, chunks)
             if low_confidence_numeric_override:
