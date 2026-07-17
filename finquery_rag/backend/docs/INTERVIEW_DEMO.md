@@ -212,6 +212,11 @@ python -m src.eval_cli retrieval-eval-bundle \
   --predictions /tmp/finquery_real_predictions.jsonl \
   --k 1 --k 3 --k 5 \
   --out-dir /tmp/finquery_real_eval_report
+
+python -m src.eval_cli failure-analysis \
+  --cases /tmp/finquery_real_eval.jsonl \
+  --predictions /tmp/finquery_real_predictions.jsonl \
+  --out /tmp/finquery_real_eval_report/failure_analysis.md
 ```
 
 Use the generated `interview_report.json` `resume_metrics` block only after you

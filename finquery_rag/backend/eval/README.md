@@ -165,6 +165,18 @@ python -m src.eval_cli run-http \
 Use `run` only for local in-process evaluation where the CLI can safely load the
 same RAG stores and model dependencies as the backend.
 
+After scoring a real run, generate a Markdown failure report before tuning the
+retriever or prompt. The report includes expected answers/sources, actual
+answers/sources, and a coarse failure category such as `retrieval_miss`,
+`number_extraction`, or `answer_mismatch`.
+
+```bash
+python -m src.eval_cli failure-analysis \
+  --cases /path/to/real_eval.jsonl \
+  --predictions /path/to/predictions.jsonl \
+  --out /path/to/failure_analysis.md
+```
+
 ## Calculation consistency
 
 When a prediction includes `calculations`, the eval scorer also checks whether
