@@ -28,7 +28,7 @@ from .services.evaluation import (
 )
 from .services.feedback import FeedbackStore
 from .services.trace import TraceLogger
-from .services.eval_runner import run_jsonl_cases, validate_n_results
+from .services.eval_runner import run_jsonl_cases, run_jsonl_cases_http, validate_n_results
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,6 +45,14 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--out", required=True, help="Predictions JSONL output path")
     run.add_argument("--user-id", type=int, required=True, help="Tenant/user id for scoped retrieval")
     run.add_argument("--n-results", type=int, default=5, help="Top-k chunks per query")
+
+    run_http = sub.add_parser("run-http", help="Run JSONL cases through a running FinQuery HTTP backend")
+    run_http.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    run_http.add_argument("--out", required=True, help="Predictions JSONL output path")
+    run_http.add_argument("--api-base", default=os.getenv("FINQUERY_API_BASE", "http://127.0.0.1:8000"), help="FinQuery backend base URL")
+    run_http.add_argument("--token", default=os.getenv("FINQUERY_TOKEN"), help="Bearer token; defaults to FINQUERY_TOKEN")
+    run_http.add_argument("--n-results", type=int, default=5, help="Top-k chunks per query")
+    run_http.add_argument("--timeout", type=float, default=180.0, help="Per-request timeout in seconds")
 
     compare = sub.add_parser("compare", help="Compare baseline and candidate reports")
     compare.add_argument("--baseline", required=True, help="Baseline report JSON")
@@ -241,6 +249,23 @@ def main(argv: list[str] | None = None) -> int:
             user_id=user_id,
             n_results=n_results,
         ))
+        print(f"wrote {len(predictions)} predictions to {args.out}")
+        return 0
+
+    if args.command == "run-http":
+        try:
+            n_results = validate_n_results(args.n_results)
+            predictions = run_jsonl_cases_http(
+                args.cases,
+                args.out,
+                api_base=args.api_base,
+                token=args.token,
+                n_results=n_results,
+                timeout=args.timeout,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         print(f"wrote {len(predictions)} predictions to {args.out}")
         return 0
 

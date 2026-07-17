@@ -1,0 +1,108 @@
+import json
+
+from src.services import eval_runner
+from src.services.evaluation import EvaluationCase
+from src.eval_cli import main as eval_cli_main
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
+def _write_jsonl(path, rows):
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+
+def test_run_http_case_posts_query_payload_and_normalizes_prediction(monkeypatch):
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        captured["headers"] = dict(request.header_items())
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        return _FakeResponse({
+            "answer": "Revenue was $219 million.",
+            "sources": [{"filename": "report.pdf", "page": 3}],
+            "confidence": 0.8,
+            "context_sufficient": True,
+            "intent": "document_qa",
+            "trace_id": "abc123",
+        })
+
+    monkeypatch.setattr(eval_runner.urllib.request, "urlopen", fake_urlopen)
+    case = EvaluationCase.from_dict({
+        "id": "c1",
+        "question": "What was revenue?",
+        "document_names": ["report.pdf"],
+    })
+
+    prediction = eval_runner.run_http_case(
+        case,
+        api_base="http://127.0.0.1:8000/",
+        token="token-123",
+        n_results=8,
+        timeout=12,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8000/query"
+    assert captured["payload"] == {
+        "question": "What was revenue?",
+        "document_names": ["report.pdf"],
+        "n_results": 8,
+    }
+    assert captured["headers"]["Authorization"] == "Bearer token-123"
+    assert captured["timeout"] == 12
+    assert prediction["id"] == "c1"
+    assert prediction["answer"] == "Revenue was $219 million."
+    assert prediction["retrieved_chunks"] == [{"filename": "report.pdf", "page": 3}]
+    assert prediction["trace_id"] == "abc123"
+
+
+def test_run_jsonl_cases_http_writes_predictions(tmp_path, monkeypatch):
+    cases = tmp_path / "cases.jsonl"
+    out = tmp_path / "predictions.jsonl"
+    _write_jsonl(cases, [{"id": "c1", "question": "Q?"}])
+
+    monkeypatch.setattr(
+        eval_runner,
+        "_post_json",
+        lambda url, payload, token, timeout: {"answer": "A", "sources": []},
+    )
+
+    predictions = eval_runner.run_jsonl_cases_http(
+        str(cases),
+        str(out),
+        api_base="http://backend",
+        token="token",
+    )
+
+    assert len(predictions) == 1
+    assert json.loads(out.read_text(encoding="utf-8"))["answer"] == "A"
+
+
+def test_eval_cli_run_http_requires_token(tmp_path, capsys, monkeypatch):
+    monkeypatch.delenv("FINQUERY_TOKEN", raising=False)
+    cases = tmp_path / "cases.jsonl"
+    out = tmp_path / "predictions.jsonl"
+    _write_jsonl(cases, [{"id": "c1", "question": "Q?"}])
+
+    code = eval_cli_main([
+        "run-http",
+        "--cases", str(cases),
+        "--out", str(out),
+        "--api-base", "http://backend",
+    ])
+
+    assert code == 2
+    assert "token is required" in capsys.readouterr().err
