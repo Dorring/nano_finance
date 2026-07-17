@@ -149,6 +149,22 @@ python scripts/real_eval_csv_to_jsonl.py \
 Rows that still contain `REPLACE_*` placeholders are skipped by default. Use
 `--allow-placeholders` only when testing the converter itself.
 
+When evaluating a running server with already-indexed documents, prefer the HTTP
+runner. It exercises the same API path as the frontend and avoids reinitializing
+native vector-store dependencies in the CLI process:
+
+```bash
+export FINQUERY_TOKEN="<token from the frontend login session>"
+python -m src.eval_cli run-http \
+  --cases /path/to/real_eval.jsonl \
+  --out /path/to/predictions.jsonl \
+  --api-base http://127.0.0.1:8000 \
+  --n-results 8
+```
+
+Use `run` only for local in-process evaluation where the CLI can safely load the
+same RAG stores and model dependencies as the backend.
+
 ## Calculation consistency
 
 When a prediction includes `calculations`, the eval scorer also checks whether

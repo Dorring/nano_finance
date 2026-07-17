@@ -200,10 +200,12 @@ python scripts/real_eval_csv_to_jsonl.py \
   --csv /tmp/finquery_real_eval.csv \
   --out /tmp/finquery_real_eval.jsonl
 
-python -m src.eval_cli run \
+export FINQUERY_TOKEN=TOKEN_FROM_FRONTEND_LOGIN
+python -m src.eval_cli run-http \
   --cases /tmp/finquery_real_eval.jsonl \
   --out /tmp/finquery_real_predictions.jsonl \
-  --user-id <your_user_id>
+  --api-base http://127.0.0.1:8000 \
+  --n-results 8
 
 python -m src.eval_cli retrieval-eval-bundle \
   --cases /tmp/finquery_real_eval.jsonl \
