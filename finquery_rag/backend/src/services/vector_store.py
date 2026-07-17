@@ -267,6 +267,52 @@ def get_front_matter_chunks(doc_name: str, user_id: int, subtype: str | None = N
         })
     chunks.sort(key=lambda chunk: ((chunk.get("metadata") or {}).get("page", 999), chunk.get("doc_id", "")))
     return chunks
+
+
+def get_page_chunks(
+    doc_name: str,
+    user_id: int,
+    pages: List[int],
+    *,
+    limit_per_page: int = 8,
+) -> List[Dict]:
+    """Fetch chunks for specific pages without vector search.
+
+    This is used as a bounded recall fallback for front-matter and table-heavy
+    financial QA where embedding/BM25 may miss a page even though the user asks
+    for a fact that usually lives on predictable pages.
+    """
+    if user_id is None or not doc_name or not pages:
+        return []
+    collection = get_or_create_collection()
+    chunks: list[dict] = []
+    for page in dict.fromkeys(int(p) for p in pages if p):
+        where_filter = _combine_where_clauses(
+            {"user_id": user_id},
+            {"doc_name": doc_name},
+            {"page": page},
+        )
+        try:
+            result = collection.get(
+                include=["documents", "metadatas"],
+                where=where_filter,
+            )
+        except Exception as exc:
+            print(f"Error fetching page chunks for {doc_name} p{page}: {exc}")
+            continue
+        ids = result.get("ids") or []
+        documents = result.get("documents") or []
+        metadatas = result.get("metadatas") or []
+        for doc_id, content, metadata in list(zip(ids, documents, metadatas))[:limit_per_page]:
+            chunks.append({
+                "doc_id": doc_id,
+                "content": content,
+                "metadata": metadata or {},
+                "score": 0.02,
+                "retrieval_fallback": "page_lookup",
+            })
+    chunks.sort(key=lambda chunk: ((chunk.get("metadata") or {}).get("page", 999), chunk.get("doc_id", "")))
+    return chunks
 def list_all_documents(user_id: int = None) -> List[Dict]:
     """
     列出数据库中的所有文档信息。

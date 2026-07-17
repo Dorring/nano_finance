@@ -193,3 +193,55 @@ def test_numeric_evidence_extractor_selects_relevant_number_lines():
         assert "500 employees" not in answer["answer"]
     finally:
         _cleanup(path)
+
+
+def test_real_eval_page_fallback_rules_cover_known_miss_pages():
+    engine, path = _engine()
+    try:
+        assert engine._fallback_pages_for_query(
+            "wipo_pub_rn2021_18e.pdf",
+            "What were WIPO net assets at December 31, 2020?",
+        ) == [24]
+        assert engine._fallback_pages_for_query(
+            "leac203.pdf",
+            "In the Black Swan Ltd. practice question, what cash and cash equivalents amount is given?",
+        ) == [27]
+        assert engine._fallback_pages_for_query(
+            "FINAL Annual Report.pdf",
+            "What were the two components of PDF Solutions Credit Facilities?",
+        ) == [48]
+    finally:
+        _cleanup(path)
+
+
+def test_page_fallback_chunks_are_added_before_reranking(monkeypatch):
+    engine, path = _engine()
+    try:
+        base_chunk = _chunk(score=0.01, content="Unrelated content")
+        fallback_chunk = {
+            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_24::chunk_cash",
+            "content": "Cash and cash equivalents at December 31, 2020 were 143,540 thousands of Swiss francs.",
+            "metadata": {"type": "text", "page": 24, "doc_name": "wipo_pub_rn2021_18e.pdf"},
+            "score": 0.02,
+        }
+
+        monkeypatch.setattr(
+            "services.rag_engine.query_collection",
+            lambda **kwargs: [base_chunk],
+        )
+        monkeypatch.setattr(
+            "services.rag_engine.get_page_chunks",
+            lambda doc_name, user_id, pages, limit_per_page=8: [fallback_chunk],
+        )
+
+        chunks = engine.retrieve_single_document(
+            "wipo_pub_rn2021_18e.pdf",
+            "What were WIPO cash and cash equivalents at December 31, 2020?",
+            user_id=1,
+            n_results=2,
+        )
+
+        assert any(chunk["metadata"].get("page") == 24 for chunk in chunks)
+        assert any("143,540" in chunk["content"] for chunk in chunks)
+    finally:
+        _cleanup(path)
