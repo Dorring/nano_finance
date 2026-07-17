@@ -1055,6 +1055,10 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             context, sources = engine.build_context(chunks)
 
             # Phase 3: If context is insufficient, return refusal without calling LLM
+            low_confidence_numeric_override = engine._should_generate_with_low_confidence(question, chunks)
+            if low_confidence_numeric_override:
+                is_sufficient = True
+
             if not is_sufficient:
                 refusal = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
                 if session_id:
@@ -1098,6 +1102,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 "confidence": confidence,
                 "context_sufficient": True,
                 "intent_confidence": intent["confidence"],
+                "low_confidence_numeric_override": low_confidence_numeric_override,
             }
             trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
 

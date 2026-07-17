@@ -129,6 +129,7 @@ def run_http_cases(
     api_base = _validate_api_base(api_base)
     token = _validate_token(token)
     timeout = _validate_timeout(timeout)
+    _preflight_http_auth(api_base, token, timeout)
     predictions = []
     for case in cases:
         predictions.append(
@@ -141,6 +142,19 @@ def run_http_cases(
             )
         )
     return predictions
+
+
+def _preflight_http_auth(api_base: str, token: str, timeout: float) -> None:
+    """Fail fast when the backend token is invalid.
+
+    Without this preflight, run-http records one HTTP 401 prediction per case and
+    the downstream score looks like a retrieval/model regression. Auth failures
+    are environment failures, not eval samples.
+    """
+    result = _get_json(f"{api_base}/me", token=token, timeout=timeout)
+    if result.get("error"):
+        detail = result.get("detail", "")
+        raise ValueError(f"run-http auth preflight failed: {result['error']} {detail}".strip())
 
 
 def run_jsonl_cases_http(
@@ -183,6 +197,25 @@ def _post_json(url: str, payload: dict[str, Any], token: str, timeout: float) ->
         detail = exc.read().decode("utf-8", errors="replace")
         return {"error": f"HTTP {exc.code}", "detail": detail}
     except Exception as exc:  # noqa: BLE001 - eval should persist per-case failures.
+        return {"error": type(exc).__name__, "detail": str(exc)}
+
+
+def _get_json(url: str, token: str, timeout: float) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        return {"error": f"HTTP {exc.code}", "detail": detail}
+    except Exception as exc:  # noqa: BLE001 - eval should fail fast on auth preflight.
         return {"error": type(exc).__name__, "detail": str(exc)}
 
 
