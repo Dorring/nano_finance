@@ -135,7 +135,7 @@ def test_non_numeric_low_confidence_query_still_refuses_without_llm(monkeypatch)
         _cleanup(path)
 
 
-def test_numeric_low_confidence_query_calls_llm(monkeypatch):
+def test_numeric_low_confidence_query_uses_deterministic_evidence(monkeypatch):
     client = _MockLLMClient()
     engine, path = _engine(client)
     try:
@@ -149,6 +149,47 @@ def test_numeric_low_confidence_query_calls_llm(monkeypatch):
 
         assert result["context_sufficient"] is True
         assert "$219 million" in result["answer"]
-        assert client.call_count == 1
+        assert "Source: FINAL Annual Report.pdf, p3" in result["answer"]
+        assert client.call_count == 0
+    finally:
+        _cleanup(path)
+
+
+def test_real_eval_query_expansion_adds_accounting_and_wipo_terms():
+    engine, path = _engine()
+    try:
+        wipo_query = engine._expand_retrieval_query("What percentage of WIPO total revenue came from PCT system fees in 2020?")
+        leac_query = engine._expand_retrieval_query("List two criteria that make an item current according to leac203.pdf.")
+
+        assert "World Intellectual Property Organization" in wipo_query
+        assert "The PCT System" in wipo_query
+        assert "operating cycle" in leac_query
+        assert "twelve months" in leac_query
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_evidence_extractor_selects_relevant_number_lines():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p3]\n"
+            "Record revenue was $219 million, up 22% year-over-year.\n"
+            "Unrelated headcount was 500 employees.\n\n"
+            "[FINAL Annual Report.pdf, p45]\n"
+            "Platform revenue was $181 million and grew 15% year-over-year.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What record revenue did PDF Solutions report for 2025?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 3}],
+        )
+
+        assert answer is not None
+        assert "$219 million" in answer["answer"]
+        assert "22%" in answer["answer"]
+        assert "Source: FINAL Annual Report.pdf, p3" in answer["answer"]
+        assert "500 employees" not in answer["answer"]
     finally:
         _cleanup(path)
