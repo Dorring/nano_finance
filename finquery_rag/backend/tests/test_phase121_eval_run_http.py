@@ -79,6 +79,11 @@ def test_run_jsonl_cases_http_writes_predictions(tmp_path, monkeypatch):
         "_post_json",
         lambda url, payload, token, timeout: {"answer": "A", "sources": []},
     )
+    monkeypatch.setattr(
+        eval_runner,
+        "_get_json",
+        lambda url, token, timeout: {"email": "qh@bb.com"},
+    )
 
     predictions = eval_runner.run_jsonl_cases_http(
         str(cases),
@@ -89,6 +94,67 @@ def test_run_jsonl_cases_http_writes_predictions(tmp_path, monkeypatch):
 
     assert len(predictions) == 1
     assert json.loads(out.read_text(encoding="utf-8"))["answer"] == "A"
+
+
+def test_run_jsonl_cases_http_preflights_auth_before_queries(tmp_path, monkeypatch):
+    cases = tmp_path / "cases.jsonl"
+    out = tmp_path / "predictions.jsonl"
+    _write_jsonl(cases, [{"id": "c1", "question": "Q?"}])
+    calls = []
+
+    monkeypatch.setattr(
+        eval_runner,
+        "_get_json",
+        lambda url, token, timeout: calls.append(("GET", url)) or {"email": "qh@bb.com"},
+    )
+    monkeypatch.setattr(
+        eval_runner,
+        "_post_json",
+        lambda url, payload, token, timeout: calls.append(("POST", url)) or {"answer": "A", "sources": []},
+    )
+
+    eval_runner.run_jsonl_cases_http(
+        str(cases),
+        str(out),
+        api_base="http://backend",
+        token="token",
+    )
+
+    assert calls == [
+        ("GET", "http://backend/me"),
+        ("POST", "http://backend/query"),
+    ]
+
+
+def test_run_jsonl_cases_http_fails_fast_on_invalid_token(tmp_path, monkeypatch):
+    cases = tmp_path / "cases.jsonl"
+    out = tmp_path / "predictions.jsonl"
+    _write_jsonl(cases, [{"id": "c1", "question": "Q?"}])
+
+    monkeypatch.setattr(
+        eval_runner,
+        "_get_json",
+        lambda url, token, timeout: {"error": "HTTP 401", "detail": '{"detail":"Could not validate credentials"}'},
+    )
+    monkeypatch.setattr(
+        eval_runner,
+        "_post_json",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("query should not run")),
+    )
+
+    try:
+        eval_runner.run_jsonl_cases_http(
+            str(cases),
+            str(out),
+            api_base="http://backend",
+            token="expired",
+        )
+    except ValueError as exc:
+        assert "auth preflight failed" in str(exc)
+        assert "HTTP 401" in str(exc)
+    else:
+        raise AssertionError("expected auth preflight failure")
+    assert not out.exists()
 
 
 def test_eval_cli_run_http_requires_token(tmp_path, capsys, monkeypatch):

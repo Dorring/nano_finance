@@ -83,6 +83,8 @@ class RAGEngine:
         self.min_score_threshold = 0.0  # chunks below this score are discarded
         self.rrf_sufficiency_threshold = float(os.getenv("RAG_RRF_SUFFICIENCY_THRESHOLD", "0.025"))
         self.dense_sufficiency_threshold = float(os.getenv("RAG_DENSE_SUFFICIENCY_THRESHOLD", "0.15"))
+        self.numeric_rrf_floor = float(os.getenv("RAG_NUMERIC_RRF_FLOOR", "0.008"))
+        self.numeric_dense_floor = float(os.getenv("RAG_NUMERIC_DENSE_FLOOR", "0.08"))
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
@@ -264,6 +266,39 @@ class RAGEngine:
             "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d",
         ))
 
+    def _is_numeric_financial_query(self, query: str) -> bool:
+        normalized = (query or "").lower()
+        numeric_markers = (
+            "how much", "how many", "amount",
+            "revenue", "cash", "equivalents", "margin", "growth", "rate",
+            "percent", "percentage", "assets", "liabilities", "income",
+            "expense", "profit", "loss", "budget", "net assets", "year-over-year",
+            "yoy", "$", "%",
+        )
+        cjk_markers = (
+            "\u591a\u5c11", "\u91d1\u989d", "\u6536\u5165", "\u8425\u6536", "\u73b0\u91d1",
+            "\u5229\u6da6", "\u589e\u957f", "\u6bd4\u7387", "\u767e\u5206\u6bd4",
+        )
+        return any(marker in normalized for marker in numeric_markers) or any(marker in query for marker in cjk_markers)
+
+    def _should_generate_with_low_confidence(self, query: str, chunks: list) -> bool:
+        """Allow numeric finance QA to proceed when evidence exists but scores are under-calibrated.
+
+        Real annual reports often retrieve the right page/table with low RRF scores.
+        Refusing before the LLM sees that evidence produces false no-answers for
+        factual numeric questions. Keep the override narrow to numeric finance
+        questions and require a minimal non-zero retrieval score.
+        """
+        if not chunks or not self._is_numeric_financial_query(query):
+            return False
+        scores = [float(chunk.get("score", 0) or 0) for chunk in chunks]
+        best_score = max(scores) if scores else 0.0
+        if best_score <= 0:
+            return False
+        if best_score < 0.05:
+            return best_score >= self.numeric_rrf_floor
+        return best_score >= self.numeric_dense_floor
+
     def answer_front_matter_query(self, query: str, chunks: list) -> dict | None:
         """Answer deterministic front-matter questions from structured chunks."""
         if not self._is_title_query(query):
@@ -280,6 +315,7 @@ class RAGEngine:
         title_chunk = dict(title_chunks[0])
         title = re.sub(r"\s+", " ", title_chunk.get("content", "")).strip()
         title = re.sub(r"^title\s*:\s*", "", title, flags=re.IGNORECASE).strip()
+        title = self._clean_deterministic_title(title)
         if not title:
             return None
         title_chunk["score"] = max(float(title_chunk.get("score", 0) or 0), 1.0)
@@ -290,6 +326,12 @@ class RAGEngine:
             "diagnostic": "front_matter_title",
         }
 
+    @staticmethod
+    def _clean_deterministic_title(title: str) -> str:
+        cleaned = re.sub(r"\s+", " ", title or "").strip(" -")
+        cleaned = re.sub(r"\b(annual)\s+(annual report)\b", r"\1 report", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\b(report)\s+(annual report)\b", r"\2", cleaned, flags=re.IGNORECASE)
+        return cleaned.strip(" -")
 
     def retrieve_front_matter_chunks(self, doc_names: list[str], query: str, user_id: int | None = None) -> list:
         """Direct metadata lookup for deterministic front-matter questions."""
@@ -490,9 +532,11 @@ class RAGEngine:
 1. Answer based ONLY on the provided context
 2. Cite sources: "Source: <filename>, page <number>"
 3. Preserve exact numbers, currencies, dates from tables
-4. If no relevant info found, say so clearly
-5. Answer in prose, never use markdown table syntax
-6. Be concise and precise."""
+4. For numeric questions, extract the exact value and unit from the most relevant sentence/table row
+5. If context contains relevant numbers, answer with those numbers instead of refusing
+6. If no relevant info found, say so clearly
+7. Answer in prose, never use markdown table syntax
+8. Be concise and precise."""
 
     def _validate_answer(self, answer: str, sources: list) -> str:
         """
@@ -822,6 +866,10 @@ class RAGEngine:
             context, sources = self.build_context(chunks)
 
             # 3. Generate answer (skip LLM if context is insufficient)
+            low_confidence_numeric_override = self._should_generate_with_low_confidence(question, chunks)
+            if low_confidence_numeric_override:
+                is_sufficient = True
+
             if not is_sufficient:
                 answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
             else:
@@ -848,6 +896,9 @@ class RAGEngine:
                 "context_sufficient": is_sufficient,
                 "intent_confidence": intent["confidence"],
                 "deterministic_answer": deterministic_answer,
+                "low_confidence_numeric_override": (
+                    low_confidence_numeric_override if not front_matter_answer else False
+                ),
             },
             "model_name": self.model_name,
             "latency_ms": elapsed_ms,

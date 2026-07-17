@@ -125,8 +125,8 @@ def _safe_find_table_bboxes(page: pymupdf.Page) -> list:
 
 def _clean_front_matter_line(text: str) -> str:
     text = re.sub(r"\s+", " ", text or "").strip()
-    text = re.sub(r"^\d{1,4}\s+", "", text)
-    text = re.sub(r"\s+\d{1,4}$", "", text)
+    text = re.sub(r"^\d{1,3}\s+", "", text)
+    text = re.sub(r"\s+\d{1,3}$", "", text)
     return text.strip()
 
 
@@ -158,6 +158,7 @@ def _extract_title_from_first_page(page: pymupdf.Page) -> str | None:
 
     max_size = max(line["size"] for line in lines)
     min_title_size = max(12.0, max_size * 0.75)
+    continuation_size = max(10.0, max_size * 0.45)
     page_height = float(getattr(page.rect, "height", 1000) or 1000)
     title_lines = []
 
@@ -169,7 +170,7 @@ def _extract_title_from_first_page(page: pymupdf.Page) -> str | None:
             continue
         if line["y0"] > page_height * 0.45 and title_lines:
             break
-        if line["size"] >= min_title_size:
+        if line["size"] >= min_title_size or line["size"] >= continuation_size:
             title_lines.append(line["text"])
         elif title_lines:
             break
