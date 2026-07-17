@@ -11,6 +11,8 @@ reporting, comparison, and CI gate behavior keep working.
 - `baseline_smoke_report.json` - checked scorer output used by the smoke regression gate.
 - `real_eval_template.jsonl` - copy/edit template for real PDF evaluation. It
   contains placeholders and must not be scored directly.
+- `real_eval_labeling_template.csv` - spreadsheet-friendly labeling template
+  for 15 real-eval cases. Convert it to JSONL after replacing placeholders.
 
 Do not commit real customer documents, trace databases, ChromaDB data, model outputs with
 sensitive content, or large generated reports here.
@@ -133,6 +135,19 @@ cp eval/real_eval_template.jsonl /tmp/finquery_real_eval.jsonl
 Replace every `REPLACE_WITH_*` placeholder by manually inspecting the uploaded
 PDF. Do not report resume/interview metrics from unedited template fixtures or
 from synthetic smoke fixtures.
+
+For manual annotation, the CSV template is usually easier:
+
+```bash
+cp eval/real_eval_labeling_template.csv /tmp/finquery_real_eval.csv
+# edit /tmp/finquery_real_eval.csv in a spreadsheet or text editor
+python scripts/real_eval_csv_to_jsonl.py \
+  --csv /tmp/finquery_real_eval.csv \
+  --out /tmp/finquery_real_eval.jsonl
+```
+
+Rows that still contain `REPLACE_*` placeholders are skipped by default. Use
+`--allow-placeholders` only when testing the converter itself.
 
 ## Calculation consistency
 
