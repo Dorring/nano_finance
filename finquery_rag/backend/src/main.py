@@ -11,6 +11,7 @@ from .services.vector_store import add_documents, list_all_documents, delete_doc
 from .services.rag_engine import RAGEngine
 from .services.document_registry import DocumentRegistry, VALID_TRANSITIONS
 from .services.session_manager import SessionManager
+from .services.memory_profile import UserMemoryStore
 from .services.health import collect_health_snapshot
 from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
@@ -76,6 +77,7 @@ llm_model_name = os.getenv("LLM_MODEL_NAME", "nanochat")
 rag_engine: RAGEngine | None = None
 document_registry = DocumentRegistry()
 session_manager = SessionManager()
+memory_store = UserMemoryStore()
 feedback_store = FeedbackStore()
 
 def get_rag_engine():
@@ -863,6 +865,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             conversation_history = session_manager.get_recent_messages(
                 session_id, current_user.id
             )
+        memory_profile = memory_store.get_profile(current_user.id)
 
         resolved_doc_names = _resolve_query_document_names_for_user(
             current_user.id,
@@ -876,6 +879,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             n_results=request.n_results,
             user_id=current_user.id,
             conversation_history=conversation_history,
+            memory_profile=memory_profile,
         )
 
         # Phase 4: Save messages to session
@@ -966,9 +970,12 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 conversation_history = session_manager.get_recent_messages(
                     session_id, current_user.id
                 )
+            memory_profile = memory_store.get_profile(current_user.id)
             if conversation_history:
-                question = await engine._rewrite_query_with_context(question, conversation_history)
+                question = await engine._rewrite_query_with_context(question, conversation_history, memory_profile)
                 trace_data["query_rewritten"] = question
+                if memory_profile:
+                    trace_data["memory_profile_used"] = True
 
             intent = classify_query_intent(question)
             trace_data["intent"] = intent["intent"]
@@ -1192,6 +1199,30 @@ async def clear_all_sessions(current_user: User = Depends(get_current_user)):
         "deleted_messages": deleted_messages,
         "summary": session_manager.storage_summary(current_user.id),
     }
+
+
+@app.get("/memory/profile", response_model=MemoryProfileResponse)
+async def get_memory_profile(current_user: User = Depends(get_current_user)):
+    """Return the current user's editable preference memory profile."""
+    profile = memory_store.get_profile(current_user.id)
+    updated_at = profile.pop("updated_at", None) if profile else None
+    return {"profile": profile, "updated_at": updated_at}
+
+
+@app.put("/memory/profile", response_model=MemoryProfileResponse)
+async def update_memory_profile(request: MemoryProfileRequest, current_user: User = Depends(get_current_user)):
+    """Patch the current user's preference memory profile."""
+    payload = request.model_dump(exclude_none=True)
+    profile = memory_store.upsert_profile(current_user.id, payload)
+    updated_at = profile.pop("updated_at", None) if profile else None
+    return {"profile": profile, "updated_at": updated_at}
+
+
+@app.delete("/memory/profile")
+async def clear_memory_profile(current_user: User = Depends(get_current_user)):
+    """Clear the current user's editable preference memory profile."""
+    cleared = memory_store.clear_profile(current_user.id)
+    return {"message": "Memory profile cleared", "cleared": cleared}
 
 
 # <---------------------- DELETE requests ---------------------->

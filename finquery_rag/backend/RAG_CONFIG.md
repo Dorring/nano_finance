@@ -109,12 +109,44 @@ CHROMA_PATH=/var/lib/finquery/chroma_db
 DOCUMENT_REGISTRY_DB_PATH=/var/lib/finquery/document_registry.db
 BM25_DB_PATH=/var/lib/finquery/rag_bm25.db
 SESSIONS_DB_PATH=/var/lib/finquery/sessions.db
+MEMORY_PROFILE_DB_PATH=/var/lib/finquery/memory_profile.db
 TRACE_DB_PATH=/var/lib/finquery/trace_log.db
 FEEDBACK_DB_PATH=/var/lib/finquery/feedback.db
 ```
 
 When unset, FinQuery keeps the existing development defaults under the backend
 working directory.
+
+## Memory profile
+
+FinQuery separates short-term session history from editable user preference
+memory. Session history is used to resolve follow-up questions. The memory
+profile stores bounded preferences such as:
+
+- `preferred_language`
+- `preferred_currency`
+- `preferred_unit`
+- `default_period`
+- `default_company`
+- `watchlist`
+- `focus_metrics`
+
+The profile is used only for query planning/rewrite ambiguity, such as resolving
+"what about margin?" to the user's default period, company, or unit. It is never
+used as a factual source for answers; answer grounding still comes from retrieved
+document context and citations.
+
+Authenticated API:
+
+```bash
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:8000/memory/profile
+
+curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"preferred_currency":"USD","default_period":"FY2024","focus_metrics":["revenue","gross margin"]}' \
+  http://127.0.0.1:8000/memory/profile
+
+curl -X DELETE -H "Authorization: Bearer <token>" http://127.0.0.1:8000/memory/profile
+```
 
 ## Deployment preflight
 

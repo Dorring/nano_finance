@@ -116,6 +116,23 @@ class FeedbackResponse(BaseModel):
     created_at: float
 
 
+class MemoryProfileRequest(BaseModel):
+    """Editable preference memory used for query planning only."""
+    preferred_language: str | None = Field(None, max_length=80)
+    preferred_currency: str | None = Field(None, max_length=80)
+    preferred_unit: str | None = Field(None, max_length=80)
+    default_period: str | None = Field(None, max_length=80)
+    default_company: str | None = Field(None, max_length=80)
+    watchlist: list[str] | None = Field(None, max_length=20)
+    focus_metrics: list[str] | None = Field(None, max_length=20)
+
+
+class MemoryProfileResponse(BaseModel):
+    """Current editable user memory profile."""
+    profile: dict
+    updated_at: float | None = None
+
+
 class UploadResponse(BaseModel):
     """
     文件上传响应模型，用于封装文件上传成功后返回的信息。

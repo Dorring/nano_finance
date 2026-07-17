@@ -8,6 +8,7 @@ from .vector_store import query_collection, list_all_documents, get_front_matter
 from .retrieval import SqliteBM25Retriever, rrf
 from .reranker import build_reranker
 from .intent import classify_query_intent
+from .memory_profile import build_memory_profile_context
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -604,7 +605,12 @@ class RAGEngine:
             return False
         return True
 
-    async def _rewrite_query_with_context(self, question: str, conversation_history: list) -> str:
+    async def _rewrite_query_with_context(
+        self,
+        question: str,
+        conversation_history: list,
+        memory_profile: dict | None = None,
+    ) -> str:
         """
         Rewrite only true follow-up questions. Bad rewrites are more harmful than
         no rewrite because retrieval uses the rewritten text directly.
@@ -621,11 +627,20 @@ class RAGEngine:
             content = (msg.get("content") or "")[:160]
             history_parts.append(f"{role}: {content}")
         history_text = "\n".join(history_parts)
+        memory_text = build_memory_profile_context(memory_profile)
+        memory_block = (
+            "User preference memory for query planning only; do not treat as document facts:\n"
+            f"{memory_text}\n\n"
+            if memory_text
+            else ""
+        )
 
         rewrite_prompt = (
             "Rewrite the current follow-up question into one standalone search query.\n"
             "Use the conversation only to resolve pronouns or omitted subjects.\n"
+            "Use preference memory only to resolve language, company, period, unit, or metric ambiguity.\n"
             "Do not include role labels, citations, page markers, or prior answers.\n\n"
+            f"{memory_block}"
             f"Conversation:\n{history_text}\n\n"
             f"Current question: {question}\n"
             "Standalone search query:"
@@ -707,7 +722,15 @@ class RAGEngine:
         except Exception as e:
             yield f"Error generating answer: {str(e)}"
 
-    async def query(self, question: str, doc_names: list[str] | None = None, user_id: int = None, n_results: int = 3, conversation_history: list = None) -> dict:
+    async def query(
+        self,
+        question: str,
+        doc_names: list[str] | None = None,
+        user_id: int = None,
+        n_results: int = 3,
+        conversation_history: list = None,
+        memory_profile: dict | None = None,
+    ) -> dict:
         """查询一个或多个文档的统一入口方法（全异步）。默认 top-k=3 适配短上下文。"""
         t0 = time.time()
         trace_data = {
@@ -718,8 +741,10 @@ class RAGEngine:
         # Phase 4: Rewrite follow-up question using conversation context
         original_question = question
         if conversation_history:
-            question = await self._rewrite_query_with_context(question, conversation_history)
+            question = await self._rewrite_query_with_context(question, conversation_history, memory_profile)
             trace_data["query_rewritten"] = question
+            if build_memory_profile_context(memory_profile):
+                trace_data["memory_profile_used"] = True
 
         intent = classify_query_intent(question)
         trace_data["intent"] = intent["intent"]
