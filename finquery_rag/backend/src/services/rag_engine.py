@@ -1027,6 +1027,7 @@ class RAGEngine:
                 answer = numeric_answer["answer"]
                 is_sufficient = True
                 deterministic_answer = numeric_answer["diagnostic"]
+                low_confidence_numeric_override = False
             else:
                 low_confidence_numeric_override = self._should_generate_with_low_confidence(question, chunks)
                 if low_confidence_numeric_override:
@@ -1036,9 +1037,6 @@ class RAGEngine:
                     answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
                 else:
                     answer = await self.generate_answer(context, question)
-
-            if numeric_answer:
-                low_confidence_numeric_override = False
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000
