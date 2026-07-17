@@ -202,6 +202,8 @@ class Prediction:
     intent: str | None = None
     intent_confidence: float | None = None
     latency_ms: float | None = None
+    error: str | None = None
+    error_detail: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Prediction":
@@ -223,6 +225,8 @@ class Prediction:
             intent=str(data["intent"]) if data.get("intent") else None,
             intent_confidence=_optional_float(data.get("intent_confidence")),
             latency_ms=_optional_float(data.get("latency_ms")),
+            error=str(data["error"]) if data.get("error") else None,
+            error_detail=str(data["error_detail"]) if data.get("error_detail") else None,
         )
 
 
@@ -335,9 +339,22 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
     if not required_scores:
         passed = True
 
+    failure_category = _classify_failure(
+        case,
+        prediction,
+        passed=passed,
+        source_recall=source_stats["recall"],
+        retrieval_recall=retrieval_stats["recall"],
+        contains_score=contains_score,
+        number_score=number_score,
+        no_answer_score=no_answer_score,
+        intent_accuracy=intent_accuracy,
+    )
+
     return {
         "id": case.case_id,
         "passed": passed,
+        "failure_category": failure_category,
         "citation_precision": source_stats["precision"],
         "citation_recall": source_stats["recall"],
         "retrieval_precision": retrieval_stats["precision"],
@@ -348,6 +365,14 @@ def score_prediction(case: EvaluationCase, prediction: Prediction) -> dict[str, 
         "calculation_accuracy": calculation_score,
         "answer_calculation_consistency": answer_calculation_consistency,
         "intent_accuracy": intent_accuracy,
+        "expected_answer_contains": list(case.expected_answer_contains),
+        "expected_numbers": list(case.expected_numbers),
+        "expected_sources": [_expected_source_to_dict(source) for source in case.expected_sources],
+        "actual_answer_preview": _preview_text(prediction.answer),
+        "actual_sources": [_compact_source_dict(source) for source in prediction.sources],
+        "actual_retrieved_chunks": [_compact_source_dict(chunk) for chunk in prediction.retrieved_chunks],
+        "prediction_error": prediction.error,
+        "prediction_error_detail": _preview_text(prediction.error_detail or "", limit=300),
         "expected_intent": case.expected_intent,
         "predicted_intent": prediction.intent,
         "intent_confidence": prediction.intent_confidence,
@@ -533,6 +558,80 @@ def build_interview_report(
         "score_report": score_report,
         "retrieval_report": retrieval_report,
     }
+
+
+def build_failure_analysis_markdown(
+    cases: Iterable[EvaluationCase],
+    predictions: dict[str, Prediction],
+    *,
+    limit: int | None = None,
+) -> str:
+    """Build a human-readable failure analysis report for real-document evals."""
+    case_list = list(cases)
+    score_report = evaluate_predictions(case_list, predictions)
+    prediction_by_id = predictions
+    failed = [
+        score for score in score_report.get("cases", [])
+        if not score.get("passed")
+    ]
+    if limit is not None:
+        failed = failed[:max(0, int(limit))]
+
+    lines = [
+        "# FinQuery eval failure analysis",
+        "",
+        "## Summary",
+        "",
+        f"- Total cases: {score_report.get('summary', {}).get('total_cases', 0)}",
+        f"- Scored cases: {score_report.get('summary', {}).get('scored_cases', 0)}",
+        f"- Pass rate: {_format_percent(score_report.get('summary', {}).get('pass_rate', 0.0))}",
+        f"- Failed cases included: {len(failed)}",
+        "",
+        "## Failure categories",
+        "",
+    ]
+    category_counts: dict[str, int] = {}
+    for score in score_report.get("cases", []):
+        if score.get("passed"):
+            continue
+        category = str(score.get("failure_category") or "unknown")
+        category_counts[category] = category_counts.get(category, 0) + 1
+    for category, count in sorted(category_counts.items(), key=lambda item: (-item[1], item[0])):
+        lines.append(f"- {category}: {count}")
+    if not category_counts:
+        lines.append("- none")
+
+    lines.extend(["", "## Failed cases", ""])
+    case_by_id = {case.case_id: case for case in case_list}
+    for score in failed:
+        case_id = str(score.get("id"))
+        case = case_by_id.get(case_id)
+        prediction = prediction_by_id.get(case_id)
+        lines.extend([
+            f"### {case_id}",
+            "",
+            f"- Failure category: `{score.get('failure_category')}`",
+            f"- Tags: {', '.join(score.get('tags', [])) or '-'}",
+            f"- Scores: answer={score.get('answer_contains')}, number={score.get('number_accuracy')}, citation={score.get('citation_recall')}, retrieval={score.get('retrieval_recall')}, intent={score.get('intent_accuracy')}",
+            f"- Question: {case.question if case else ''}",
+            f"- Expected answer contains: {', '.join(score.get('expected_answer_contains') or []) or '-'}",
+            f"- Expected numbers: {', '.join(score.get('expected_numbers') or []) or '-'}",
+            f"- Expected sources: {_format_source_list(score.get('expected_sources') or [])}",
+            f"- Actual sources: {_format_source_list(score.get('actual_sources') or [])}",
+            f"- Retrieved chunks: {_format_source_list(score.get('actual_retrieved_chunks') or [])}",
+        ])
+        if prediction and prediction.error:
+            lines.append(f"- Prediction error: `{prediction.error}` {prediction.error_detail or ''}")
+        lines.extend([
+            "",
+            "Actual answer:",
+            "",
+            "```text",
+            _preview_text(prediction.answer if prediction else "", limit=1200),
+            "```",
+            "",
+        ])
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def audit_evaluation_fixtures(
@@ -1069,12 +1168,20 @@ def _select_interview_weak_cases(
         weak_by_id[case_id] = {
             "id": case_id,
             "passed": False,
+            "failure_category": score.get("failure_category"),
             "citation_recall": score.get("citation_recall"),
             "retrieval_recall": score.get("retrieval_recall"),
             "answer_contains": score.get("answer_contains"),
             "number_accuracy": score.get("number_accuracy"),
             "no_answer_accuracy": score.get("no_answer_accuracy"),
             "intent_accuracy": score.get("intent_accuracy"),
+            "expected_answer_contains": score.get("expected_answer_contains", []),
+            "expected_numbers": score.get("expected_numbers", []),
+            "expected_sources": score.get("expected_sources", []),
+            "actual_answer_preview": score.get("actual_answer_preview", ""),
+            "actual_sources": score.get("actual_sources", []),
+            "actual_retrieved_chunks": score.get("actual_retrieved_chunks", []),
+            "prediction_error": score.get("prediction_error"),
             "tags": score.get("tags", []),
             "reason": "score_failed",
         }
@@ -1313,7 +1420,12 @@ def _score_sources(
 def _contains_score(answer_lower: str, expected_phrases: tuple[str, ...]) -> float:
     if not expected_phrases:
         return 1.0
-    hits = sum(1 for phrase in expected_phrases if phrase.lower() in answer_lower)
+    normalized_answer = _normalize_text_for_match(answer_lower)
+    hits = 0
+    for phrase in expected_phrases:
+        alternatives = _expected_alternatives(phrase)
+        if any(_normalize_text_for_match(item) in normalized_answer for item in alternatives):
+            hits += 1
     return hits / len(expected_phrases)
 
 
@@ -1321,7 +1433,11 @@ def _number_score(answer: str, expected_numbers: tuple[str, ...]) -> float:
     if not expected_numbers:
         return 1.0
     found = set(_extract_numbers(answer))
-    hits = sum(1 for number in expected_numbers if number in found)
+    hits = 0
+    for number in expected_numbers:
+        expected = _normalize_number(number)
+        if expected in found or _number_text_match(answer, expected):
+            hits += 1
     return hits / len(expected_numbers)
 
 
@@ -1352,7 +1468,95 @@ def _extract_numbers(text: str) -> list[str]:
 
 
 def _normalize_number(value: str) -> str:
-    return value.replace(",", "").strip()
+    return value.replace(",", "").strip().rstrip("%")
+
+
+def _number_text_match(answer: str, expected: str) -> bool:
+    """Fallback for simple scaled forms, e.g. 42.2 vs '$42.2 million'."""
+    if not expected:
+        return False
+    compact_answer = answer.replace(",", "").lower()
+    if re.search(rf"(?<!\d){re.escape(expected)}(?!\d)", compact_answer):
+        return True
+    return False
+
+
+def _expected_alternatives(phrase: str) -> list[str]:
+    text = str(phrase)
+    # Allow explicit OR groups in future fixtures without changing the schema.
+    return [part.strip() for part in text.split("||") if part.strip()] or [text]
+
+
+def _normalize_text_for_match(text: str) -> str:
+    lowered = str(text).lower()
+    lowered = re.sub(r"\s+", " ", lowered)
+    return lowered.strip()
+
+
+def _classify_failure(
+    case: EvaluationCase,
+    prediction: Prediction,
+    *,
+    passed: bool,
+    source_recall: float,
+    retrieval_recall: float,
+    contains_score: float,
+    number_score: float,
+    no_answer_score: float,
+    intent_accuracy: float,
+) -> str | None:
+    if passed:
+        return None
+    if prediction.error:
+        return "runtime_error"
+    if case.expected_sources and retrieval_recall <= 0:
+        return "retrieval_miss"
+    if case.expected_sources and source_recall <= 0:
+        return "citation_miss"
+    if case.expected_numbers and number_score < 1.0:
+        return "number_extraction"
+    if case.expected_answer_contains and contains_score < 1.0:
+        return "answer_mismatch"
+    if case.expected_no_answer and no_answer_score < 1.0:
+        return "no_answer_failure"
+    if case.expected_intent and intent_accuracy < 1.0:
+        return "intent_mismatch"
+    return "score_failed"
+
+
+def _preview_text(text: str, *, limit: int = 500) -> str:
+    normalized = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _compact_source_dict(source: dict[str, Any]) -> dict[str, Any]:
+    compact: dict[str, Any] = {}
+    for key in ("filename", "page", "chunk_id", "doc_id", "parent_id", "section_path"):
+        value = source.get(key)
+        if value not in (None, "", []):
+            compact[key] = value
+    if "score" in source:
+        compact["score"] = source.get("score")
+    if "rerank_score" in source:
+        compact["rerank_score"] = source.get("rerank_score")
+    return compact
+
+
+def _format_source_list(sources: list[dict[str, Any]]) -> str:
+    if not sources:
+        return "-"
+    parts = []
+    for item in sources[:8]:
+        filename = item.get("filename") or _filename_from_doc_id(str(item.get("doc_id", ""))) or "?"
+        page = item.get("page", "?")
+        chunk = item.get("chunk_id") or item.get("doc_id") or ""
+        suffix = f" ({chunk})" if chunk else ""
+        parts.append(f"{filename}:p{page}{suffix}")
+    if len(sources) > 8:
+        parts.append(f"... +{len(sources) - 8} more")
+    return "; ".join(parts)
 
 
 def _filename_from_doc_id(doc_id: str) -> str | None:

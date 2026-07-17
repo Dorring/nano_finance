@@ -16,6 +16,7 @@ import sys
 
 from .services.evaluation import (
     audit_evaluation_fixtures,
+    build_failure_analysis_markdown,
     build_interview_report,
     compare_reports,
     diagnose_retrieval,
@@ -118,6 +119,12 @@ def main(argv: list[str] | None = None) -> int:
     interview.add_argument("--candidate-field", choices=["retrieved_chunks", "sources"], default="retrieved_chunks")
     interview.add_argument("--worst-limit", type=int, default=5, help="Maximum weak cases to include")
     interview.add_argument("--out", help="Optional interview report JSON output path")
+
+    failure_analysis = sub.add_parser("failure-analysis", help="Write a Markdown failure analysis report")
+    failure_analysis.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
+    failure_analysis.add_argument("--predictions", required=True, help="Predictions JSONL")
+    failure_analysis.add_argument("--out", required=True, help="Markdown output path")
+    failure_analysis.add_argument("--limit", type=int, help="Maximum failed cases to include")
 
     retrieval_bundle = sub.add_parser("retrieval-eval-bundle", help="Write score, retrieval diagnostics, and interview reports together")
     retrieval_bundle.add_argument("--cases", required=True, help="Golden/replay cases JSONL")
@@ -433,6 +440,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.out:
             write_json_file(args.out, report)
         print(payload)
+        return 0
+
+    if args.command == "failure-analysis":
+        try:
+            cases = load_jsonl_cases(args.cases)
+            predictions = load_jsonl_predictions(args.predictions)
+            markdown = build_failure_analysis_markdown(
+                cases,
+                predictions,
+                limit=args.limit,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(markdown, encoding="utf-8", newline="\n")
+        print(f"wrote failure analysis to {args.out}")
         return 0
 
     if args.command == "retrieval-eval-bundle":
