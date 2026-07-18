@@ -237,6 +237,82 @@ def test_numeric_answer_sums_cash_equivalents_from_table_terms():
         _cleanup(path)
 
 
+def test_numeric_answer_extracts_operating_cash_flow_table_row():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p50]\n"
+            "Net cash flows provided by (used in): Operating activities $ 24,053 $ 9,703 $ 14,600.\n"
+            "Financing activities 64,563 (11,233) (5,890).\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What net cash was provided by operating activities in 2025?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 50}],
+        )
+
+        assert answer is not None
+        assert "Answer: $24.1 million, 24,053." in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_extracts_wipo_statement_position_values():
+    engine, path = _engine()
+    try:
+        cash_context = (
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "STATEMENT I: Statement of Financial Position (in thousands of Swiss francs) "
+            "Cash and cash equivalents 143,540.\n"
+        )
+        assets_context = (
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "STATEMENT I: Statement of Financial Position (in thousands of Swiss francs) "
+            "Net assets 387,063.\n"
+        )
+
+        cash_answer = engine.answer_numeric_query_from_context(
+            "What were WIPO cash and cash equivalents at December 31, 2020?",
+            cash_context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 24}],
+        )
+        assets_answer = engine.answer_numeric_query_from_context(
+            "What were WIPO net assets at December 31, 2020?",
+            assets_context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 24}],
+        )
+
+        assert cash_answer is not None
+        assert "143,540, thousands of Swiss francs" in cash_answer["answer"]
+        assert assets_answer is not None
+        assert "387,063, thousands of Swiss francs" in assets_answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_extracts_credit_facility_components():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p48]\n"
+            "Credit Facilities consisted of a Revolving Credit Facility of $45.0 million "
+            "and a Term Loan of $25.0 million.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What were the two components of PDF Solutions Credit Facilities?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 48}],
+        )
+
+        assert answer is not None
+        assert "Revolving Credit Facility, $45 million" in answer["answer"]
+        assert "Term Loan, $25 million" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
 def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
     engine, path = _engine()
     try:
@@ -394,5 +470,36 @@ def test_page_fallback_chunks_are_added_before_reranking(monkeypatch):
         assert any("143,540" in chunk["content"] for chunk in chunks)
         assert any(chunk["metadata"].get("page_fallback") for chunk in chunks)
         assert all(chunk.get("score", 0) >= engine.min_score_threshold for chunk in chunks if chunk["metadata"].get("page_fallback"))
+    finally:
+        _cleanup(path)
+
+
+def test_page_fallback_pages_are_preserved_after_reranking():
+    engine, path = _engine()
+    try:
+        selected = [
+            _chunk(score=0.9, content="High scoring but unrelated page 1"),
+            {
+                "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_25::chunk_stmt",
+                "content": "Statement page.",
+                "metadata": {"type": "text", "page": 25, "doc_name": "wipo_pub_rn2021_18e.pdf"},
+                "score": 0.8,
+            },
+        ]
+        fallback_page_10 = {
+            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_10::chunk_revenue",
+            "content": "PCT system fees accounted for 76.6 per cent of total revenue.",
+            "metadata": {"type": "text", "page": 10, "doc_name": "wipo_pub_rn2021_18e.pdf", "page_fallback": True},
+            "score": 0.05,
+        }
+
+        covered = engine._ensure_page_fallback_coverage(
+            selected + [fallback_page_10],
+            selected,
+            top_k=2,
+        )
+
+        assert any(chunk["metadata"].get("page") == 10 for chunk in covered)
+        assert len(covered) == 2
     finally:
         _cleanup(path)
