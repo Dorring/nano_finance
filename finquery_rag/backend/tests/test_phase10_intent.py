@@ -34,6 +34,23 @@ def test_intent_classifies_financial_calculation():
     assert result["confidence"] >= 0.8
 
 
+def test_intent_keeps_reported_metrics_as_document_qa():
+    pct = classify_query_intent("What percentage of WIPO total revenue came from PCT system fees in 2020?")
+    margin = classify_query_intent("What was PDF Solutions GAAP gross margin in 2025?")
+    growth = classify_query_intent("What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?")
+
+    assert pct["intent"] == "document_qa"
+    assert pct["reason"] == "reported_metric_lookup"
+    assert margin["intent"] == "document_qa"
+    assert growth["intent"] == "document_qa"
+
+
+def test_intent_still_classifies_explicit_calculation():
+    result = classify_query_intent("Calculate the growth rate from 2024 revenue to 2025 revenue")
+
+    assert result["intent"] == "financial_calculation"
+
+
 def test_intent_classifies_document_summary():
     result = classify_query_intent("Summarize the key financial metrics")
     assert result["intent"] == "document_summary"

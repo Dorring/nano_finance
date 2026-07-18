@@ -36,6 +36,20 @@ SUMMARY_KEYWORDS = (
     "要点", "亮点",
 )
 
+DOCUMENT_LOOKUP_PATTERNS = (
+    "what was", "what were", "what is", "what are", "how much", "which",
+    "what percentage", "what percent",
+    "according to", "shown", "given", "reported", "in the report",
+    "in the document", "in the illustration", "in the table",
+)
+
+EXPLICIT_CALCULATION_PATTERNS = (
+    "calculate", "compute", "derive", "work out", "what is the ratio",
+    "what is the difference", "difference between", "growth rate from",
+    "change from", "increase from", "decrease from", "variance between",
+    "cagr",
+)
+
 GREETING_RE = re.compile(
     r"^(hi|hello|hey|good morning|good afternoon|good evening|你好|您好|嗨)[!.。！\s]*$",
     re.IGNORECASE,
@@ -59,6 +73,13 @@ OUT_OF_SCOPE_PATTERNS = (
 
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     return any(keyword in text for keyword in keywords)
+
+
+def _is_document_lookup_calculation_text(text: str) -> bool:
+    """Treat reported percentages/margins as document QA unless calculation is explicit."""
+    if _contains_any(text, EXPLICIT_CALCULATION_PATTERNS):
+        return False
+    return _contains_any(text, DOCUMENT_LOOKUP_PATTERNS)
 
 
 def classify_query_intent(question: str | None) -> dict[str, Any]:
@@ -94,6 +115,14 @@ def classify_query_intent(question: str | None) -> dict[str, Any]:
             "confidence": 0.85,
             "requires_retrieval": False,
             "reason": "assistant_meta_question",
+        }
+
+    if has_calc and _is_document_lookup_calculation_text(text):
+        return {
+            "intent": "document_qa",
+            "confidence": 0.84 if has_finance else 0.68,
+            "requires_retrieval": True,
+            "reason": "reported_metric_lookup",
         }
 
     if has_calc:
