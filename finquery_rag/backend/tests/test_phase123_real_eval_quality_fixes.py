@@ -195,6 +195,78 @@ def test_numeric_evidence_extractor_selects_relevant_number_lines():
         _cleanup(path)
 
 
+def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p29]\n"
+            "The PCT System\n"
+            "Actual 2020\n"
+            "98,755\n"
+            "Unrelated line 123\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "In WIPO Statement V expenses, what was the actual 2020 amount for The PCT System?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 29}],
+        )
+
+        assert answer is not None
+        assert "The PCT System" in answer["answer"]
+        assert "98,755" in answer["answer"]
+        assert "Source: wipo_pub_rn2021_18e.pdf, p29" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_evidence_extractor_answers_definition_without_llm():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p1]\n"
+            "Financial statements are the basic and formal annual reports through which corporate management communicates financial information.\n"
+            "They include balance sheet and statement of profit and loss.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "According to leac203.pdf, what are financial statements?",
+            context,
+            [{"filename": "leac203.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "basic and formal annual reports" in answer["answer"]
+        assert "corporate management communicates financial information" in answer["answer"]
+        assert "Source: leac203.pdf, p1" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_query_uses_deterministic_factual_answer_before_llm(monkeypatch):
+    client = _MockLLMClient(response_text="LLM should not be used.")
+    engine, path = _engine(client)
+    try:
+        monkeypatch.setattr(engine, "retrieve_single_document", lambda *args, **kwargs: [{
+            "doc_id": "user_1_leac203.pdf::page_1::chunk_definition",
+            "content": "Financial statements are the basic and formal annual reports through which corporate management communicates financial information.",
+            "metadata": {"type": "text", "page": 1, "doc_name": "leac203.pdf"},
+            "score": 0.8,
+        }])
+
+        result = asyncio.run(engine.query(
+            "According to leac203.pdf, what are financial statements?",
+            doc_names=["leac203.pdf"],
+            user_id=1,
+        ))
+
+        assert result["context_sufficient"] is True
+        assert "basic and formal annual reports" in result["answer"]
+        assert client.call_count == 0
+    finally:
+        _cleanup(path)
+
+
 def test_real_eval_page_fallback_rules_cover_known_miss_pages():
     engine, path = _engine()
     try:

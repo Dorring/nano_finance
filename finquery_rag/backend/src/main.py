@@ -1054,14 +1054,14 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             # Phase 3: Build context
             context, sources = engine.build_context(chunks)
 
-            numeric_answer = engine.answer_numeric_query_from_context(question, context, sources)
-            if numeric_answer:
-                full_answer = numeric_answer["answer"]
+            deterministic_context_answer = engine.answer_deterministic_query_from_context(question, context, sources)
+            if deterministic_context_answer:
+                full_answer = deterministic_context_answer["answer"]
                 diagnostics = {
                     "confidence": confidence,
                     "context_sufficient": True,
                     "intent_confidence": intent["confidence"],
-                    "deterministic_answer": numeric_answer["diagnostic"],
+                    "deterministic_answer": deterministic_context_answer["diagnostic"],
                 }
                 if session_id:
                     session_manager.add_message(session_id, current_user.id, "user", request.question)
