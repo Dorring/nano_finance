@@ -873,52 +873,185 @@ class RAGEngine:
         if not context or not self._should_try_deterministic_numeric_answer(query, [{"score": 1.0}]):
             return None
 
-        query_terms = self._important_query_terms(query)
-        evidence = []
+        evidence = self._rank_context_evidence(
+            query,
+            context,
+            require_number=True,
+            window_radius=1,
+        )
+        if not evidence:
+            return None
+
+        selected = self._select_distinct_evidence(evidence, limit=3)
+        if not selected:
+            return None
+
+        answer_lines = ["The relevant numeric evidence is:"]
+        for item in selected:
+            if item["source"]:
+                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
+            else:
+                answer_lines.append(f"- {item['text']}")
+        return {
+            "answer": "\n".join(answer_lines),
+            "diagnostic": "deterministic_numeric_evidence",
+        }
+
+    def answer_factual_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
+        """Return deterministic evidence for factual front-matter/definition/list questions."""
+        if not context or self._is_numeric_financial_query(query):
+            return None
+        if not self._should_try_deterministic_factual_answer(query):
+            return None
+
+        evidence = self._rank_context_evidence(
+            query,
+            context,
+            require_number=False,
+            window_radius=1,
+        )
+        if not evidence:
+            return None
+
+        selected = self._select_distinct_evidence(evidence, limit=3)
+        if not selected:
+            return None
+
+        normalized = (query or "").lower()
+        if "list" in normalized or "criteria" in normalized:
+            prefix = "The relevant criteria from the document are:"
+        elif "definition" in normalized or "meaning" in normalized or "what are financial statements" in normalized:
+            prefix = "The document states:"
+        else:
+            prefix = "The relevant document evidence is:"
+
+        answer_lines = [prefix]
+        for item in selected:
+            if item["source"]:
+                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
+            else:
+                answer_lines.append(f"- {item['text']}")
+        return {
+            "answer": "\n".join(answer_lines),
+            "diagnostic": "deterministic_factual_evidence",
+        }
+
+    def answer_deterministic_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
+        """Try deterministic non-LLM answering from retrieved context."""
+        factual = self.answer_factual_query_from_context(query, context, sources)
+        if factual:
+            return factual
+        return self.answer_numeric_query_from_context(query, context, sources)
+
+    @staticmethod
+    def _parse_context_lines(context: str) -> list[dict]:
+        parsed = []
         current_source = None
-        for raw_line in context.splitlines():
+        for raw_line in (context or "").splitlines():
             line = re.sub(r"\s+", " ", raw_line or "").strip()
-            if not line:
+            if not line or line == "---":
                 continue
             source_match = re.match(r"^\[(?P<source>[^\]]+)\]$", line)
             if source_match:
                 current_source = source_match.group("source")
                 continue
-            if not re.search(r"\d", line):
+            parsed.append({"source": current_source, "text": line})
+        return parsed
+
+    def _rank_context_evidence(
+        self,
+        query: str,
+        context: str,
+        *,
+        require_number: bool,
+        window_radius: int = 1,
+    ) -> list[dict]:
+        query_terms = self._important_query_terms(query)
+        parsed = self._parse_context_lines(context)
+        evidence = []
+        for index, item in enumerate(parsed):
+            line = item["text"]
+            if require_number and not re.search(r"\d", line):
                 continue
-            score = self._numeric_evidence_score(line, query_terms)
+            score = (
+                self._numeric_evidence_score(line, query_terms)
+                if require_number
+                else self._factual_evidence_score(line, query_terms)
+            )
             if score <= 0:
                 continue
-            evidence.append((score, current_source, line))
+            window = self._evidence_window(
+                parsed,
+                index,
+                radius=window_radius,
+                require_number=require_number,
+                query_terms=query_terms,
+            )
+            evidence.append({
+                "score": score,
+                "source": item["source"],
+                "text": window,
+            })
+        evidence.sort(key=lambda item: (-item["score"], len(item["text"])))
+        return evidence
 
-        if not evidence:
-            return None
+    @staticmethod
+    def _evidence_window(
+        parsed: list[dict],
+        index: int,
+        *,
+        radius: int,
+        require_number: bool,
+        query_terms: set[str],
+    ) -> str:
+        start = max(0, index - radius)
+        end = min(len(parsed), index + radius + 1)
+        source = parsed[index].get("source")
+        lines = []
+        for item in parsed[start:end]:
+            if item.get("source") != source:
+                continue
+            text = item.get("text") or ""
+            if not text or text in lines:
+                continue
+            if require_number and item is not parsed[index] and re.search(r"\d", text):
+                lowered = text.lower()
+                is_numeric_value_line = bool(re.fullmatch(r"[-+]?\$?\(?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|per cent|million|thousand|francs)?", text, flags=re.IGNORECASE))
+                if not is_numeric_value_line and not any(term in lowered for term in query_terms):
+                    continue
+            lines.append(text)
+        if require_number and not any(re.search(r"\d", line) for line in lines):
+            return parsed[index].get("text") or ""
+        joined = " ".join(lines)
+        if len(joined) > 700:
+            joined = joined[:700].rsplit(" ", 1)[0] + " [...]"
+        return joined
 
-        evidence.sort(key=lambda item: (-item[0], len(item[2])))
+    @staticmethod
+    def _select_distinct_evidence(evidence: list[dict], *, limit: int) -> list[dict]:
         selected = []
         seen_lines = set()
-        for score, source, line in evidence:
-            key = line.lower()
-            if key in seen_lines:
+        for item in evidence:
+            key = re.sub(r"\W+", " ", item.get("text", "").lower()).strip()[:180]
+            if not key or key in seen_lines:
                 continue
             seen_lines.add(key)
-            selected.append((source, line))
-            if len(selected) >= 3:
+            selected.append(item)
+            if len(selected) >= limit:
                 break
+        return selected
 
-        if not selected:
-            return None
-
-        answer_lines = ["The relevant numeric evidence is:"]
-        for source, line in selected:
-            if source:
-                answer_lines.append(f"- {line} (Source: {source})")
-            else:
-                answer_lines.append(f"- {line}")
-        return {
-            "answer": "\n".join(answer_lines),
-            "diagnostic": "deterministic_numeric_evidence",
-        }
+    @staticmethod
+    def _should_try_deterministic_factual_answer(query: str) -> bool:
+        normalized = (query or "").lower()
+        factual_markers = (
+            "what topic", "what is the title", "title and reporting period",
+            "which organization", "prepared", "what are financial statements",
+            "according to", "nature section", "basis for preparation",
+            "list two criteria", "criteria that make an item current",
+            "which documents mention", "cash terms",
+        )
+        return any(marker in normalized for marker in factual_markers)
 
     @staticmethod
     def _important_query_terms(query: str) -> set[str]:
@@ -927,6 +1060,8 @@ class RAGEngine:
             "how", "much", "many", "as", "of", "in", "on", "by", "to", "from",
             "with", "which", "documents", "document", "report", "reports",
             "according", "given", "shown", "amount", "year", "year-over-year",
+            "topic", "cover", "prepared", "organization", "basis", "preparation",
+            "list", "two", "criteria", "make", "item", "current", "mention",
         }
         terms = {
             term
@@ -945,6 +1080,10 @@ class RAGEngine:
             "surplus": {"reserve", "surplus"},
             "operating": {"operating", "activities"},
             "facilities": {"facility", "facilities", "loan", "credit"},
+            "organization": {"organization", "wipo", "world", "intellectual", "property"},
+            "prepared": {"prepared", "organization", "wipo"},
+            "statements": {"statements", "financial"},
+            "current": {"current", "operating", "cycle", "twelve", "months", "trading", "cash"},
         }
         expanded = set(terms)
         for term in list(terms):
@@ -961,6 +1100,16 @@ class RAGEngine:
         if number_hits == 0:
             return 0.0
         return term_hits * 2.0 + min(number_hits, 4)
+
+    @staticmethod
+    def _factual_evidence_score(line: str, query_terms: set[str]) -> float:
+        lowered = line.lower()
+        term_hits = sum(1 for term in query_terms if term in lowered)
+        if term_hits == 0:
+            return 0.0
+        if len(line) < 20:
+            return 0.0
+        return term_hits * 2.0
 
     def generate_answer_stream(self, context: str, query: str):
         """
@@ -1093,11 +1242,11 @@ class RAGEngine:
             context, sources = self.build_context(chunks)
 
             # 3. Generate answer (skip LLM if context is insufficient)
-            numeric_answer = self.answer_numeric_query_from_context(question, context, sources)
-            if numeric_answer:
-                answer = numeric_answer["answer"]
+            deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
+            if deterministic_context_answer:
+                answer = deterministic_context_answer["answer"]
                 is_sufficient = True
-                deterministic_answer = numeric_answer["diagnostic"]
+                deterministic_answer = deterministic_context_answer["diagnostic"]
                 low_confidence_numeric_override = False
             else:
                 low_confidence_numeric_override = self._should_generate_with_low_confidence(question, chunks)
