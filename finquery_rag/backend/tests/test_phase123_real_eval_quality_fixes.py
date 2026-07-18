@@ -313,6 +313,116 @@ def test_numeric_answer_extracts_credit_facility_components():
         _cleanup(path)
 
 
+def test_numeric_answer_prefers_pdfsol_cash_equivalents_over_nearby_tax_values():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p48]\n"
+            "The Company had cash and cash equivalents of $42.2 million as of December 31, 2025.\n"
+            "[FINAL Annual Report.pdf, p40]\n"
+            "Unrelated income tax expense was $1.3 million and the effective tax rate was 40%.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What cash and cash equivalents did PDF Solutions report at year-end 2025?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 48}],
+        )
+
+        assert answer is not None
+        assert "Answer: $42.2 million." in answer["answer"]
+        assert "$1.3 million" not in answer["answer"]
+        assert "40%" not in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_prefers_wipo_total_revenue_share_over_growth_rate():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "PCT system fees, accounting for 76.6 per cent of total revenue, "
+            "increased by 6.1 per cent compared to 2019.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What percentage of WIPO total revenue came from PCT system fees in 2020?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 10}],
+        )
+
+        assert answer is not None
+        assert "Answer: 76.6 per cent." in answer["answer"]
+        assert "6.1 per cent" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_extracts_wipo_madrid_total_revenue_share():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Madrid system fees amounted to 76.2 million Swiss francs, "
+            "representing 16.3 per cent of total revenue.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What percentage of WIPO total revenue came from Madrid system fees in 2020?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 10}],
+        )
+
+        assert answer is not None
+        assert "Answer: 16.3 per cent." in answer["answer"]
+        assert "76.2 million" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_uses_full_context_for_wipo_title_and_reporting_period():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p1]\n"
+            "Annual financial report and financial statements\n"
+            "Year to December 31, 2020\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "What is the title and reporting period of the WIPO financial report?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "Annual financial report and financial statements" in answer["answer"]
+        assert "Year to December 31, 2020" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_resolves_wipo_organization_from_query_when_context_is_sparse():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p1]\n"
+            "Annual financial report and financial statements.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "Which organization prepared the WIPO annual financial report?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "World Intellectual Property Organization (WIPO)." in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
 def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
     engine, path = _engine()
     try:
