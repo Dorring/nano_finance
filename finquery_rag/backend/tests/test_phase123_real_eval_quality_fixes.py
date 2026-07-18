@@ -195,6 +195,48 @@ def test_numeric_evidence_extractor_selects_relevant_number_lines():
         _cleanup(path)
 
 
+def test_numeric_answer_adds_direct_reported_metric_summary():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p45]\n"
+            "Platform revenue was $181.0 million for the year ended December 31, 2025, "
+            "an increase of $23.9 million, or 15%, compared to the year ended December 31, 2024.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What was PDF Solutions platform revenue in 2025 and how much did it grow year over year?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 45}],
+        )
+
+        assert answer is not None
+        assert answer["answer"].startswith("Answer: $181 million, 15% year-over-year.")
+        assert "Evidence:" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_sums_cash_equivalents_from_table_terms():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p10(T2)]\n"
+            "| Bank balance | 60,000 | Cash in hand | 38,000 |\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "In the Amba Ltd. illustration, what amount is shown as cash and cash equivalents?",
+            context,
+            [{"filename": "leac203.pdf", "page": 10}],
+        )
+
+        assert answer is not None
+        assert "Answer: 98,000." in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
 def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
     engine, path = _engine()
     try:
@@ -239,6 +281,41 @@ def test_factual_evidence_extractor_answers_definition_without_llm():
         assert "basic and formal annual reports" in answer["answer"]
         assert "corporate management communicates financial information" in answer["answer"]
         assert "Source: leac203.pdf, p1" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_summarizes_known_cover_topic():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p1]\n"
+            "Accountancy Financial Statements of a Company Learning Objectives.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "What topic does leac203.pdf cover?",
+            context,
+            [{"filename": "leac203.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "Answer: Financial Statements of a Company; Accountancy." in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_short_generic_front_matter_title_does_not_short_circuit():
+    engine, path = _engine()
+    try:
+        result = engine.answer_front_matter_query("What is the title shown on the cover?", [{
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_1::front_matter_title",
+            "content": "ANNUAL",
+            "metadata": {"type": "front_matter", "subtype": "title", "page": 1},
+            "score": 1.0,
+        }])
+
+        assert result is None
     finally:
         _cleanup(path)
 
@@ -315,5 +392,7 @@ def test_page_fallback_chunks_are_added_before_reranking(monkeypatch):
 
         assert any(chunk["metadata"].get("page") == 24 for chunk in chunks)
         assert any("143,540" in chunk["content"] for chunk in chunks)
+        assert any(chunk["metadata"].get("page_fallback") for chunk in chunks)
+        assert all(chunk.get("score", 0) >= engine.min_score_threshold for chunk in chunks if chunk["metadata"].get("page_fallback"))
     finally:
         _cleanup(path)
