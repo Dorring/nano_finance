@@ -974,8 +974,6 @@ def test_multi_doc_cash_terms_query_is_not_treated_as_numeric_extraction():
         assert "$1.3 million" not in answer["answer"]
     finally:
         _cleanup(path)
-
-
 def test_pdfsol_cash_equivalents_uses_statement_page_when_text_is_polluted():
     engine, path = _engine()
     try:
