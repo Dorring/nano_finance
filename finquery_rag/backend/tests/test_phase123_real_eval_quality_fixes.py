@@ -1296,3 +1296,30 @@ def test_factual_summary_lists_all_cash_equivalent_documents():
             assert expected in answer["answer"]
     finally:
         _cleanup(path)
+
+
+def test_factual_cash_terms_uses_sources_when_context_is_truncated():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p10]\n"
+            "Cash and cash equivalents is shown as a line item.\n"
+            "[FINAL Annual Report.pdf, p48]\n"
+            "Cash and cash equivalents are reported.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "Which documents mention cash and cash equivalents as a reported line item?",
+            context,
+            [
+                {"filename": "leac203.pdf", "page": 10},
+                {"filename": "FINAL Annual Report.pdf", "page": 48},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 24},
+            ],
+        )
+
+        assert answer is not None
+        for expected in ("FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf", "leac203.pdf"):
+            assert expected in answer["answer"]
+    finally:
+        _cleanup(path)
