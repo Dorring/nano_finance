@@ -974,3 +974,77 @@ def test_multi_doc_cash_terms_query_is_not_treated_as_numeric_extraction():
         assert "$1.3 million" not in answer["answer"]
     finally:
         _cleanup(path)
+def test_pdfsol_cash_equivalents_uses_statement_page_when_text_is_polluted():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p48]\n"
+            "A nearby tax disclosure mentions a cash tax benefit of $1.3 million and a 40% effective tax rate.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "How much cash and cash equivalents did PDF Solutions have as of December 31, 2025?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 48}],
+        )
+
+        assert answer is not None
+        assert "Answer: $42.2 million." in answer["answer"]
+        assert "$1.3 million" not in answer["answer"].split("Evidence:", 1)[0]
+        assert "40%" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_wipo_revenue_share_uses_expected_page_metric_over_growth_rate():
+    engine, path = _engine()
+    try:
+        pct_context = (
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Revenue from PCT system fees increased by 6.1 per cent compared to 2019.\n"
+        )
+        madrid_context = (
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Madrid system fees were 76.2 million Swiss francs in 2020.\n"
+        )
+
+        pct_answer = engine.answer_numeric_query_from_context(
+            "What percentage of WIPO total revenue came from PCT system fees in 2020?",
+            pct_context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 10}],
+        )
+        madrid_answer = engine.answer_numeric_query_from_context(
+            "What percentage of WIPO total revenue came from Madrid system fees in 2020?",
+            madrid_context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 10}],
+        )
+
+        assert pct_answer is not None
+        assert "Answer: 76.6 per cent." in pct_answer["answer"]
+        assert "6.1 per cent" not in pct_answer["answer"].split("Evidence:", 1)[0]
+        assert madrid_answer is not None
+        assert "Answer: 16.3 per cent." in madrid_answer["answer"]
+        assert "76.2 million" not in madrid_answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_sunfill_reserve_surplus_uses_known_balance_sheet_page():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p13]\n"
+            "The table contains page numbers and unrelated dates, but it is the Sunfill Ltd. balance sheet page.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "In the Sunfill Ltd. illustration, what reserve and surplus amount is shown for March 31, 2017?",
+            context,
+            [{"filename": "leac203.pdf", "page": 13}],
+        )
+
+        assert answer is not None
+        assert "Answer: 2,00,000." in answer["answer"]
+        assert "156" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
