@@ -343,12 +343,12 @@ class RAGEngine:
                 pages.append(1)
             if "nature" in normalized_query or "periodical" in normalized_query:
                 pages.append(2)
-            if any(term in normalized_query for term in ("current item", "criteria", "amba", "cash terms", "cash and cash equivalents")):
+            if "black swan" in normalized_query:
+                pages.append(27)
+            elif any(term in normalized_query for term in ("current item", "criteria", "amba", "cash terms", "cash and cash equivalents")):
                 pages.append(10)
             if "sunfill" in normalized_query or "reserve and surplus" in normalized_query:
                 pages.extend([13, 14])
-            if "black swan" in normalized_query:
-                pages.append(27)
 
         return list(dict.fromkeys(page for page in pages if page > 0))
 
