@@ -291,6 +291,54 @@ def test_numeric_answer_extracts_wipo_statement_position_values():
         _cleanup(path)
 
 
+def test_numeric_answer_uses_wipo_statement_position_page_fallback_when_table_value_is_missing():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "STATEMENT I: Statement of Financial Position (in thousands of Swiss francs).\n"
+        )
+
+        cash_answer = engine.answer_numeric_query_from_context(
+            "What were WIPO cash and cash equivalents at December 31, 2020?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 24}],
+        )
+        assets_answer = engine.answer_numeric_query_from_context(
+            "What were WIPO net assets at December 31, 2020?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 24}],
+        )
+
+        assert cash_answer is not None
+        assert "143,540, thousands of Swiss francs" in cash_answer["answer"]
+        assert assets_answer is not None
+        assert "387,063, thousands of Swiss francs" in assets_answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_uses_wipo_total_revenue_table_page_fallback():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p25]\n"
+            "STATEMENT II: Statement of Financial Performance (in thousands of Swiss francs).\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "What was WIPO total revenue in 2020 on an IPSAS basis?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 25}],
+        )
+
+        assert answer is not None
+        assert "468.3 million Swiss francs" in answer["answer"]
+        assert "468,272" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
 def test_numeric_answer_extracts_credit_facility_components():
     engine, path = _engine()
     try:
@@ -377,6 +425,53 @@ def test_numeric_answer_extracts_wipo_madrid_total_revenue_share():
         assert answer is not None
         assert "Answer: 16.3 per cent." in answer["answer"]
         assert "76.2 million" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_numeric_answer_prefers_wipo_statement_v_pct_system_actual_over_pct_share():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p29]\n"
+            "STATEMENT V: Comparison of budget and actual amounts. The PCT System actual 2020 amount is 98,755.\n"
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "PCT system fees accounted for 76.6 per cent of total revenue.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "In WIPO Statement V expenses, what was the actual 2020 amount for The PCT System?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 29}],
+        )
+
+        assert answer is not None
+        assert "The PCT System" in answer["answer"]
+        assert "98,755" in answer["answer"]
+        assert "76.6 per cent" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_extracts_pdfsol_cover_title_from_context():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p53]\n"
+            "CONSOLIDATED STATEMENTS OF STOCKHOLDERS' EQUITY.\n"
+            "[FINAL Annual Report.pdf, p1]\n"
+            "2025 Driving Smart Solutions ANNUAL REPORT.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "What is the title shown on the cover of the PDF Solutions report?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "2025 Driving Smart Solutions Annual Report" in answer["answer"]
+        assert "STOCKHOLDERS" not in answer["answer"].split("Evidence:", 1)[0]
     finally:
         _cleanup(path)
 
