@@ -1238,3 +1238,61 @@ def test_multi_doc_cash_terms_lists_all_documents_from_context_sources():
             assert expected in answer["answer"]
     finally:
         _cleanup(path)
+
+
+def test_numeric_summary_prefers_main_revenue_for_multi_doc_compare():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p45]\n"
+            "Platform revenue was $181.0 million.\n"
+            "[FINAL Annual Report.pdf, p3]\n"
+            "Record revenue reached $219 million.\n"
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Total revenue was 468.3 million Swiss francs.\n"
+        )
+
+        answer = engine.answer_numeric_query_from_context(
+            "Compare the main 2025/2020 revenue figures in the PDF Solutions and WIPO reports.",
+            context,
+            [
+                {"filename": "FINAL Annual Report.pdf", "page": 3},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 10},
+            ],
+        )
+
+        assert answer is not None
+        assert "$219 million" in answer["answer"]
+        assert "468.3 million Swiss francs" in answer["answer"]
+        assert "$181" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_summary_lists_all_cash_equivalent_documents():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p10]\n"
+            "Cash and cash equivalents is shown as a line item.\n"
+            "[FINAL Annual Report.pdf, p48]\n"
+            "Cash and cash equivalents are reported.\n"
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "Cash and cash equivalents are reported.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "Which documents mention cash and cash equivalents as a reported line item?",
+            context,
+            [
+                {"filename": "leac203.pdf", "page": 10},
+                {"filename": "FINAL Annual Report.pdf", "page": 48},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 24},
+            ],
+        )
+
+        assert answer is not None
+        for expected in ("FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf", "leac203.pdf"):
+            assert expected in answer["answer"]
+    finally:
+        _cleanup(path)
