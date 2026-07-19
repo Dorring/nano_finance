@@ -1896,6 +1896,7 @@ class RAGEngine:
 
             # 2. Build context (with dedup and score threshold)
             context, sources = self.build_context(chunks)
+            sources = self._ensure_supporting_sources(sources, chunks)
 
             # 3. Generate answer (skip LLM if context is insufficient)
             deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
