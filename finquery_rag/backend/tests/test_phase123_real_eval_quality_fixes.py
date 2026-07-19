@@ -120,6 +120,46 @@ def test_numeric_finance_query_can_generate_from_low_rrf_score():
         _cleanup(path)
 
 
+def test_supporting_source_pages_are_retained_in_final_sources():
+    engine, path = _engine()
+    try:
+        sources = [{
+            "filename": "FINAL Annual Report.pdf",
+            "page": 45,
+            "type": "text",
+            "score": 0.9,
+            "chunk_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_47_5",
+        }]
+        chunks = [
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_47_5",
+                "content": "Volume-based revenue was $38.0 million.",
+                "metadata": {"type": "text", "page": 45, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.9,
+            },
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_record_revenue",
+                "content": "Record revenue and volume-based revenue are summarized on the cover facts page.",
+                "metadata": {
+                    "type": "text",
+                    "page": 3,
+                    "doc_name": "FINAL Annual Report.pdf",
+                    "page_fallback": True,
+                    "supporting_source_page": True,
+                },
+                "score": 0.12,
+            },
+        ]
+
+        retained = engine._ensure_supporting_sources(sources, chunks)
+        summarized = engine._summarize_retrieved_chunks(chunks)
+
+        assert any(source["filename"] == "FINAL Annual Report.pdf" and source["page"] == 3 for source in retained)
+        assert any(chunk.get("supporting_source_page") for chunk in summarized)
+    finally:
+        _cleanup(path)
+
+
 def test_non_numeric_low_confidence_query_still_refuses_without_llm(monkeypatch):
     client = _MockLLMClient()
     engine, path = _engine(client)

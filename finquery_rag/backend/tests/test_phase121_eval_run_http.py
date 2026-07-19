@@ -34,6 +34,14 @@ def test_run_http_case_posts_query_payload_and_normalizes_prediction(monkeypatch
         return _FakeResponse({
             "answer": "Revenue was $219 million.",
             "sources": [{"filename": "report.pdf", "page": 3}],
+            "retrieved_chunks": [
+                {
+                    "doc_id": "user_1_report.pdf::page_3::chunk_7",
+                    "filename": "report.pdf",
+                    "page": 3,
+                }
+            ],
+            "retrieval_debug": {"candidate_count": 16, "returned_count": 8},
             "confidence": 0.8,
             "context_sufficient": True,
             "intent": "document_qa",
@@ -65,7 +73,14 @@ def test_run_http_case_posts_query_payload_and_normalizes_prediction(monkeypatch
     assert captured["timeout"] == 12
     assert prediction["id"] == "c1"
     assert prediction["answer"] == "Revenue was $219 million."
-    assert prediction["retrieved_chunks"] == [{"filename": "report.pdf", "page": 3}]
+    assert prediction["retrieved_chunks"] == [
+        {
+            "doc_id": "user_1_report.pdf::page_3::chunk_7",
+            "filename": "report.pdf",
+            "page": 3,
+        }
+    ]
+    assert prediction["retrieval_debug"] == {"candidate_count": 16, "returned_count": 8}
     assert prediction["trace_id"] == "abc123"
 
 
