@@ -89,6 +89,23 @@ def test_number_accuracy_normalizes_commas():
     assert score["passed"] is True
 
 
+def test_answer_contains_treats_percent_and_per_cent_as_equivalent():
+    case = EvaluationCase.from_dict({
+        "id": "c1",
+        "question": "What share?",
+        "expected_answer_contains": ["76.6%"],
+    })
+    pred = Prediction.from_dict({
+        "id": "c1",
+        "answer": "Answer: 76.6 per cent.",
+    })
+
+    score = score_prediction(case, pred)
+
+    assert score["answer_contains"] == 1.0
+    assert score["passed"] is True
+
+
 def test_no_answer_case_requires_refusal_marker():
     case = EvaluationCase.from_dict({
         "id": "c1",

@@ -1424,9 +1424,20 @@ def _contains_score(answer_lower: str, expected_phrases: tuple[str, ...]) -> flo
     hits = 0
     for phrase in expected_phrases:
         alternatives = _expected_alternatives(phrase)
-        if any(_normalize_text_for_match(item) in normalized_answer for item in alternatives):
+        if any(_expected_phrase_matches(normalized_answer, item) for item in alternatives):
             hits += 1
     return hits / len(expected_phrases)
+
+
+def _expected_phrase_matches(normalized_answer: str, expected: str) -> bool:
+    normalized_expected = _normalize_text_for_match(expected)
+    if normalized_expected in normalized_answer:
+        return True
+    percent_match = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(?:%|percent|per cent)", normalized_expected)
+    if percent_match:
+        value = re.escape(percent_match.group(1))
+        return bool(re.search(rf"\b{value}\s*(?:%|percent|per cent)\b", normalized_answer))
+    return False
 
 
 def _number_score(answer: str, expected_numbers: tuple[str, ...]) -> float:

@@ -373,7 +373,7 @@ class RAGEngine:
                 pages.extend([3, 6])
             if any(term in normalized_query for term in ("pct", "madrid", "percentage", "total revenue", "compare")):
                 pages.append(10)
-            if "cash and cash equivalents" in normalized_query or "cash terms" in normalized_query:
+            if "cash and cash equivalents" in normalized_query or "cash terms" in normalized_query or "net assets" in normalized_query:
                 pages.append(24)
 
         if "leac" in normalized_doc or "leac" in normalized_query:
