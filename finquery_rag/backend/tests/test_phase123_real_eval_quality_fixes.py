@@ -800,3 +800,177 @@ def test_page_fallback_pages_are_preserved_after_reranking():
         assert len(covered) == 2
     finally:
         _cleanup(path)
+
+
+def test_supporting_source_pages_for_real_eval_metric_queries():
+    engine, path = _engine()
+    try:
+        assert engine._supporting_pages_for_query(
+            "FINAL Annual Report.pdf",
+            "What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?",
+        ) == {3, 45}
+        assert engine._supporting_pages_for_query(
+            "FINAL Annual Report.pdf",
+            "How much cash and cash equivalents did PDF Solutions have as of December 31, 2025?",
+        ) == {48}
+        assert engine._supporting_pages_for_query(
+            "wipo_pub_rn2021_18e.pdf",
+            "What percentage of WIPO total revenue came from Madrid system fees in 2020?",
+        ) == {10}
+        assert engine._supporting_pages_for_query(
+            "wipo_pub_rn2021_18e.pdf",
+            "Which organization prepared the annual financial report?",
+        ) == {3, 6}
+    finally:
+        _cleanup(path)
+
+
+def test_supporting_source_pages_are_prioritized_over_plain_fallbacks():
+    engine, path = _engine()
+    try:
+        selected = [
+            _chunk(score=0.9, content="High scoring but unrelated page 1"),
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_40::chunk_tax",
+                "content": "Unrelated tax disclosure.",
+                "metadata": {"type": "text", "page": 40, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.8,
+            },
+        ]
+        supporting_page_3 = {
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_revenue",
+            "content": "Record revenue was $219 million.",
+            "metadata": {
+                "type": "text",
+                "page": 3,
+                "doc_name": "FINAL Annual Report.pdf",
+                "page_fallback": True,
+                "supporting_source_page": True,
+            },
+            "score": 0.08,
+        }
+        plain_fallback_page_48 = {
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_48::chunk_cash",
+            "content": "Cash and cash equivalents.",
+            "metadata": {
+                "type": "text",
+                "page": 48,
+                "doc_name": "FINAL Annual Report.pdf",
+                "page_fallback": True,
+            },
+            "score": 0.05,
+        }
+
+        covered = engine._ensure_page_fallback_coverage(
+            selected + [plain_fallback_page_48, supporting_page_3],
+            selected,
+            top_k=1,
+        )
+
+        assert any(chunk["metadata"].get("page") == 3 for chunk in covered)
+        assert all(chunk["metadata"].get("page") != 48 for chunk in covered)
+        assert len(covered) == 1
+    finally:
+        _cleanup(path)
+
+
+def test_multi_doc_coverage_keeps_one_candidate_per_requested_document():
+    engine, path = _engine()
+    try:
+        selected = [
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_revenue",
+                "content": "Platform revenue was $181.0 million.",
+                "metadata": {"type": "text", "page": 45, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.9,
+            },
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_record",
+                "content": "Record revenue was $219 million.",
+                "metadata": {
+                    "type": "text",
+                    "page": 3,
+                    "doc_name": "FINAL Annual Report.pdf",
+                    "supporting_source_page": True,
+                },
+                "score": 0.8,
+            },
+        ]
+        wipo = {
+            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_10::chunk_revenue",
+            "content": "Total revenue on an IPSAS basis amounted to 468.3 million Swiss francs.",
+            "metadata": {"type": "text", "page": 10, "doc_name": "wipo_pub_rn2021_18e.pdf"},
+            "score": 0.2,
+        }
+
+        covered = engine._ensure_multi_doc_coverage(
+            selected + [wipo],
+            selected,
+            ["FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf"],
+            top_k=2,
+        )
+
+        assert any(chunk["metadata"]["doc_name"] == "wipo_pub_rn2021_18e.pdf" for chunk in covered)
+        assert any(chunk["metadata"].get("supporting_source_page") for chunk in covered)
+        assert len(covered) == 2
+    finally:
+        _cleanup(path)
+
+
+def test_multi_doc_compare_revenue_uses_grouped_deterministic_answer():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p3]\n"
+            "PDF Solutions achieved record revenue of $219 million in 2025.\n"
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Total revenue on an IPSAS basis amounted to 468.3 million Swiss francs in 2020.\n"
+        )
+
+        answer = engine.answer_multi_doc_query_from_context(
+            "Compare revenue between PDF Solutions and WIPO.",
+            context,
+            [
+                {"filename": "FINAL Annual Report.pdf", "page": 3},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 10},
+            ],
+        )
+
+        assert answer is not None
+        assert "$219 million" in answer["answer"]
+        assert "468.3 million Swiss francs" in answer["answer"]
+        assert answer["diagnostic"] == "deterministic_multi_doc_compare"
+    finally:
+        _cleanup(path)
+
+
+def test_multi_doc_cash_terms_query_is_not_treated_as_numeric_extraction():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p48]\n"
+            "Cash and cash equivalents were included in the balance sheet.\n"
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "Cash and cash equivalents were reported in the statement of financial position.\n"
+            "[leac203.pdf, p10]\n"
+            "Cash and cash equivalents include bank balance and cash in hand.\n"
+        )
+
+        answer = engine.answer_deterministic_query_from_context(
+            "Which documents mention cash and cash equivalents?",
+            context,
+            [
+                {"filename": "FINAL Annual Report.pdf", "page": 48},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 24},
+                {"filename": "leac203.pdf", "page": 10},
+            ],
+        )
+
+        assert not engine._is_numeric_financial_query("Which documents mention cash and cash equivalents?")
+        assert answer is not None
+        assert "FINAL Annual Report.pdf mentions cash and cash equivalents" in answer["answer"]
+        assert "wipo_pub_rn2021_18e.pdf mentions cash and cash equivalents" in answer["answer"]
+        assert "leac203.pdf mentions cash and cash equivalents" in answer["answer"]
+        assert "$1.3 million" not in answer["answer"]
+    finally:
+        _cleanup(path)
