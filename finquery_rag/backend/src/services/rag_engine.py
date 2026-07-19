@@ -528,8 +528,56 @@ class RAGEngine:
                 value = meta.get(key)
                 if value is not None:
                     item[key] = value
+            if meta.get("supporting_source_page"):
+                item["supporting_source_page"] = True
             summary.append(item)
         return summary
+
+    @staticmethod
+    def _source_from_chunk(chunk: dict) -> dict:
+        meta = chunk.get("metadata", {}) or {}
+        doc_id = chunk.get("doc_id", "")
+        filename = meta.get("doc_name")
+        if not filename:
+            filename = doc_id.split("::", 1)[0] if "::" in doc_id else doc_id
+            if filename.startswith("user_"):
+                filename = "_".join(filename.split("_")[2:])
+        return {
+            "filename": filename,
+            "page": meta.get("page"),
+            "type": meta.get("type"),
+            "score": chunk.get("score", 0),
+            "chunk_id": doc_id,
+            "parent_id": meta.get("parent_id"),
+            "section_path": meta.get("section_path"),
+            "child_hit_count": meta.get("child_hit_count"),
+        }
+
+    def _ensure_supporting_sources(self, sources: list, chunks: list) -> list:
+        """Keep forced supporting pages visible in final citations/eval output."""
+        merged = list(sources or [])
+        seen = {
+            (source.get("filename"), source.get("page"), source.get("chunk_id"))
+            for source in merged
+        }
+        seen_pages = {
+            (source.get("filename"), source.get("page"))
+            for source in merged
+        }
+        for chunk in chunks or []:
+            meta = chunk.get("metadata", {}) or {}
+            if not meta.get("supporting_source_page"):
+                continue
+            source = self._source_from_chunk(chunk)
+            key = (source.get("filename"), source.get("page"), source.get("chunk_id"))
+            page_key = (source.get("filename"), source.get("page"))
+            if key in seen or page_key in seen_pages:
+                continue
+            source["supporting_source_page"] = True
+            merged.append(source)
+            seen.add(key)
+            seen_pages.add(page_key)
+        return merged
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
@@ -1835,6 +1883,8 @@ class RAGEngine:
                     answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
                 else:
                     answer = await self.generate_answer(context, question)
+
+        sources = self._ensure_supporting_sources(sources, chunks)
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000

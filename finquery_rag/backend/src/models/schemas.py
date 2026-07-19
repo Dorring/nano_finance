@@ -88,6 +88,12 @@ class QueryResponse(BaseModel):
     trace_id: str | None = None
     # 查询追踪ID（Phase 12）
 
+    retrieved_chunks: list[dict] = Field(default_factory=list)
+    # Compact retrieval candidates for HTTP/offline evaluation diagnostics.
+    retrieval_debug: dict = Field(default_factory=dict)
+    # Retrieval configuration and candidate-count diagnostics.
+
+
 class EvalScoreRequest(BaseModel):
     """Offline evaluation scoring request using in-memory JSON cases/predictions."""
     cases: list[dict] = Field(..., min_length=1, max_length=1000)

@@ -909,6 +909,8 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             intent=result.get("intent"),
             intent_confidence=result.get("intent_confidence"),
             trace_id=result.get("trace_id"),
+            retrieved_chunks=result.get("retrieved_chunks", []),
+            retrieval_debug=result.get("retrieval_debug", {}),
         )
 
     except HTTPException:

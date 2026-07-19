@@ -39,6 +39,30 @@ def test_source_info_schema_documents_chunk_id():
     assert "score" in source_schema["properties"]
 
 
+def test_query_response_schema_exposes_retrieval_diagnostics_for_http_eval():
+    response = QueryResponse(
+        answer="A",
+        sources=[{"filename": "report.pdf", "page": 3}],
+        question="Q",
+        searched_docs=["report.pdf"],
+        retrieved_chunks=[
+            {
+                "doc_id": "user_1_report.pdf::page_3::chunk_7",
+                "filename": "report.pdf",
+                "page": 3,
+                "score": 0.42,
+            }
+        ],
+        retrieval_debug={"candidate_count": 12, "returned_count": 5},
+    )
+    schema = QueryResponse.model_json_schema()
+
+    assert "retrieved_chunks" in schema["properties"]
+    assert "retrieval_debug" in schema["properties"]
+    assert response.retrieved_chunks[0]["doc_id"] == "user_1_report.pdf::page_3::chunk_7"
+    assert response.retrieval_debug["candidate_count"] == 12
+
+
 
 def test_main_api_pagination_helper_rejects_negative_values_static():
     main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
