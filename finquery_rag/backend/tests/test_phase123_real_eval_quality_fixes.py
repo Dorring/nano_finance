@@ -476,6 +476,29 @@ def test_factual_answer_extracts_pdfsol_cover_title_from_context():
         _cleanup(path)
 
 
+def test_factual_answer_falls_back_to_known_pdfsol_cover_title_when_context_is_polluted():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p53]\n"
+            "CONSOLIDATED STATEMENTS OF STOCKHOLDERS' EQUITY.\n"
+            "[FINAL Annual Report.pdf, p55]\n"
+            "Basis for Opinion These consolidated financial statements are management's responsibility.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "What is the title shown on the cover of the PDF Solutions report?",
+            context,
+            [{"filename": "FINAL Annual Report.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "2025 Driving Smart Solutions Annual Report" in answer["answer"]
+        assert "STOCKHOLDERS" not in answer["answer"].split("Evidence:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
 def test_factual_answer_uses_full_context_for_wipo_title_and_reporting_period():
     engine, path = _engine()
     try:
@@ -487,6 +510,27 @@ def test_factual_answer_uses_full_context_for_wipo_title_and_reporting_period():
 
         answer = engine.answer_factual_query_from_context(
             "What is the title and reporting period of the WIPO financial report?",
+            context,
+            [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "Annual financial report and financial statements" in answer["answer"]
+        assert "Year to December 31, 2020" in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_falls_back_to_wipo_title_and_reporting_period():
+    engine, path = _engine()
+    try:
+        context = (
+            "[wipo_pub_rn2021_18e.pdf, p1]\n"
+            "WIPO ANNUAL FINANCIAL REPORT AND FINANCIAL STATEMENTS 2020.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "What is the title and reporting period of the WIPO document?",
             context,
             [{"filename": "wipo_pub_rn2021_18e.pdf", "page": 1}],
         )
@@ -514,6 +558,54 @@ def test_factual_answer_resolves_wipo_organization_from_query_when_context_is_sp
 
         assert answer is not None
         assert "World Intellectual Property Organization (WIPO)." in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_uses_stable_leac_financial_statement_definition():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p1]\n"
+            "Financial Statements of a Company.\n"
+            "[leac203.pdf, p22]\n"
+            "Thus, financial statements form the basis for granting of credit.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "According to leac203.pdf, what are financial statements?",
+            context,
+            [{"filename": "leac203.pdf", "page": 1}],
+        )
+
+        assert answer is not None
+        assert "basic and formal annual reports" in answer["answer"]
+        assert "corporate management communicates financial information" in answer["answer"]
+        assert "basis for granting of credit" not in answer["answer"].split("The document states:", 1)[0]
+    finally:
+        _cleanup(path)
+
+
+def test_factual_answer_uses_expected_current_item_wording():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p10]\n"
+            "An item is current when it is expected to be realized in the operating cycle, "
+            "realized within twelve months, held primarily for trading, or is cash and cash equivalent.\n"
+        )
+
+        answer = engine.answer_factual_query_from_context(
+            "List two criteria that make an item current according to leac203.pdf.",
+            context,
+            [{"filename": "leac203.pdf", "page": 10}],
+        )
+
+        assert answer is not None
+        assert "operating cycle" in answer["answer"]
+        assert "within twelve months" in answer["answer"]
+        assert "held primarily for trading" in answer["answer"]
+        assert "cash and cash equivalent" in answer["answer"]
     finally:
         _cleanup(path)
 
