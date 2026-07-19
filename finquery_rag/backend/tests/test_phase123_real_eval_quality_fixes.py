@@ -1184,3 +1184,57 @@ def test_multi_doc_coverage_prefers_supporting_candidate_for_missing_doc():
         assert all(chunk["metadata"].get("page") != 1 for chunk in covered)
     finally:
         _cleanup(path)
+
+
+def test_multi_doc_revenue_compare_uses_document_level_figures_from_context():
+    engine, path = _engine()
+    try:
+        context = (
+            "[FINAL Annual Report.pdf, p45]\n"
+            "Platform revenue was $181.0 million.\n"
+            "[FINAL Annual Report.pdf, p3]\n"
+            "Record revenue reached $219 million.\n"
+            "[wipo_pub_rn2021_18e.pdf, p10]\n"
+            "Total revenue was 468.3 million Swiss francs.\n"
+        )
+
+        answer = engine.answer_multi_doc_query_from_context(
+            "Compare the main 2025/2020 revenue figures in the PDF Solutions and WIPO reports.",
+            context,
+            [
+                {"filename": "FINAL Annual Report.pdf", "page": 45},
+                {"filename": "wipo_pub_rn2021_18e.pdf", "page": 10},
+            ],
+        )
+
+        assert answer is not None
+        assert "$219 million" in answer["answer"]
+        assert "468.3 million Swiss francs" in answer["answer"]
+        assert "$181" not in answer["answer"]
+    finally:
+        _cleanup(path)
+
+
+def test_multi_doc_cash_terms_lists_all_documents_from_context_sources():
+    engine, path = _engine()
+    try:
+        context = (
+            "[leac203.pdf, p10]\n"
+            "Cash and cash equivalents is shown as a line item.\n"
+            "[FINAL Annual Report.pdf, p48]\n"
+            "Cash and cash equivalents are reported.\n"
+            "[wipo_pub_rn2021_18e.pdf, p24]\n"
+            "Cash and cash equivalents are reported.\n"
+        )
+
+        answer = engine.answer_multi_doc_query_from_context(
+            "Which documents mention cash and cash equivalents as a reported line item?",
+            context,
+            [{"filename": "leac203.pdf", "page": 10}],
+        )
+
+        assert answer is not None
+        for expected in ("FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf", "leac203.pdf"):
+            assert expected in answer["answer"]
+    finally:
+        _cleanup(path)
