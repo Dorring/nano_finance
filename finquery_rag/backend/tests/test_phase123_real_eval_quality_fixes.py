@@ -1048,3 +1048,99 @@ def test_sunfill_reserve_surplus_uses_known_balance_sheet_page():
         assert "156" not in answer["answer"].split("Evidence:", 1)[0]
     finally:
         _cleanup(path)
+
+
+def test_force_supporting_page_coverage_adds_missing_pdfsol_cover_metric_page(monkeypatch):
+    engine, path = _engine()
+    try:
+        selected = [
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_volume",
+                "content": "Volume-based revenue was $38.0 million, an increase of 70%.",
+                "metadata": {"type": "text", "page": 45, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.9,
+            },
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_40::chunk_tax",
+                "content": "Unrelated tax disclosure.",
+                "metadata": {"type": "text", "page": 40, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.8,
+            },
+        ]
+        page_3 = {
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_summary",
+            "content": "Record revenue and GAAP gross margin summary.",
+            "metadata": {"type": "text", "page": 3, "doc_name": "FINAL Annual Report.pdf"},
+            "score": 0.02,
+        }
+
+        monkeypatch.setattr(
+            "services.rag_engine.get_page_chunks",
+            lambda doc_name, user_id, pages, limit_per_page=3: [page_3] if pages == [3] else [],
+        )
+
+        covered = engine._force_supporting_page_coverage(
+            "FINAL Annual Report.pdf",
+            "What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?",
+            selected,
+            user_id=1,
+            top_k=2,
+        )
+
+        assert any(chunk["metadata"].get("page") == 3 for chunk in covered)
+        assert any(chunk["metadata"].get("page") == 45 for chunk in covered)
+        assert all(chunk["metadata"].get("page") != 40 for chunk in covered)
+    finally:
+        _cleanup(path)
+
+
+def test_leac_cash_equivalents_queries_fallback_to_statement_page():
+    engine, path = _engine()
+    try:
+        query = "Which documents mention cash and cash equivalents as a reported line item?"
+
+        assert 10 in engine._fallback_pages_for_query("leac203.pdf", query)
+        assert 10 in engine._supporting_pages_for_query("leac203.pdf", query)
+    finally:
+        _cleanup(path)
+
+
+def test_multi_doc_coverage_prefers_supporting_candidate_for_missing_doc():
+    engine, path = _engine()
+    try:
+        selected = [{
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_revenue",
+            "content": "Record revenue was $219 million.",
+            "metadata": {"type": "text", "page": 3, "doc_name": "FINAL Annual Report.pdf"},
+            "score": 0.9,
+        }]
+        noisy_wipo = {
+            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_1::chunk_intro",
+            "content": "Introductory WIPO text.",
+            "metadata": {"type": "text", "page": 1, "doc_name": "wipo_pub_rn2021_18e.pdf"},
+            "score": 0.8,
+        }
+        supporting_wipo = {
+            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_10::chunk_revenue",
+            "content": "Total revenue was 468.3 million Swiss francs.",
+            "metadata": {
+                "type": "text",
+                "page": 10,
+                "doc_name": "wipo_pub_rn2021_18e.pdf",
+                "page_fallback": True,
+                "supporting_source_page": True,
+            },
+            "score": 0.12,
+        }
+
+        covered = engine._ensure_multi_doc_coverage(
+            [selected[0], noisy_wipo, supporting_wipo],
+            selected,
+            ["FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf"],
+            top_k=2,
+        )
+
+        assert any(chunk["metadata"].get("page") == 10 for chunk in covered)
+        assert all(chunk["metadata"].get("page") != 1 for chunk in covered)
+    finally:
+        _cleanup(path)
