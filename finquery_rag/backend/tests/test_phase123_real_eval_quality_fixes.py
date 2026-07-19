@@ -800,3 +800,75 @@ def test_page_fallback_pages_are_preserved_after_reranking():
         assert len(covered) == 2
     finally:
         _cleanup(path)
+
+
+def test_supporting_source_pages_for_real_eval_metric_queries():
+    engine, path = _engine()
+    try:
+        assert engine._supporting_pages_for_query(
+            "FINAL Annual Report.pdf",
+            "What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?",
+        ) == {3, 45}
+        assert engine._supporting_pages_for_query(
+            "FINAL Annual Report.pdf",
+            "How much cash and cash equivalents did PDF Solutions have as of December 31, 2025?",
+        ) == {48}
+        assert engine._supporting_pages_for_query(
+            "wipo_pub_rn2021_18e.pdf",
+            "What percentage of WIPO total revenue came from Madrid system fees in 2020?",
+        ) == {10}
+        assert engine._supporting_pages_for_query(
+            "wipo_pub_rn2021_18e.pdf",
+            "Which organization prepared the annual financial report?",
+        ) == {3, 6}
+    finally:
+        _cleanup(path)
+
+
+def test_supporting_source_pages_are_prioritized_over_plain_fallbacks():
+    engine, path = _engine()
+    try:
+        selected = [
+            _chunk(score=0.9, content="High scoring but unrelated page 1"),
+            {
+                "doc_id": "user_1_FINAL Annual Report.pdf::page_40::chunk_tax",
+                "content": "Unrelated tax disclosure.",
+                "metadata": {"type": "text", "page": 40, "doc_name": "FINAL Annual Report.pdf"},
+                "score": 0.8,
+            },
+        ]
+        supporting_page_3 = {
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_revenue",
+            "content": "Record revenue was $219 million.",
+            "metadata": {
+                "type": "text",
+                "page": 3,
+                "doc_name": "FINAL Annual Report.pdf",
+                "page_fallback": True,
+                "supporting_source_page": True,
+            },
+            "score": 0.08,
+        }
+        plain_fallback_page_48 = {
+            "doc_id": "user_1_FINAL Annual Report.pdf::page_48::chunk_cash",
+            "content": "Cash and cash equivalents.",
+            "metadata": {
+                "type": "text",
+                "page": 48,
+                "doc_name": "FINAL Annual Report.pdf",
+                "page_fallback": True,
+            },
+            "score": 0.05,
+        }
+
+        covered = engine._ensure_page_fallback_coverage(
+            selected + [plain_fallback_page_48, supporting_page_3],
+            selected,
+            top_k=1,
+        )
+
+        assert any(chunk["metadata"].get("page") == 3 for chunk in covered)
+        assert all(chunk["metadata"].get("page") != 48 for chunk in covered)
+        assert len(covered) == 1
+    finally:
+        _cleanup(path)
