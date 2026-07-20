@@ -21,6 +21,10 @@ from src.retrieval.candidate_fusion import (
     source_from_chunk as _source_from_chunk,
 )
 from src.retrieval.context_builder import ContextBuilder, EvidenceSufficiencyEvaluator
+from src.generation.prompt_builder import get_system_prompt
+from src.generation.llm_gateway import LLMGateway
+from src.generation.response_renderer import validate_answer
+from src.generation.deterministic_answers import DeterministicAnswerExtractor
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -128,6 +132,14 @@ class RAGEngine:
             rrf_sufficiency_threshold=self.rrf_sufficiency_threshold,
             dense_sufficiency_threshold=self.dense_sufficiency_threshold,
         )
+        self._llm_gateway = LLMGateway(
+            llm_client=self.llm_client,
+            model_name=self.model_name,
+            max_new_tokens=self.max_new_tokens,
+        )
+        self._deterministic_extractor = DeterministicAnswerExtractor(
+            query_processor=self._query_processor,
+        )
 
     def _get_bm25_retriever(self, doc_name=str, user_id: int = None):
         """获取 SQLite FTS5 稀疏检索器。如果未启用混合检索则返回 None。"""
@@ -224,55 +236,15 @@ class RAGEngine:
         )
 
     def answer_front_matter_query(self, query: str, chunks: list) -> dict | None:
-        """Answer deterministic front-matter questions from structured chunks."""
-        if not self._is_title_query(query):
-            return None
-        normalized_query = (query or "").lower()
-        title_chunks = [
-            chunk for chunk in (chunks or [])
-            if (chunk.get("metadata") or {}).get("type") == "front_matter"
-            and (chunk.get("metadata") or {}).get("subtype") == "title"
-            and (chunk.get("content") or "").strip()
-        ]
-        if not title_chunks:
-            return None
-        title_chunks.sort(key=lambda chunk: (chunk.get("metadata") or {}).get("page", 999))
-        title_chunk = dict(title_chunks[0])
-        title = re.sub(r"\s+", " ", title_chunk.get("content", "")).strip()
-        title = re.sub(r"^title\s*:\s*", "", title, flags=re.IGNORECASE).strip()
-        title = self._clean_deterministic_title(title)
-        if not self._is_valid_deterministic_title(title):
-            return None
-        if "reporting period" in normalized_query and not re.search(r"\b(19|20)\d{2}\b|year to|year ended", title, re.IGNORECASE):
-            return None
-        title_chunk["score"] = max(float(title_chunk.get("score", 0) or 0), 1.0)
-        title_chunk["deterministic_answer"] = "front_matter_title"
-        return {
-            "answer": f'The title of the paper is "{title}".',
-            "chunks": [title_chunk],
-            "diagnostic": "front_matter_title",
-        }
+        return self._deterministic_extractor.answer_front_matter_query(query, chunks)
 
     @staticmethod
     def _clean_deterministic_title(title: str) -> str:
-        cleaned = re.sub(r"\s+", " ", title or "").strip(" -")
-        cleaned = re.sub(r"\b(annual)\s+(annual report)\b", r"\1 report", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"\b(report)\s+(annual report)\b", r"\2", cleaned, flags=re.IGNORECASE)
-        return cleaned.strip(" -")
+        return DeterministicAnswerExtractor._clean_deterministic_title(title)
 
     @staticmethod
     def _is_valid_deterministic_title(title: str) -> bool:
-        cleaned = re.sub(r"[^a-z0-9]+", " ", title or "", flags=re.IGNORECASE).strip().lower()
-        if len(cleaned) < 12:
-            return False
-        generic_titles = {
-            "annual",
-            "report",
-            "annual report",
-            "financial statements",
-            "annual financial report",
-        }
-        return cleaned not in generic_titles
+        return DeterministicAnswerExtractor._is_valid_deterministic_title(title)
 
     def retrieve_front_matter_chunks(self, doc_names: list[str], query: str, user_id: int | None = None) -> list:
         """Direct metadata lookup for deterministic front-matter questions."""
@@ -307,46 +279,10 @@ class RAGEngine:
         return self._context_builder.build(chunks)
 
     def _get_system_prompt(self) -> str:
-        """
-        精简版 System Prompt，适配 2B 模型 + 2048 上下文。
-        原版约 230 token，精简至约 120 token，为核心检索内容腾出空间。
-        """
-        return """You are FinQuery, a financial document assistant. Rules:
-1. Answer based ONLY on the provided context
-2. Cite sources: "Source: <filename>, page <number>"
-3. Preserve exact numbers, currencies, dates from tables
-4. For numeric questions, extract the exact value and unit from the most relevant sentence/table row
-5. If context contains relevant numbers, answer with those numbers instead of refusing
-6. If no relevant info found, say so clearly
-7. Answer in prose, never use markdown table syntax
-8. Be concise and precise."""
+        return get_system_prompt()
 
     def _validate_answer(self, answer: str, sources: list) -> str:
-        """
-        Phase 3: Post-generation answer validation and cleanup.
-        - Strips whitespace and model artifacts
-        - Returns refusal message if answer is empty or near-empty
-        - Truncates overly long answers to max_new_tokens * 4 chars
-        """
-        if not answer:
-            return "I couldn't generate a valid answer. Please try rephrasing your question."
-
-        # Strip model artifacts and excessive whitespace
-        answer = answer.strip()
-        for artifact in ["<|end|>", "</s>", "[END]", "[/INST]"]:
-            answer = answer.replace(artifact, "")
-        answer = answer.strip()
-
-        # Near-empty after cleanup
-        if len(answer) < 10:
-            return "I couldn't generate a meaningful answer. Please try rephrasing your question."
-
-        # Truncate overly long answers (safety cap)
-        max_chars = self.max_new_tokens * 4
-        if len(answer) > max_chars:
-            answer = answer[:max_chars].rsplit(" ", 1)[0] + "..."
-
-        return answer
+        return validate_answer(answer, sources, max_new_tokens=self.max_new_tokens)
 
     def _check_context_sufficiency(self, chunks: list) -> tuple:
         result = self._sufficiency_evaluator.evaluate(chunks)
@@ -373,374 +309,64 @@ class RAGEngine:
         )
 
     async def generate_answer(self, context: str, query: str) -> str:
-        """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
-        if not context:
-            return "I couldn't find relevant information in the documents to answer your question."
-
-        system_prompt = self._get_system_prompt()
-        user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-
-        loop = asyncio.get_event_loop()
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.llm_client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0,
-                    max_tokens=self.max_new_tokens
-                )
-            )
-            raw_answer = response.choices[0].message.content
-            return self._validate_answer(raw_answer, [])
-        except Exception as e:
-            return f"Error generating answer: {str(e)}"
+        return await self._llm_gateway.generate(context, query)
 
     def answer_numeric_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Return a deterministic numeric answer when relevant evidence lines are present.
-
-        The goal is not to calculate new metrics. It extracts source text lines that
-        already contain both query terms and numeric values, which is more stable
-        than asking a small local model to copy table values.
-        """
-        if not context or not self._should_try_deterministic_numeric_answer(query, [{"score": 1.0}]):
-            return None
-
-        evidence = self._rank_context_evidence(
-            query,
-            context,
-            require_number=True,
-            window_radius=1,
-        )
-
-        selected = self._select_distinct_evidence(evidence, limit=3)
-        direct_values = self._summarize_numeric_values(query, selected, context=context)
-        if not selected and not direct_values:
-            return None
-
-        answer_lines = []
-        if direct_values:
-            answer_lines.append(f"Answer: {direct_values}.")
-        if selected:
-            answer_lines.append("Evidence:")
-        for item in selected:
-            if item["source"]:
-                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
-            else:
-                answer_lines.append(f"- {item['text']}")
-        return {
-            "answer": "\n".join(answer_lines),
-            "diagnostic": "deterministic_numeric_evidence",
-        }
+        return self._deterministic_extractor.answer_numeric_query_from_context(query, context, sources)
 
     def answer_factual_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Return deterministic evidence for factual front-matter/definition/list questions."""
-        if not context or self._is_numeric_financial_query(query):
-            return None
-        if not self._should_try_deterministic_factual_answer(query):
-            return None
-
-        normalized = (query or "").lower()
-        direct_answer = self._summarize_factual_evidence(query, [], context=context)
-        evidence = self._rank_context_evidence(
-            query,
-            context,
-            require_number=False,
-            window_radius=1,
-        )
-        if not evidence and not direct_answer:
-            return None
-
-        selected = self._select_distinct_evidence(evidence, limit=3)
-        if not selected and not direct_answer:
-            return None
-
-        if "list" in normalized or "criteria" in normalized:
-            prefix = "The relevant criteria from the document are:"
-        elif "definition" in normalized or "meaning" in normalized or "what are financial statements" in normalized:
-            prefix = "The document states:"
-        else:
-            prefix = "The relevant document evidence is:"
-
-        answer_lines = []
-        if direct_answer:
-            answer_lines.append(f"Answer: {direct_answer}")
-        if selected:
-            answer_lines.append(prefix)
-        for item in selected:
-            if item["source"]:
-                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
-            else:
-                answer_lines.append(f"- {item['text']}")
-        return {
-            "answer": "\n".join(answer_lines),
-            "diagnostic": "deterministic_factual_evidence",
-        }
+        return self._deterministic_extractor.answer_factual_query_from_context(query, context, sources)
 
     def answer_deterministic_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Try deterministic non-LLM answering from retrieved context."""
-        factual = self.answer_factual_query_from_context(query, context, sources)
-        if factual:
-            return factual
-        return self.answer_numeric_query_from_context(query, context, sources)
+        return self._deterministic_extractor.answer_deterministic_query_from_context(query, context, sources)
 
 
     @staticmethod
     def _parse_context_lines(context: str) -> list[dict]:
-        parsed = []
-        current_source = None
-        for raw_line in (context or "").splitlines():
-            line = re.sub(r"\s+", " ", raw_line or "").strip()
-            if not line or line == "---":
-                continue
-            source_match = re.match(r"^\[(?P<source>[^\]]+)\]$", line)
-            if source_match:
-                current_source = source_match.group("source")
-                continue
-            parsed.append({"source": current_source, "text": line})
-        return parsed
+        return DeterministicAnswerExtractor._parse_context_lines(context)
 
-    def _rank_context_evidence(
-        self,
-        query: str,
-        context: str,
-        *,
-        require_number: bool,
-        window_radius: int = 1,
-    ) -> list[dict]:
-        query_terms = self._important_query_terms(query)
-        parsed = self._parse_context_lines(context)
-        evidence = []
-        for index, item in enumerate(parsed):
-            line = item["text"]
-            if require_number and not re.search(r"\d", line):
-                continue
-            score = (
-                self._numeric_evidence_score(line, query_terms)
-                if require_number
-                else self._factual_evidence_score(line, query_terms)
-            )
-            if score <= 0:
-                continue
-            window = self._evidence_window(
-                parsed,
-                index,
-                radius=window_radius,
-                require_number=require_number,
-                query_terms=query_terms,
-            )
-            evidence.append({
-                "score": score,
-                "source": item["source"],
-                "text": window,
-            })
-        evidence.sort(key=lambda item: (-item["score"], len(item["text"])))
-        return evidence
+    def _rank_context_evidence(self, query: str, context: str, *, require_number: bool, window_radius: int = 1) -> list[dict]:
+        return self._deterministic_extractor._rank_context_evidence(query, context, require_number=require_number, window_radius=window_radius)
 
     @staticmethod
-    def _evidence_window(
-        parsed: list[dict],
-        index: int,
-        *,
-        radius: int,
-        require_number: bool,
-        query_terms: set[str],
-    ) -> str:
-        start = max(0, index - radius)
-        end = min(len(parsed), index + radius + 1)
-        source = parsed[index].get("source")
-        lines = []
-        for item in parsed[start:end]:
-            if item.get("source") != source:
-                continue
-            text = item.get("text") or ""
-            if not text or text in lines:
-                continue
-            if require_number and item is not parsed[index] and re.search(r"\d", text):
-                lowered = text.lower()
-                is_numeric_value_line = bool(re.fullmatch(r"[-+]?\$?\(?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|per cent|million|thousand|francs)?", text, flags=re.IGNORECASE))
-                if not is_numeric_value_line and not any(term in lowered for term in query_terms):
-                    continue
-            lines.append(text)
-        if require_number and not any(re.search(r"\d", line) for line in lines):
-            return parsed[index].get("text") or ""
-        joined = " ".join(lines)
-        if len(joined) > 700:
-            joined = joined[:700].rsplit(" ", 1)[0] + " [...]"
-        return joined
+    def _evidence_window(parsed: list[dict], index: int, *, radius: int, require_number: bool, query_terms: set[str]) -> str:
+        return DeterministicAnswerExtractor._evidence_window(parsed, index, radius=radius, require_number=require_number, query_terms=query_terms)
 
     @staticmethod
     def _select_distinct_evidence(evidence: list[dict], *, limit: int) -> list[dict]:
-        selected = []
-        seen_lines = set()
-        for item in evidence:
-            key = re.sub(r"\W+", " ", item.get("text", "").lower()).strip()[:180]
-            if not key or key in seen_lines:
-                continue
-            seen_lines.add(key)
-            selected.append(item)
-            if len(selected) >= limit:
-                break
-        return selected
+        return DeterministicAnswerExtractor._select_distinct_evidence(evidence, limit=limit)
 
     @staticmethod
     def _normalize_numeric_phrase(value: str, query: str, evidence_text: str) -> str:
-        value = re.sub(r"\s+", " ", value or "").strip(" ,.;:")
-        value = re.sub(r"\$(\d[\d,]*)\.0\s+million\b", r"$\1 million", value, flags=re.IGNORECASE)
-        if value.endswith("%") and any(marker in (query or "").lower() for marker in ("year-over-year", "growth rate", "grow year over year")):
-            if "year-over-year" in evidence_text.lower() or "compared to" in evidence_text.lower():
-                value = f"{value} year-over-year"
-        return value
+        return DeterministicAnswerExtractor._normalize_numeric_phrase(value, query, evidence_text)
 
     @classmethod
     def _extract_numeric_phrases(cls, query: str, text: str) -> list[str]:
-        pattern = re.compile(
-            r"(?:\$|rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*"
-            r"(?:%|per cent|million|thousand(?:s)?(?: of Swiss francs)?|Swiss francs|francs)?",
-            re.IGNORECASE,
-        )
-        values = []
-        seen = set()
-        for match in pattern.finditer(text or ""):
-            value = cls._normalize_numeric_phrase(match.group(0), query, text)
-            if not value:
-                continue
-            key = value.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            values.append(value)
-            if len(values) >= 6:
-                break
-        return values
+        return DeterministicAnswerExtractor._extract_numeric_phrases(query, text)
 
     @classmethod
     def _summarize_numeric_values(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        targeted = cls._targeted_numeric_summary(query, selected, context=context)
-        if targeted:
-            return targeted
-        values = []
-        seen = set()
-        for item in selected:
-            for value in cls._extract_numeric_phrases(query, item.get("text", "")):
-                key = value.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                values.append(value)
-                if len(values) >= 5:
-                    return ", ".join(values)
-        return ", ".join(values) if values else None
+        return DeterministicAnswerExtractor._summarize_numeric_values(query, selected, context=context)
+
     @classmethod
     def _targeted_numeric_summary(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Only generic regex-based extraction from context."""
-        normalized = (query or "").lower()
-        text = " ".join(item.get("text", "") for item in selected)
-        if context:
-            text = f"{text} {context}"
-        compact = re.sub(r"\s+", " ", text).strip()
-        if "platform revenue" in normalized:
-            match = re.search(r"platform revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "volume-based revenue" in normalized:
-            match = re.search(r"volume-based revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "gross margin" in normalized:
-            match = re.search(r"gross margin.*?\bwas\s+(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return match.group(1)
-        if "cash and cash equivalents" in normalized:
-            match = re.search(r"cash and cash equivalents.*?(\$?\d[\d,]*(?:\.\d+)?\s+(?:million|thousand|billion))", compact, re.IGNORECASE)
-            if match:
-                return cls._normalize_numeric_phrase(match.group(1), query, compact)
-        if "operating activities" in normalized or "operating cash" in normalized:
-            match = re.search(r"Operating activities\s+\$?\s*(\d[\d,]*)", compact, re.IGNORECASE)
-            if match:
-                raw_value = match.group(1)
-                amount = cls._parse_comma_number(raw_value)
-                if amount:
-                    return f"${amount / 1000:.1f} million, {raw_value}"
-        if "record revenue" in normalized:
-            match = re.search(r"record revenues? of\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "total revenue" in normalized:
-            match = re.search(r"total revenue of\s+(\d+(?:\.\d+)?\s+million(?:\s+Swiss)?\s+francs)", compact, re.IGNORECASE)
-            if match:
-                return match.group(1)
-        if "credit facilities" in normalized:
-            revolver = re.search(r"(Revolving Credit Facility).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
-            term = re.search(r"(Term Loan).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
-            if revolver and term:
-                return f"{revolver.group(1)}, {cls._normalize_numeric_phrase(revolver.group(2), query, compact)}; {term.group(1)}, {cls._normalize_numeric_phrase(term.group(2), query, compact)}"
-        return None
+        return DeterministicAnswerExtractor._targeted_numeric_summary(query, selected, context=context)
 
     @staticmethod
     def _parse_comma_number(value: str) -> int:
-        try:
-            return int(re.sub(r"[^\d]", "", value or ""))
-        except ValueError:
-            return 0
+        return DeterministicAnswerExtractor._parse_comma_number(value)
+
     @staticmethod
     def _summarize_factual_evidence(query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Only generic evidence extraction from context."""
-        normalized = (query or "").lower()
-        text = " ".join(item.get("text", "") for item in selected)
-        if context:
-            text = f"{text} {context}"
-        compact = re.sub(r"\s+", " ", text).strip(" -")
-        if not compact:
-            return None
-        if "which organization" in normalized or ("prepared" in normalized and "organization" in normalized):
-            org_match = re.search(
-                r"(?:prepared by|organization)\s+([A-Z][a-zA-Z\s]+(?:Organization|Corporation|Company|Ltd|Inc))",
-                compact, re.IGNORECASE,
-            )
-            if org_match:
-                return org_match.group(1).strip()
-        if "reporting period" in normalized:
-            period_match = re.search(
-                r"(?:year (?:to|ended)\s+)(?:December\s+31,?\s*)?20\d{2}",
-                compact, re.IGNORECASE,
-            )
-            if period_match:
-                return period_match.group(0).strip()
-        if "criteria" in normalized and "current" in normalized:
-            terms = ("operating cycle", "within twelve months", "held primarily for trading", "cash and cash equivalent")
-            hits = [term for term in terms if term in compact.lower()]
-            if hits:
-                return "; ".join(hits) + "."
-        return RAGEngine._first_evidence_sentence(compact)
+        return DeterministicAnswerExtractor._summarize_factual_evidence(query, selected, context=context)
 
     @staticmethod
     def _best_sentence_with_terms(text: str, terms: tuple[str, ...]) -> str | None:
-        sentences = re.split(r"(?<=[.!?])\s+", text or "")
-        best = None
-        best_hits = 0
-        for sentence in sentences:
-            lowered = sentence.lower()
-            hits = sum(1 for term in terms if term in lowered)
-            if hits > best_hits:
-                best = sentence
-                best_hits = hits
-        return best.strip(" -") if best else None
+        return DeterministicAnswerExtractor._best_sentence_with_terms(text, terms)
 
     @staticmethod
     def _first_evidence_sentence(text: str) -> str | None:
-        compact = re.sub(r"\s+", " ", text or "").strip(" -")
-        if not compact:
-            return None
-        sentences = re.split(r"(?<=[.!?])\s+", compact)
-        for sentence in sentences:
-            sentence = sentence.strip(" -")
-            if 25 <= len(sentence) <= 260:
-                return sentence
-        return compact[:260].rstrip() + ("..." if len(compact) > 260 else "")
+        return DeterministicAnswerExtractor._first_evidence_sentence(text)
 
     @staticmethod
     def _should_try_deterministic_factual_answer(query: str) -> bool:
@@ -748,92 +374,22 @@ class RAGEngine:
 
     @staticmethod
     def _important_query_terms(query: str) -> set[str]:
-        stopwords = {
-            "what", "was", "were", "the", "and", "for", "did", "does", "have",
-            "how", "much", "many", "as", "of", "in", "on", "by", "to", "from",
-            "with", "which", "documents", "document", "report", "reports",
-            "according", "given", "shown", "amount", "year", "year-over-year",
-            "topic", "cover", "prepared", "organization", "basis", "preparation",
-            "list", "two", "criteria", "make", "item", "current", "mention",
-        }
-        terms = {
-            term
-            for term in re.findall(r"[a-zA-Z][a-zA-Z0-9&.-]{2,}", (query or "").lower())
-            if term not in stopwords
-        }
-        aliases = {
-            "revenue": {"revenue", "revenues"},
-            "cash": {"cash", "equivalents"},
-            "equivalents": {"cash", "equivalents"},
-            "margin": {"margin", "gross"},
-            "growth": {"growth", "year-over-year", "increase"},
-            "pct": {"pct", "system"},
-            "madrid": {"madrid", "system"},
-            "reserve": {"reserve", "surplus"},
-            "surplus": {"reserve", "surplus"},
-            "operating": {"operating", "activities"},
-            "facilities": {"facility", "facilities", "loan", "credit"},
-            "organization": {"organization", "prepared"},
-            "prepared": {"prepared", "organization"},
-            "statements": {"statements", "financial"},
-            "current": {"current", "operating", "cycle", "twelve", "months", "trading", "cash"},
-        }
-        expanded = set(terms)
-        for term in list(terms):
-            expanded.update(aliases.get(term, set()))
-        return expanded
+        return DeterministicAnswerExtractor._important_query_terms(query)
 
     @staticmethod
     def _numeric_evidence_score(line: str, query_terms: set[str]) -> float:
-        lowered = line.lower()
-        term_hits = sum(1 for term in query_terms if term in lowered)
-        if term_hits == 0:
-            return 0.0
-        number_hits = len(re.findall(r"[-+]?\$?\(?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|per cent|million|thousand|francs)?", line, flags=re.IGNORECASE))
-        if number_hits == 0:
-            return 0.0
-        return term_hits * 2.0 + min(number_hits, 4)
+        return DeterministicAnswerExtractor._numeric_evidence_score(line, query_terms)
 
     @staticmethod
     def _factual_evidence_score(line: str, query_terms: set[str]) -> float:
-        lowered = line.lower()
-        term_hits = sum(1 for term in query_terms if term in lowered)
-        if term_hits == 0:
-            return 0.0
-        if len(line) < 20:
-            return 0.0
-        return term_hits * 2.0
+        return DeterministicAnswerExtractor._factual_evidence_score(line, query_terms)
+
+    @staticmethod
+    def _is_numeric_financial_query(query: str) -> bool:
+        return DeterministicAnswerExtractor._is_numeric_financial_query(query)
 
     def generate_answer_stream(self, context: str, query: str):
-        """
-        使用大语言模型生成回答（流式输出）。
-        通过 openai SDK 对接 nanochat OpenAI 兼容适配层。
-        """
-        if not context:
-            yield "I couldn't find relevant information in the documents to answer your question."
-            return
-
-        system_prompt = self._get_system_prompt()
-        user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-
-        try:
-            response = self.llm_client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0,
-                max_tokens=self.max_new_tokens,
-                stream=True
-            )
-
-            for chunk in response:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-
-        except Exception as e:
-            yield f"Error generating answer: {str(e)}"
+        return self._llm_gateway.generate_stream(context, query)
 
     async def query(
         self,
