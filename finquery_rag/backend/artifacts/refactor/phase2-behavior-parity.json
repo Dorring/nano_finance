@@ -1,6 +1,6 @@
 {
   "baseline_commit": "3d08498",
-  "phase2_commit": "to-be-filled-after-commit",
+  "phase2_commit": "6cf6b89",
   "query_expansion_equal": true,
   "retrieval_order_equal": true,
   "context_equal": true,
