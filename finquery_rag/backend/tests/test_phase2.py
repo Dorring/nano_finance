@@ -7,8 +7,8 @@ import gc
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.rag_engine import RAGEngine
-from services.trace import TraceLogger
+from src.services.rag_engine import RAGEngine
+from src.services.trace import TraceLogger
 
 
 class MockLLMClient:
