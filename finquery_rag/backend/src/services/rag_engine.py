@@ -9,6 +9,7 @@ from .retrieval import SqliteBM25Retriever, rrf
 from .reranker import build_reranker
 from .intent import classify_query_intent
 from .memory_profile import build_memory_profile_context
+from src.retrieval.query_processor import QueryProcessor
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -88,6 +89,7 @@ class RAGEngine:
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
+        self._query_processor = QueryProcessor()
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -194,54 +196,13 @@ float(chunk.get("score", 0) or 0),
         return selected[:top_k]
 
     def _has_cjk(self, text: str) -> bool:
-        return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+        return self._query_processor._has_cjk(text)
 
     def _is_document_front_matter_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        markers = (
-            "title", "author", "abstract", "paper name", "paper title",
-            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d", "\u4f5c\u8005", "\u6458\u8981", "\u8fd9\u7bc7\u8bba\u6587",
-        )
-        return any(marker in normalized for marker in markers)
-    def _expand_retrieval_query(self, query: str) -> str:
-        """Add lightweight retrieval terms for common finance PDF questions.
+        return self._query_processor.is_front_matter_query(query)
 
-        Only generic financial terminology expansions remain. Works for unknown documents.
-        """
-        if not query:
-            return query
-        expansions = []
-        lowered = query.lower()
-        if self._has_cjk(query):
-            if any(term in query for term in ("标题", "题目", "论文名")):
-                expansions.append("paper title title of this paper")
-            if "作者" in query:
-                expansions.append("paper authors author affiliation")
-            if "摘要" in query:
-                expansions.append("abstract summary")
-            if any(term in query for term in ("主要", "贡献", "研究", "解决")):
-                expansions.append("main contribution problem method approach")
-            if any(term in query for term in ("页", "几页", "多少页")):
-                expansions.append("number of pages page count")
-        if "title" in lowered and "paper title" not in lowered:
-            expansions.append("paper title")
-        if "reporting period" in lowered:
-            expansions.append("year ended reporting period fiscal year")
-        if "total revenue" in lowered:
-            expansions.append("total revenue revenue")
-        if "net assets" in lowered:
-            expansions.append("net assets statement of financial position")
-        if "cash and cash equivalents" in lowered or "cash equivalents" in lowered:
-            expansions.append("cash and cash equivalents current assets")
-        if "credit facilities" in lowered:
-            expansions.append("credit facilities revolving credit facility term loan")
-        if "gross margin" in lowered:
-            expansions.append("gross margin gross profit revenue")
-        if "operating activities" in lowered or "operating cash flow" in lowered:
-            expansions.append("net cash operating activities cash flows")
-        if not expansions:
-            return query
-        return f"{query}\n" + "\n".join(dict.fromkeys(expansions))
+    def _expand_retrieval_query(self, query: str) -> str:
+        return self._query_processor.expand(query)
 
     def _boost_front_matter_chunks(self, query: str, chunks: list) -> list:
         """Prefer page-1 evidence for title/author/abstract style questions."""
@@ -356,59 +317,20 @@ float(chunk.get("score", 0) or 0),
         return self._ensure_multi_doc_coverage(all_results, selected, doc_names, n_results)
 
     def _is_title_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        return any(marker in normalized for marker in (
-            "title", "paper title", "name of this paper",
-            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d",
-        ))
+        return self._query_processor.is_title_query(query)
 
     def _is_numeric_financial_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        if "which documents mention" in normalized:
-            return False
-        numeric_markers = (
-            "how much", "how many", "amount",
-            "revenue", "cash", "equivalents", "margin", "growth", "rate",
-            "percent", "percentage", "assets", "liabilities", "income",
-            "expense", "profit", "loss", "budget", "net assets", "year-over-year",
-            "credit facilities", "revolving credit facility", "term loan", "yoy", "$", "%",
-        )
-        cjk_markers = (
-            "\u591a\u5c11", "\u91d1\u989d", "\u6536\u5165", "\u8425\u6536", "\u73b0\u91d1",
-            "\u5229\u6da6", "\u589e\u957f", "\u6bd4\u7387", "\u767e\u5206\u6bd4",
-        )
-        return any(marker in normalized for marker in numeric_markers) or any(marker in query for marker in cjk_markers)
+        return self._query_processor.is_numeric_query(query)
 
     def _should_try_deterministic_numeric_answer(self, query: str, chunks: list) -> bool:
-        if not chunks or not self._is_numeric_financial_query(query):
-            return False
-        normalized = (query or "").lower()
-        strong_markers = (
-            "record", "how much", "percentage", "percent", "cash and cash equivalents",
-            "gross margin", "platform revenue", "volume-based revenue", "credit facilities",
-            "operating activities", "net assets", "budget", "actual 2020", "reserve and surplus",
-            "practice question", "compare", "amount", "year-over-year", "growth rate",
-            "total revenue", "pct system", "madrid system",
-        )
-        return any(marker in normalized for marker in strong_markers)
+        return self._query_processor.should_try_deterministic_numeric_answer(query, chunks)
 
     def _should_generate_with_low_confidence(self, query: str, chunks: list) -> bool:
-        """Allow numeric finance QA to proceed when evidence exists but scores are under-calibrated.
-
-        Real annual reports often retrieve the right page/table with low RRF scores.
-        Refusing before the LLM sees that evidence produces false no-answers for
-        factual numeric questions. Keep the override narrow to numeric finance
-        questions and require a minimal non-zero retrieval score.
-        """
-        if not chunks or not self._is_numeric_financial_query(query):
-            return False
-        scores = [float(chunk.get("score", 0) or 0) for chunk in chunks]
-        best_score = max(scores) if scores else 0.0
-        if best_score <= 0:
-            return False
-        if best_score < 0.05:
-            return best_score >= self.numeric_rrf_floor
-        return best_score >= self.numeric_dense_floor
+        return self._query_processor.should_generate_with_low_confidence(
+            query, chunks,
+            numeric_rrf_floor=self.numeric_rrf_floor,
+            numeric_dense_floor=self.numeric_dense_floor,
+        )
 
     def answer_front_matter_query(self, query: str, chunks: list) -> dict | None:
         """Answer deterministic front-matter questions from structured chunks."""
@@ -744,43 +666,10 @@ float(chunk.get("score", 0) or 0),
         return min(1.0, max(0.0, confidence))
 
     def _looks_like_followup_question(self, question: str) -> bool:
-        """Return True only for questions that likely need conversation context."""
-        normalized = (question or "").strip().lower()
-        if not normalized:
-            return False
-
-        followup_markers = (
-            "it", "its", "they", "them", "that", "this", "those", "these",
-            "above", "previous", "same", "there", "what about", "how about",
-            "继续", "这个", "那个", "上述", "前面", "上一", "它", "他们", "这些", "那些",
-        )
-        standalone_markers = (
-            "title", "paper", "document", "pdf", "论文", "文档", "标题", "作者", "页", "多少",
-        )
-
-        has_followup = any(marker in normalized for marker in followup_markers)
-        has_standalone = any(marker in normalized for marker in standalone_markers)
-        return has_followup and not has_standalone
+        return self._query_processor.looks_like_followup_question(question)
 
     def _is_valid_rewritten_query(self, original: str, rewritten: str) -> bool:
-        """Reject LLM rewrite artifacts that would poison retrieval."""
-        if not rewritten:
-            return False
-        candidate = rewritten.strip()
-        if len(candidate) < 5 or len(candidate) > max(200, len(original) * 4):
-            return False
-        if "\n" in candidate:
-            return False
-        artifact_patterns = (
-            r"\bUser\s*:",
-            r"\bAssistant\s*:",
-            r"\[[^\]]+\.pdf\s*,\s*p\d+\]",
-            r"Context\s*:",
-            r"Answer\s*:",
-        )
-        if any(re.search(pattern, candidate, flags=re.IGNORECASE) for pattern in artifact_patterns):
-            return False
-        return True
+        return self._query_processor.is_valid_rewritten_query(original, rewritten)
 
     async def _rewrite_query_with_context(
         self,
@@ -788,58 +677,10 @@ float(chunk.get("score", 0) or 0),
         conversation_history: list,
         memory_profile: dict | None = None,
     ) -> str:
-        """
-        Rewrite only true follow-up questions. Bad rewrites are more harmful than
-        no rewrite because retrieval uses the rewritten text directly.
-        """
-        if not conversation_history or len(conversation_history) < 2:
-            return question
-        if not self._looks_like_followup_question(question):
-            return question
-
-        recent = conversation_history[-4:]
-        history_parts = []
-        for msg in recent:
-            role = "User" if msg["role"] == "user" else "Assistant"
-            content = (msg.get("content") or "")[:160]
-            history_parts.append(f"{role}: {content}")
-        history_text = "\n".join(history_parts)
-        memory_text = build_memory_profile_context(memory_profile)
-        memory_block = (
-            "User preference memory for query planning only; do not treat as document facts:\n"
-            f"{memory_text}\n\n"
-            if memory_text
-            else ""
+        return await self._query_processor.rewrite(
+            question, conversation_history, memory_profile,
+            llm_client=self.llm_client, model_name=self.model_name,
         )
-
-        rewrite_prompt = (
-            "Rewrite the current follow-up question into one standalone search query.\n"
-            "Use the conversation only to resolve pronouns or omitted subjects.\n"
-            "Use preference memory only to resolve language, company, period, unit, or metric ambiguity.\n"
-            "Do not include role labels, citations, page markers, or prior answers.\n\n"
-            f"{memory_block}"
-            f"Conversation:\n{history_text}\n\n"
-            f"Current question: {question}\n"
-            "Standalone search query:"
-        )
-
-        try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.llm_client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": rewrite_prompt}],
-                    temperature=0,
-                    max_tokens=100,
-                )
-            )
-            rewritten = response.choices[0].message.content
-            if self._is_valid_rewritten_query(question, rewritten):
-                return rewritten.strip()
-            return question
-        except Exception:
-            return question
 
     async def generate_answer(self, context: str, query: str) -> str:
         """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
@@ -1213,14 +1054,7 @@ float(chunk.get("score", 0) or 0),
 
     @staticmethod
     def _should_try_deterministic_factual_answer(query: str) -> bool:
-        normalized = (query or "").lower()
-        factual_markers = (
-            "what is the title", "title and reporting period",
-            "which organization", "prepared",
-            "according to",
-            "list two criteria", "criteria that make an item current",
-        )
-        return any(marker in normalized for marker in factual_markers)
+        return QueryProcessor().should_try_deterministic_factual_answer(query)
 
     @staticmethod
     def _important_query_terms(query: str) -> set[str]:
