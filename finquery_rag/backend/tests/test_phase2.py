@@ -4,6 +4,18 @@ import sys
 import time
 import tempfile
 import gc
+from unittest.mock import MagicMock
+
+# Mock heavy dependencies before importing RAGEngine
+for _mod in [
+    "chromadb", "chromadb.utils", "chromadb.utils.embedding_functions",
+    "tiktoken", "sentence_transformers", "openai", "jieba_fast",
+    "pymupdf", "fitz", "jose", "jose.jwt", "jose.jws", "jose.jwe",
+    "bcrypt", "sqlalchemy", "sqlalchemy.orm", "sqlalchemy.ext",
+    "sqlalchemy.ext.declarative",
+]:
+    if _mod not in sys.modules:
+        sys.modules[_mod] = MagicMock()
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -34,6 +46,9 @@ def make_engine(**kwargs):
         bm25_db_path=tmp.name,
         **kwargs,
     )
+    # Mocked tiktoken returns invalid tokenizer; use None for char-based estimation
+    engine.tokenizer = None
+    engine._context_builder._tokenizer = None
     return engine, tmp.name
 
 

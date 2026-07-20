@@ -25,8 +25,9 @@ def test_trace_to_replay_case_keeps_n_results_metadata():
 
 
 def test_rag_engine_trace_records_n_results_static():
-    path = os.path.join(os.path.dirname(__file__), "..", "src", "services", "rag_engine.py")
-    content = open(path, encoding="utf-8").read()
+    # Logic moved to RAGOrchestrator; check both locations
+    orchestrator_path = os.path.join(os.path.dirname(__file__), "..", "src", "application", "rag_orchestrator.py")
+    content = open(orchestrator_path, encoding="utf-8").read()
 
     assert '"filter_conditions": {"doc_names": doc_names, "n_results": n_results}' in content
 

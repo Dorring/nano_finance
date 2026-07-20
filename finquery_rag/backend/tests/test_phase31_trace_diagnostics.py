@@ -66,14 +66,14 @@ def test_trace_logger_migrates_legacy_schema_with_diagnostics(tmp_path):
 
 def test_query_paths_pass_diagnostics_to_trace_static():
     main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
-    rag_path = os.path.join(os.path.dirname(__file__), "..", "src", "services", "rag_engine.py")
+    orchestrator_path = os.path.join(os.path.dirname(__file__), "..", "src", "application", "rag_orchestrator.py")
     main = open(main_path, encoding="utf-8").read()
-    rag = open(rag_path, encoding="utf-8").read()
+    orchestrator = open(orchestrator_path, encoding="utf-8").read()
 
     assert '"diagnostics": diagnostics' in main
     assert 'trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}' in main
-    assert '"diagnostics": {' in rag
-    assert '"context_sufficient": is_sufficient' in rag
+    assert '"diagnostics": {' in orchestrator
+    assert '"context_sufficient": is_sufficient' in orchestrator
 
 
 

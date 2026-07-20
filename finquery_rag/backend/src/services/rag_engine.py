@@ -289,6 +289,9 @@ class RAGEngine:
         return ContextBuilder._compose_parent_context(parent_excerpt, child_snippets)
 
     def build_context(self, chunks: list) -> tuple:
+        # Sync threshold and token budget in case they were changed after init
+        self._context_builder._min_score_threshold = self.min_score_threshold
+        self._context_builder._max_context_tokens = self.max_context_tokens
         return self._context_builder.build(chunks)
 
     def _get_system_prompt(self) -> str:
@@ -399,7 +402,7 @@ class RAGEngine:
 
     @staticmethod
     def _is_numeric_financial_query(query: str) -> bool:
-        return DeterministicAnswerExtractor._is_numeric_financial_query(query)
+        return QueryProcessor().is_numeric_query(query)
 
     def generate_answer_stream(self, context: str, query: str):
         return self._llm_gateway.generate_stream(context, query)
@@ -413,6 +416,14 @@ class RAGEngine:
         conversation_history: list = None,
         memory_profile: dict | None = None,
     ) -> dict:
+        # Sync facade state so test mocks on RAGEngine propagate to orchestrator
+        self._orchestrator._sufficiency_evaluator = self._sufficiency_evaluator
+        self._orchestrator._context_builder = self._context_builder
+        self._orchestrator._deterministic_extractor = self._deterministic_extractor
+        self._orchestrator._llm_gateway = self._llm_gateway
+        self._orchestrator._query_processor = self._query_processor
+        self._orchestrator._trace_logger = self.trace_logger
+        self._orchestrator._retrieval_pipeline = self._retrieval_pipeline
         return await self._orchestrator.query(
             question, doc_names, user_id, n_results,
             conversation_history, memory_profile,

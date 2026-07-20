@@ -31,9 +31,11 @@ class TestLowConfidenceNoLLM:
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=False)
         eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b.db'))
-        eng._check_context_sufficiency = lambda chunks: (False, 0.01, 0.01)
-        eng._compute_confidence = lambda chunks: 0.01
-        eng.build_context = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.01}])
+        # Mock at orchestrator dependency level (query delegates to orchestrator)
+        from src.retrieval.context_builder import SufficiencyResult
+        eng._sufficiency_evaluator.evaluate = lambda chunks: SufficiencyResult(is_sufficient=False, best_score=0.01, average_score=0.01)
+        eng._sufficiency_evaluator.confidence = lambda chunks: 0.01
+        eng._context_builder.build = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.01}])
         loop = asyncio.new_event_loop()
         try:
             r = loop.run_until_complete(eng.query('test', doc_names=['f.pdf'], user_id=1))
@@ -47,9 +49,11 @@ class TestLowConfidenceNoLLM:
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=True, response='Revenue was 10M.')
         eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b2.db'))
-        eng._check_context_sufficiency = lambda chunks: (True, 0.8, 0.75)
-        eng._compute_confidence = lambda chunks: 0.78
-        eng.build_context = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.8}])
+        # Mock at orchestrator dependency level (query delegates to orchestrator)
+        from src.retrieval.context_builder import SufficiencyResult
+        eng._sufficiency_evaluator.evaluate = lambda chunks: SufficiencyResult(is_sufficient=True, best_score=0.8, average_score=0.75)
+        eng._sufficiency_evaluator.confidence = lambda chunks: 0.78
+        eng._context_builder.build = lambda chunks: ('mock context', [{'filename':'f.pdf','page':1,'type':'text','score':0.8}])
         loop = asyncio.new_event_loop()
         try:
             r = loop.run_until_complete(eng.query('test', doc_names=['f.pdf'], user_id=1))

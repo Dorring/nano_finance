@@ -79,7 +79,7 @@ class DeterministicAnswerExtractor:
 
     def answer_factual_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
         """Return deterministic evidence for factual front-matter/definition/list questions."""
-        if not context or self._is_numeric_financial_query(query):
+        if not context or self._query_processor.is_numeric_query(query):
             return None
         if not self._query_processor.should_try_deterministic_factual_answer(query):
             return None
