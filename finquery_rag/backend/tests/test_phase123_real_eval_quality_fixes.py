@@ -140,6 +140,7 @@ def test_supporting_source_pages_are_retained_in_final_sources():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_real_eval_query_expansion_adds_accounting_and_wipo_terms():
     engine, path = _engine()
     try:
@@ -154,6 +155,7 @@ def test_real_eval_query_expansion_adds_accounting_and_wipo_terms():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_evidence_extractor_selects_relevant_number_lines():
     engine, path = _engine()
     try:
@@ -180,6 +182,7 @@ def test_numeric_evidence_extractor_selects_relevant_number_lines():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_adds_direct_reported_metric_summary():
     engine, path = _engine()
     try:
@@ -202,6 +205,7 @@ def test_numeric_answer_adds_direct_reported_metric_summary():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_sums_cash_equivalents_from_table_terms():
     engine, path = _engine()
     try:
@@ -222,6 +226,7 @@ def test_numeric_answer_sums_cash_equivalents_from_table_terms():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_extracts_operating_cash_flow_table_row():
     engine, path = _engine()
     try:
@@ -243,6 +248,7 @@ def test_numeric_answer_extracts_operating_cash_flow_table_row():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_extracts_wipo_statement_position_values():
     engine, path = _engine()
     try:
@@ -276,6 +282,7 @@ def test_numeric_answer_extracts_wipo_statement_position_values():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_uses_wipo_statement_position_page_fallback_when_table_value_is_missing():
     engine, path = _engine()
     try:
@@ -303,6 +310,7 @@ def test_numeric_answer_uses_wipo_statement_position_page_fallback_when_table_va
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_uses_wipo_total_revenue_table_page_fallback():
     engine, path = _engine()
     try:
@@ -324,6 +332,7 @@ def test_numeric_answer_uses_wipo_total_revenue_table_page_fallback():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_extracts_credit_facility_components():
     engine, path = _engine()
     try:
@@ -346,6 +355,7 @@ def test_numeric_answer_extracts_credit_facility_components():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_prefers_pdfsol_cash_equivalents_over_nearby_tax_values():
     engine, path = _engine()
     try:
@@ -370,6 +380,7 @@ def test_numeric_answer_prefers_pdfsol_cash_equivalents_over_nearby_tax_values()
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_prefers_wipo_total_revenue_share_over_growth_rate():
     engine, path = _engine()
     try:
@@ -392,6 +403,7 @@ def test_numeric_answer_prefers_wipo_total_revenue_share_over_growth_rate():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_extracts_wipo_madrid_total_revenue_share():
     engine, path = _engine()
     try:
@@ -414,6 +426,7 @@ def test_numeric_answer_extracts_wipo_madrid_total_revenue_share():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_answer_prefers_wipo_statement_v_pct_system_actual_over_pct_share():
     engine, path = _engine()
     try:
@@ -438,6 +451,7 @@ def test_numeric_answer_prefers_wipo_statement_v_pct_system_actual_over_pct_shar
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_extracts_pdfsol_cover_title_from_context():
     engine, path = _engine()
     try:
@@ -461,6 +475,7 @@ def test_factual_answer_extracts_pdfsol_cover_title_from_context():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_falls_back_to_known_pdfsol_cover_title_when_context_is_polluted():
     engine, path = _engine()
     try:
@@ -484,6 +499,7 @@ def test_factual_answer_falls_back_to_known_pdfsol_cover_title_when_context_is_p
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_uses_full_context_for_wipo_title_and_reporting_period():
     engine, path = _engine()
     try:
@@ -506,6 +522,7 @@ def test_factual_answer_uses_full_context_for_wipo_title_and_reporting_period():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_falls_back_to_wipo_title_and_reporting_period():
     engine, path = _engine()
     try:
@@ -527,6 +544,7 @@ def test_factual_answer_falls_back_to_wipo_title_and_reporting_period():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_resolves_wipo_organization_from_query_when_context_is_sparse():
     engine, path = _engine()
     try:
@@ -547,6 +565,7 @@ def test_factual_answer_resolves_wipo_organization_from_query_when_context_is_sp
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_uses_stable_leac_financial_statement_definition():
     engine, path = _engine()
     try:
@@ -571,6 +590,7 @@ def test_factual_answer_uses_stable_leac_financial_statement_definition():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_uses_expected_current_item_wording():
     engine, path = _engine()
     try:
@@ -595,6 +615,7 @@ def test_factual_answer_uses_expected_current_item_wording():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
     engine, path = _engine()
     try:
@@ -620,6 +641,7 @@ def test_numeric_evidence_extractor_uses_neighbor_window_for_tables():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_evidence_extractor_answers_definition_without_llm():
     engine, path = _engine()
     try:
@@ -643,6 +665,7 @@ def test_factual_evidence_extractor_answers_definition_without_llm():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_answer_summarizes_known_cover_topic():
     engine, path = _engine()
     try:
@@ -678,6 +701,7 @@ def test_short_generic_front_matter_title_does_not_short_circuit():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_query_uses_deterministic_factual_answer_before_llm(monkeypatch):
     client = _MockLLMClient(response_text="LLM should not be used.")
     engine, path = _engine(client)
@@ -724,6 +748,7 @@ def test_page_fallback_chunks_are_added_before_reranking(monkeypatch):
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_page_fallback_pages_are_preserved_after_reranking():
     engine, path = _engine()
     try:
@@ -766,6 +791,7 @@ def test_supporting_source_pages_for_real_eval_metric_queries():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_supporting_source_pages_are_prioritized_over_plain_fallbacks():
     engine, path = _engine()
     try:
@@ -858,6 +884,7 @@ def test_multi_doc_coverage_keeps_one_candidate_per_requested_document():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_multi_doc_compare_revenue_uses_grouped_deterministic_answer():
     engine, path = _engine()
     try:
@@ -885,6 +912,7 @@ def test_multi_doc_compare_revenue_uses_grouped_deterministic_answer():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_multi_doc_cash_terms_query_is_not_treated_as_numeric_extraction():
     engine, path = _engine()
     try:
@@ -915,6 +943,7 @@ def test_multi_doc_cash_terms_query_is_not_treated_as_numeric_extraction():
         assert "$1.3 million" not in answer["answer"]
     finally:
         _cleanup(path)
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_pdfsol_cash_equivalents_uses_statement_page_when_text_is_polluted():
     engine, path = _engine()
     try:
@@ -937,6 +966,7 @@ def test_pdfsol_cash_equivalents_uses_statement_page_when_text_is_polluted():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_wipo_revenue_share_uses_expected_page_metric_over_growth_rate():
     engine, path = _engine()
     try:
@@ -970,6 +1000,7 @@ def test_wipo_revenue_share_uses_expected_page_metric_over_growth_rate():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_sunfill_reserve_surplus_uses_known_balance_sheet_page():
     engine, path = _engine()
     try:
@@ -1019,6 +1050,7 @@ def test_leac_cash_equivalents_queries_fallback_to_statement_page():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_multi_doc_coverage_prefers_supporting_candidate_for_missing_doc():
     engine, path = _engine()
     try:
@@ -1060,6 +1092,7 @@ def test_multi_doc_coverage_prefers_supporting_candidate_for_missing_doc():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_multi_doc_revenue_compare_uses_document_level_figures_from_context():
     engine, path = _engine()
     try:
@@ -1089,6 +1122,7 @@ def test_multi_doc_revenue_compare_uses_document_level_figures_from_context():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_multi_doc_cash_terms_lists_all_documents_from_context_sources():
     engine, path = _engine()
     try:
@@ -1114,6 +1148,7 @@ def test_multi_doc_cash_terms_lists_all_documents_from_context_sources():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_numeric_summary_prefers_main_revenue_for_multi_doc_compare():
     engine, path = _engine()
     try:
@@ -1143,6 +1178,7 @@ def test_numeric_summary_prefers_main_revenue_for_multi_doc_compare():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_summary_lists_all_cash_equivalent_documents():
     engine, path = _engine()
     try:
@@ -1172,6 +1208,7 @@ def test_factual_summary_lists_all_cash_equivalent_documents():
         _cleanup(path)
 
 
+@pytest.mark.skip(reason="Phase 1: tests removed benchmark-specific behavior")
 def test_factual_cash_terms_uses_sources_when_context_is_truncated():
     engine, path = _engine()
     try:
