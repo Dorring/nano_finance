@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from services.feedback import FeedbackStore
 from services.trace import TraceLogger
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def test_trace_export_uses_jsonl_writer_and_creates_parent(tmp_path):

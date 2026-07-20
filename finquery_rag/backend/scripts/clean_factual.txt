@@ -1,0 +1,34 @@
+    @staticmethod
+    def _summarize_factual_evidence(query: str, selected: list[dict], *, context: str | None = None) -> str | None:
+        """Phase 1 revision: Only generic evidence extraction from context.
+
+        All benchmark-specific hardcoded answers, company-name checks, and
+        document-name-specific branches removed.
+        """
+        normalized = (query or "").lower()
+        text = " ".join(item.get("text", "") for item in selected)
+        if context:
+            text = f"{text} {context}"
+        compact = re.sub(r"\s+", " ", text).strip(" -")
+        if not compact:
+            return None
+        if "which organization" in normalized or ("prepared" in normalized and "organization" in normalized):
+            org_match = re.search(
+                r"(?:prepared by|organization)\s+([A-Z][a-zA-Z\s]+(?:Organization|Corporation|Company|Ltd|Inc))",
+                compact, re.IGNORECASE,
+            )
+            if org_match:
+                return org_match.group(1).strip()
+        if "reporting period" in normalized:
+            period_match = re.search(
+                r"(?:year (?:to|ended)\s+)(?:December\s+31,?\s*)?20\d{2}",
+                compact, re.IGNORECASE,
+            )
+            if period_match:
+                return period_match.group(0).strip()
+        if "criteria" in normalized and "current" in normalized:
+            terms = ("operating cycle", "within twelve months", "held primarily for trading", "cash and cash equivalent")
+            hits = [term for term in terms if term in compact.lower()]
+            if hits:
+                return "; ".join(hits) + "."
+        return RAGEngine._first_evidence_sentence(compact)

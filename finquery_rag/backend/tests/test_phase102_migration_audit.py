@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 from src.services.migration_audit import audit_migration_readiness
 
 

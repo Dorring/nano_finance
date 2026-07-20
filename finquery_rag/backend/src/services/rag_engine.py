@@ -130,73 +130,12 @@ class RAGEngine:
             selected = chunks[:top_k]
         else:
             selected = self.reranker.rerank(query, chunks, top_k=top_k)
-        selected = self._ensure_page_fallback_coverage(chunks, selected, top_k)
         self._last_retrieval_debug = self._make_retrieval_debug(
             candidate_count,
             len(selected),
         )
         return selected
 
-    @staticmethod
-    def _chunk_page_key(chunk: dict) -> tuple[str | None, int | None]:
-        metadata = chunk.get("metadata") or {}
-        return metadata.get("doc_name"), metadata.get("page")
-
-    def _ensure_page_fallback_coverage(self, candidates: list, selected: list, top_k: int | None) -> list:
-        """Keep rule-based fallback pages in the final top-k when reranking drops them.
-
-        Fallback pages are bounded and query-specific. They are used for known
-        front-matter/table locations where dense/BM25/reranker scores are often
-        poorly calibrated, but the page is still the correct evidence region.
-        """
-        if top_k is None or top_k <= 0 or not candidates:
-            return selected
-
-        selected = list(selected or [])
-        selected_ids = {chunk.get("doc_id") for chunk in selected}
-        selected_pages = {self._chunk_page_key(chunk) for chunk in selected}
-        fallback_by_page = []
-        seen_pages = set()
-        for chunk in candidates:
-            metadata = chunk.get("metadata") or {}
-            if not metadata.get("page_fallback") and not metadata.get("supporting_source_page"):
-                continue
-            page_key = self._chunk_page_key(chunk)
-            if page_key in seen_pages or page_key in selected_pages:
-                continue
-            seen_pages.add(page_key)
-            fallback_by_page.append(chunk)
-
-        if not fallback_by_page:
-            return selected[:top_k]
-
-        fallback_by_page.sort(
-            key=lambda chunk: (
-                1 if (chunk.get("metadata") or {}).get("supporting_source_page") else 0,
-                float(chunk.get("score", 0) or 0),
-            ),
-            reverse=True,
-        )
-        for fallback in fallback_by_page:
-            if fallback.get("doc_id") in selected_ids:
-                continue
-            if len(selected) < top_k:
-                selected.append(fallback)
-            else:
-                replace_index = None
-                for index in range(len(selected) - 1, -1, -1):
-                    metadata = selected[index].get("metadata") or {}
-                    if not metadata.get("page_fallback") and not metadata.get("supporting_source_page"):
-                        replace_index = index
-                        break
-                if replace_index is None:
-                    break
-                selected[replace_index] = fallback
-            selected_ids.add(fallback.get("doc_id"))
-            selected_pages.add(self._chunk_page_key(fallback))
-        return selected[:top_k]
-
-    @staticmethod
     def _dedupe_chunks(chunks: list) -> list:
         deduped = []
         seen = set()
@@ -239,9 +178,7 @@ class RAGEngine:
             best = max(
                 doc_candidates,
                 key=lambda chunk: (
-                    1 if (chunk.get("metadata") or {}).get("supporting_source_page") else 0,
-                    1 if (chunk.get("metadata") or {}).get("page_fallback") else 0,
-                    float(chunk.get("score", 0) or 0),
+float(chunk.get("score", 0) or 0),
                 ),
                 default=None,
             )
@@ -250,169 +187,11 @@ class RAGEngine:
             if len(selected) < top_k:
                 selected.append(best)
             else:
-                replace_index = None
-                for index in range(len(selected) - 1, -1, -1):
-                    metadata = selected[index].get("metadata") or {}
-                    if not metadata.get("supporting_source_page") and not metadata.get("page_fallback"):
-                        replace_index = index
-                        break
-                if replace_index is None:
-                    replace_index = len(selected) - 1
+                replace_index = len(selected) - 1
                 selected[replace_index] = best
             selected_ids.add(best.get("doc_id"))
             selected_docs.add(doc_name)
         return selected[:top_k]
-
-    def _force_supporting_page_coverage(
-        self,
-        doc_name: str,
-        query: str,
-        selected: list,
-        user_id: int | None,
-        top_k: int | None,
-    ) -> list:
-        """Fetch and retain required citation pages after reranking.
-
-        This is stricter than normal fallback augmentation: eval and replay rely on
-        final retrieved_chunks/sources, so known source pages must survive the final
-        top-k selection even if reranking prefers a neighboring page.
-        """
-        if user_id is None or top_k is None or top_k <= 0:
-            return selected
-        required_pages = self._supporting_pages_for_query(doc_name, query)
-        if not required_pages:
-            return selected
-
-        selected_pages = {
-            (chunk.get("metadata") or {}).get("page")
-            for chunk in selected or []
-            if self._chunk_doc_name(chunk) == doc_name
-        }
-        missing_pages = [page for page in sorted(required_pages) if page not in selected_pages]
-        if not missing_pages:
-            return selected[:top_k]
-
-        page_chunks = get_page_chunks(
-            doc_name=doc_name,
-            user_id=user_id,
-            pages=missing_pages,
-            limit_per_page=3,
-        )
-        if not page_chunks:
-            return selected[:top_k]
-
-        forced = []
-        for chunk in page_chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            metadata["page_fallback"] = True
-            metadata["supporting_source_page"] = True
-            item["metadata"] = metadata
-            item["score"] = max(float(item.get("score", 0) or 0), self.min_score_threshold, 0.12)
-            forced.append(item)
-
-        candidates = self._dedupe_chunks(list(selected or []) + forced)
-        return self._ensure_page_fallback_coverage(candidates, selected, top_k)
-
-    def _fallback_pages_for_query(self, doc_name: str, query: str) -> list[int]:
-        normalized_doc = (doc_name or "").lower()
-        normalized_query = (query or "").lower()
-        pages: list[int] = []
-
-        if self._is_document_front_matter_query(query) or any(term in normalized_query for term in ("topic", "meaning", "prepared", "organization", "reporting period")):
-            pages.extend([1, 2, 3, 6])
-
-        if "final annual report" in normalized_doc or "pdf solutions" in normalized_query:
-            if any(term in normalized_query for term in ("record revenue", "platform revenue", "volume-based revenue", "gross margin", "compare")):
-                pages.extend([3, 45])
-            if any(term in normalized_query for term in ("cash and cash equivalents", "credit facilities")):
-                pages.append(48)
-            if "operating activities" in normalized_query or "operating cash" in normalized_query:
-                pages.append(50)
-
-        if "wipo" in normalized_doc or "wipo" in normalized_query:
-            if any(term in normalized_query for term in ("total revenue", "pct", "madrid", "percentage", "compare")):
-                pages.extend([10, 25])
-            if any(term in normalized_query for term in ("cash and cash equivalents", "net assets", "cash terms")):
-                pages.append(24)
-            if "budget" in normalized_query or "actual 2020" in normalized_query:
-                pages.append(29)
-
-        if "leac" in normalized_doc or "leac" in normalized_query:
-            if any(term in normalized_query for term in ("topic", "financial statements", "meaning")):
-                pages.append(1)
-            if "nature" in normalized_query or "periodical" in normalized_query:
-                pages.append(2)
-            if "black swan" in normalized_query:
-                pages.append(27)
-            elif any(term in normalized_query for term in ("current item", "criteria", "amba", "cash terms", "cash and cash equivalents")):
-                pages.append(10)
-            if "sunfill" in normalized_query or "reserve and surplus" in normalized_query:
-                pages.extend([13, 14])
-
-        return list(dict.fromkeys(page for page in pages if page > 0))
-
-    def _supporting_pages_for_query(self, doc_name: str, query: str) -> set[int]:
-        """Pages that should remain visible as citation support for known real-eval finance facts."""
-        normalized_doc = (doc_name or "").lower()
-        normalized_query = (query or "").lower()
-        pages: list[int] = []
-
-        is_pdfsol = "final annual report" in normalized_doc or "pdf solutions" in normalized_query
-        if is_pdfsol:
-            if any(term in normalized_query for term in ("record revenue", "platform revenue", "volume-based revenue", "gross margin", "compare")):
-                pages.extend([3, 45])
-            if "cash and cash equivalents" in normalized_query:
-                pages.append(48)
-
-        is_wipo = "wipo" in normalized_doc or "wipo" in normalized_query
-        if is_wipo:
-            if "title" in normalized_query or "reporting period" in normalized_query:
-                pages.extend([1, 3])
-            if "prepared" in normalized_query or "organization" in normalized_query:
-                pages.extend([3, 6])
-            if any(term in normalized_query for term in ("pct", "madrid", "percentage", "total revenue", "compare")):
-                pages.append(10)
-            if "cash and cash equivalents" in normalized_query or "cash terms" in normalized_query or "net assets" in normalized_query:
-                pages.append(24)
-
-        if "leac" in normalized_doc or "leac" in normalized_query:
-            if any(term in normalized_query for term in ("current item", "criteria", "cash terms", "cash and cash equivalents")):
-                pages.append(10)
-            if "financial statements" in normalized_query or "meaning" in normalized_query:
-                pages.append(1)
-
-        return {page for page in pages if page > 0}
-
-    def _augment_with_page_fallbacks(
-        self,
-        doc_name: str,
-        query: str,
-        chunks: list,
-        user_id: int | None,
-    ) -> list:
-        if user_id is None:
-            return chunks
-        pages = self._fallback_pages_for_query(doc_name, query)
-        if not pages:
-            return chunks
-        supporting_pages = self._supporting_pages_for_query(doc_name, query)
-        fallback_chunks = get_page_chunks(doc_name=doc_name, user_id=user_id, pages=pages, limit_per_page=6)
-        if not fallback_chunks:
-            return chunks
-        boosted_fallbacks = []
-        for chunk in fallback_chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            metadata["page_fallback"] = True
-            if metadata.get("page") in supporting_pages:
-                metadata["supporting_source_page"] = True
-            item["metadata"] = metadata
-            floor = 0.08 if metadata.get("supporting_source_page") else 0.05
-            item["score"] = max(float(item.get("score", 0) or 0), self.min_score_threshold, floor)
-            boosted_fallbacks.append(item)
-        return self._dedupe_chunks(list(chunks or []) + boosted_fallbacks)
-
 
     def _has_cjk(self, text: str) -> bool:
         return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
@@ -424,70 +203,42 @@ class RAGEngine:
             "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d", "\u4f5c\u8005", "\u6458\u8981", "\u8fd9\u7bc7\u8bba\u6587",
         )
         return any(marker in normalized for marker in markers)
-
     def _expand_retrieval_query(self, query: str) -> str:
-        """Add lightweight retrieval terms for common finance/accounting PDF questions."""
+        """Add lightweight retrieval terms for common finance PDF questions.
+
+        Only generic financial terminology expansions remain. Works for unknown documents.
+        """
         if not query:
             return query
         expansions = []
         lowered = query.lower()
         if self._has_cjk(query):
-            if any(term in query for term in ("\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d")):
+            if any(term in query for term in ("标题", "题目", "论文名")):
                 expansions.append("paper title title of this paper")
-            if "\u4f5c\u8005" in query:
+            if "作者" in query:
                 expansions.append("paper authors author affiliation")
-            if "\u6458\u8981" in query:
+            if "摘要" in query:
                 expansions.append("abstract summary")
-            if any(term in query for term in ("\u4e3b\u8981", "\u8d21\u732e", "\u7814\u7a76", "\u89e3\u51b3")):
+            if any(term in query for term in ("主要", "贡献", "研究", "解决")):
                 expansions.append("main contribution problem method approach")
-            if any(term in query for term in ("\u9875", "\u51e0\u9875", "\u591a\u5c11\u9875")):
+            if any(term in query for term in ("页", "几页", "多少页")):
                 expansions.append("number of pages page count")
         if "title" in lowered and "paper title" not in lowered:
             expansions.append("paper title")
-        if any(term in lowered for term in ("wipo", "world intellectual property", "pct", "madrid")):
-            expansions.append("World Intellectual Property Organization WIPO annual financial report financial statements")
         if "reporting period" in lowered:
-            expansions.append("year ended year to December 31 reporting period")
-        if "prepared" in lowered and "organization" in lowered:
-            expansions.append("prepared by organization World Intellectual Property Organization WIPO")
+            expansions.append("year ended reporting period fiscal year")
         if "total revenue" in lowered:
-            expansions.append("total revenue IPSAS basis statement of financial performance")
-        if "pct" in lowered:
-            expansions.append("The PCT System PCT system fees percentage total revenue")
-        if "madrid" in lowered:
-            expansions.append("Madrid system fees percentage total revenue")
+            expansions.append("total revenue revenue")
         if "net assets" in lowered:
             expansions.append("net assets statement of financial position")
         if "cash and cash equivalents" in lowered or "cash equivalents" in lowered:
-            expansions.append("cash and cash equivalents statement of financial position current assets")
-        if "budget" in lowered or "actual 2020" in lowered:
-            expansions.append("Statement V expenses budget actual 2020 The PCT System")
+            expansions.append("cash and cash equivalents current assets")
         if "credit facilities" in lowered:
-            expansions.append("Credit Facilities Revolving Credit Facility Term Loan")
+            expansions.append("credit facilities revolving credit facility term loan")
         if "gross margin" in lowered:
-            expansions.append("GAAP gross margin gross profit revenue")
-        if "platform revenue" in lowered:
-            expansions.append("platform revenue year-over-year subscription revenue")
-        if "volume-based revenue" in lowered:
-            expansions.append("volume-based revenue year-over-year")
+            expansions.append("gross margin gross profit revenue")
         if "operating activities" in lowered or "operating cash flow" in lowered:
-            expansions.append("net cash provided by operating activities cash flows")
-        if any(term in lowered for term in ("leac", "financial statements", "accountancy", "current item", "current according")):
-            expansions.append("Financial Statements of a Company Accountancy financial statements")
-        if "what topic" in lowered or "cover" in lowered:
-            expansions.append("topic title chapter Financial Statements of a Company Accountancy")
-        if "what are financial statements" in lowered:
-            expansions.append("basic and formal annual reports corporate management communicates financial information")
-        if "nature section" in lowered or "basis for preparation" in lowered:
-            expansions.append("Nature chronologically recorded facts monetary terms defined period of time")
-        if "current item" in lowered or "criteria" in lowered:
-            expansions.append("current item current assets operating cycle twelve months held primarily for trading cash and cash equivalent")
-        if "amba" in lowered:
-            expansions.append("Amba Ltd illustration cash and cash equivalents")
-        if "sunfill" in lowered:
-            expansions.append("Sunfill Ltd reserve and surplus March 31 2017")
-        if "black swan" in lowered:
-            expansions.append("Black Swan Ltd cash and cash equivalents")
+            expansions.append("net cash operating activities cash flows")
         if not expansions:
             return query
         return f"{query}\n" + "\n".join(dict.fromkeys(expansions))
@@ -528,8 +279,6 @@ class RAGEngine:
                 value = meta.get(key)
                 if value is not None:
                     item[key] = value
-            if meta.get("supporting_source_page"):
-                item["supporting_source_page"] = True
             summary.append(item)
         return summary
 
@@ -553,32 +302,6 @@ class RAGEngine:
             "child_hit_count": meta.get("child_hit_count"),
         }
 
-    def _ensure_supporting_sources(self, sources: list, chunks: list) -> list:
-        """Keep forced supporting pages visible in final citations/eval output."""
-        merged = list(sources or [])
-        seen = {
-            (source.get("filename"), source.get("page"), source.get("chunk_id"))
-            for source in merged
-        }
-        seen_pages = {
-            (source.get("filename"), source.get("page"))
-            for source in merged
-        }
-        for chunk in chunks or []:
-            meta = chunk.get("metadata", {}) or {}
-            if not meta.get("supporting_source_page"):
-                continue
-            source = self._source_from_chunk(chunk)
-            key = (source.get("filename"), source.get("page"), source.get("chunk_id"))
-            page_key = (source.get("filename"), source.get("page"))
-            if key in seen or page_key in seen_pages:
-                continue
-            source["supporting_source_page"] = True
-            merged.append(source)
-            seen.add(key)
-            seen_pages.add(page_key)
-        return merged
-
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
         retrieval_query = self._expand_retrieval_query(query)
@@ -586,9 +309,8 @@ class RAGEngine:
             results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=n_results, user_id=user_id)
             results = self._normalize_scores(results)
             results = self._boost_front_matter_chunks(query, results)
-            results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
             selected = self._apply_reranker(query, results, n_results)
-            return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+            return selected[:n_results] if n_results else selected
 
         # Hybrid search
         candidate_k = n_results * self.retrieval_candidate_multiplier
@@ -601,15 +323,13 @@ class RAGEngine:
             fused = rrf([dense_results, sparse_results])
             results = self._normalize_scores(fused)
             results = self._boost_front_matter_chunks(query, results)
-            results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
             selected = self._apply_reranker(query, results, n_results)
-            return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+            return selected[:n_results] if n_results else selected
 
         results = self._normalize_scores(dense_results)
         results = self._boost_front_matter_chunks(query, results)
-        results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
         selected = self._apply_reranker(query, results, n_results)
-        return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+        return selected[:n_results] if n_results else selected
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:
         """异步并发地从多个文档中检索相关文本块，并按相关性得分降序返回前 N 个结果。"""
@@ -1193,21 +913,6 @@ class RAGEngine:
             return None
 
         normalized = (query or "").lower()
-        if "which documents mention" in normalized and "cash and cash equivalents" in normalized:
-            source_docs = {source.get("filename") for source in sources or []}
-            documents = [
-                filename
-                for filename in ("FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf", "leac203.pdf")
-                if filename in source_docs
-            ]
-            if len(documents) >= 2:
-                return {
-                    "answer": "Answer: " + "; ".join(
-                        f"{filename} mentions cash and cash equivalents" for filename in documents
-                    ) + ".",
-                    "diagnostic": "deterministic_factual_source_presence",
-                }
-
         direct_answer = self._summarize_factual_evidence(query, [], context=context)
         evidence = self._rank_context_evidence(
             query,
@@ -1246,58 +951,11 @@ class RAGEngine:
 
     def answer_deterministic_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
         """Try deterministic non-LLM answering from retrieved context."""
-        multi_doc = self.answer_multi_doc_query_from_context(query, context, sources)
-        if multi_doc:
-            return multi_doc
         factual = self.answer_factual_query_from_context(query, context, sources)
         if factual:
             return factual
         return self.answer_numeric_query_from_context(query, context, sources)
 
-    def answer_multi_doc_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Return deterministic grouped answers for bounded multi-document real-eval queries."""
-        normalized = (query or "").lower()
-        if not context:
-            return None
-
-        source_pages = {(src.get("filename"), src.get("page")) for src in sources or []}
-        source_docs = {src.get("filename") for src in sources or []}
-        context_lower = context.lower()
-
-        if "compare" in normalized and "revenue" in normalized:
-            parts = []
-            if (
-                re.search(r"\$?219(?:\.0)?\s+million", context, re.IGNORECASE)
-                or ("FINAL Annual Report.pdf", 3) in source_pages
-                or "final annual report.pdf" in context_lower
-            ):
-                parts.append("FINAL Annual Report.pdf: $219 million record revenue in 2025.")
-            if (
-                re.search(r"468\.3\s+million Swiss francs", context, re.IGNORECASE)
-                or ("wipo_pub_rn2021_18e.pdf", 10) in source_pages
-                or "wipo_pub_rn2021_18e.pdf" in context_lower
-            ):
-                parts.append("wipo_pub_rn2021_18e.pdf: 468.3 million Swiss francs total revenue in 2020.")
-            if len(parts) >= 2:
-                return {
-                    "answer": "Answer:\n- " + "\n- ".join(parts),
-                    "diagnostic": "deterministic_multi_doc_compare",
-                }
-
-        if "which documents mention" in normalized and "cash and cash equivalents" in normalized:
-            mentions = []
-            if "FINAL Annual Report.pdf" in source_docs or ("FINAL Annual Report.pdf", 48) in source_pages or "final annual report.pdf" in context_lower:
-                mentions.append("FINAL Annual Report.pdf mentions cash and cash equivalents.")
-            if "wipo_pub_rn2021_18e.pdf" in source_docs or ("wipo_pub_rn2021_18e.pdf", 24) in source_pages or "wipo_pub_rn2021_18e.pdf" in context_lower:
-                mentions.append("wipo_pub_rn2021_18e.pdf mentions cash and cash equivalents.")
-            if "leac203.pdf" in source_docs or ("leac203.pdf", 10) in source_pages or "leac203.pdf" in context_lower:
-                mentions.append("leac203.pdf mentions cash and cash equivalents.")
-            if len(mentions) >= 2:
-                return {
-                    "answer": "Answer:\n- " + "\n- ".join(mentions),
-                    "diagnostic": "deterministic_multi_doc_presence",
-                }
-        return None
 
     @staticmethod
     def _parse_context_lines(context: str) -> list[dict]:
@@ -1445,154 +1103,50 @@ class RAGEngine:
                 if len(values) >= 5:
                     return ", ".join(values)
         return ", ".join(values) if values else None
-
     @classmethod
     def _targeted_numeric_summary(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
+        """Only generic regex-based extraction from context."""
         normalized = (query or "").lower()
         text = " ".join(item.get("text", "") for item in selected)
         if context:
             text = f"{text} {context}"
         compact = re.sub(r"\s+", " ", text).strip()
-        selected_pages = set()
-        for item in selected:
-            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-            source = item.get("source")
-            page = metadata.get("page")
-            if isinstance(source, dict):
-                page = source.get("page", page)
-            elif isinstance(source, str):
-                match = re.search(r"\bp(?:age)?\.?\s*(\d+)\b", source, re.IGNORECASE)
-                if match:
-                    page = match.group(1)
-            if str(page).isdigit():
-                selected_pages.add(int(page))
-        for match in re.finditer(r"[, ]p(?:age)?\.?\s*(\d+)\]", context or "", re.IGNORECASE):
-            selected_pages.add(int(match.group(1)))
-
-        if "compare" in normalized and "revenue" in normalized and "pdf solutions" in normalized and "wipo" in normalized:
-            return "$219 million; 468.3 million Swiss francs"
-
         if "platform revenue" in normalized:
             match = re.search(r"platform revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
             if match:
                 return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-
         if "volume-based revenue" in normalized:
             match = re.search(r"volume-based revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
             if match:
                 return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-
         if "gross margin" in normalized:
             match = re.search(r"gross margin.*?\bwas\s+(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
             if match:
                 return match.group(1)
-
-        if "cash and cash equivalents" in normalized and "pdf solutions" in normalized:
-            direct_match = re.search(r"\$?42\.2\s+million", compact, re.IGNORECASE)
-            if direct_match:
-                return "$42.2 million"
-            if 48 in selected_pages:
-                return "$42.2 million"
-            match = re.search(
-                r"cash and cash equivalents.*?(\$?\d[\d,]*(?:\.\d+)?\s+million)",
-                compact,
-                re.IGNORECASE,
-            )
+        if "cash and cash equivalents" in normalized:
+            match = re.search(r"cash and cash equivalents.*?(\$?\d[\d,]*(?:\.\d+)?\s+(?:million|thousand|billion))", compact, re.IGNORECASE)
             if match:
                 return cls._normalize_numeric_phrase(match.group(1), query, compact)
-
         if "operating activities" in normalized or "operating cash" in normalized:
-            match = re.search(
-                r"Operating activities\s+\$?\s*(\d[\d,]*)",
-                compact,
-                re.IGNORECASE,
-            )
+            match = re.search(r"Operating activities\s+\$?\s*(\d[\d,]*)", compact, re.IGNORECASE)
             if match:
                 raw_value = match.group(1)
                 amount = cls._parse_comma_number(raw_value)
                 if amount:
                     return f"${amount / 1000:.1f} million, {raw_value}"
-
         if "record revenue" in normalized:
             match = re.search(r"record revenues? of\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
             if match:
                 return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-
-        if ("actual 2020" in normalized or "budget" in normalized) and "pct system" in normalized:
-            if "98,755" in compact or 29 in selected_pages:
-                return "The PCT System, 98,755, thousands of Swiss francs"
-
-        if "pct system" in normalized or "pct " in normalized:
-            if 10 in selected_pages:
-                return "76.6 per cent"
-            accounting_match = re.search(
-                r"PCT system fees,\s*accounting for\s*(\d+(?:\.\d+)?)\s*(per cent|%)\s*of total revenue",
-                compact,
-                re.IGNORECASE,
-            )
-            if accounting_match:
-                return f"{accounting_match.group(1)} {accounting_match.group(2)}"
-            direct_match = re.search(r"76\.6\s*(per cent|%)", compact, re.IGNORECASE)
-            if direct_match:
-                return f"76.6 {direct_match.group(1)}"
-            match = re.search(r"\bPCT\b.*?(\d+(?:\.\d+)?)\s*(per cent|%)", compact, re.IGNORECASE)
-            if match:
-                return f"{match.group(1)} {match.group(2)}"
-
-        if "madrid" in normalized:
-            if 10 in selected_pages:
-                return "16.3 per cent"
-            representing_match = re.search(
-                r"Madrid system fees.*?representing\s*(\d+(?:\.\d+)?)\s*(per cent|%)",
-                compact,
-                re.IGNORECASE,
-            )
-            if representing_match:
-                return f"{representing_match.group(1)} {representing_match.group(2)}"
-            direct_match = re.search(r"16\.3\s*(per cent|%)", compact, re.IGNORECASE)
-            if direct_match:
-                return f"16.3 {direct_match.group(1)}"
-            match = re.search(r"\bMadrid\b.*?(\d+(?:\.\d+)?)\s*(per cent|%)", compact, re.IGNORECASE)
-            if match:
-                return f"{match.group(1)} {match.group(2)}"
-
         if "total revenue" in normalized:
-            if "wipo" in normalized and 25 in selected_pages:
-                return "468.3 million Swiss francs, 468,272"
-            match = re.search(r"total revenue of\s+(\d+(?:\.\d+)?\s+million Swiss francs)", compact, re.IGNORECASE)
+            match = re.search(r"total revenue of\s+(\d+(?:\.\d+)?\s+million(?:\s+Swiss)?\s+francs)", compact, re.IGNORECASE)
             if match:
-                values = [match.group(1)]
-                table_match = re.search(r"\b468,272\b", compact)
-                if table_match:
-                    values.append(table_match.group(0))
-                return ", ".join(values)
-
-        if "cash and cash equivalents" in normalized and "wipo" in normalized:
-            if "143,540" in compact or 24 in selected_pages:
-                return "143,540, thousands of Swiss francs"
-
-        if "net assets" in normalized and "wipo" in normalized:
-            if "387,063" in compact or 24 in selected_pages:
-                return "387,063, thousands of Swiss francs"
-
+                return match.group(1)
         if "credit facilities" in normalized:
             revolver = re.search(r"(Revolving Credit Facility).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
             term = re.search(r"(Term Loan).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
             if revolver and term:
                 return f"{revolver.group(1)}, {cls._normalize_numeric_phrase(revolver.group(2), query, compact)}; {term.group(1)}, {cls._normalize_numeric_phrase(term.group(2), query, compact)}"
-
-        if "sunfill" in normalized and "reserve and surplus" in normalized:
-            if "2,00,000" in compact or 13 in selected_pages or 14 in selected_pages:
-                return "2,00,000"
-
-        if "cash and cash equivalents" in normalized and ("amba" in normalized or "cash in hand" in compact.lower()):
-            bank = re.search(r"Bank balance\s*\|?\s*(\d[\d,]*)", compact, re.IGNORECASE)
-            cash = re.search(r"Cash in hand\s*\|?\s*(\d[\d,]*)", compact, re.IGNORECASE)
-            if bank and cash:
-                total = cls._parse_comma_number(bank.group(1)) + cls._parse_comma_number(cash.group(1))
-                if total:
-                    return f"{total:,}"
-
         return None
 
     @staticmethod
@@ -1601,9 +1155,9 @@ class RAGEngine:
             return int(re.sub(r"[^\d]", "", value or ""))
         except ValueError:
             return 0
-
     @staticmethod
     def _summarize_factual_evidence(query: str, selected: list[dict], *, context: str | None = None) -> str | None:
+        """Only generic evidence extraction from context."""
         normalized = (query or "").lower()
         text = " ".join(item.get("text", "") for item in selected)
         if context:
@@ -1611,64 +1165,26 @@ class RAGEngine:
         compact = re.sub(r"\s+", " ", text).strip(" -")
         if not compact:
             return None
-
-        if "which documents mention" in normalized and "cash and cash equivalents" in normalized:
-            documents = []
-            lowered = compact.lower()
-            for filename in ("FINAL Annual Report.pdf", "wipo_pub_rn2021_18e.pdf", "leac203.pdf"):
-                if filename.lower() in lowered:
-                    documents.append(filename)
-            if len(documents) >= 2:
-                return "; ".join(f"{filename} mentions cash and cash equivalents" for filename in documents) + "."
-
-        if "title" in normalized and "pdf solutions" in normalized:
-            if re.search(r"2025\s+Driving\s+Smart\s+Solutions", compact, re.IGNORECASE):
-                return "2025 Driving Smart Solutions Annual Report."
-            return "2025 Driving Smart Solutions Annual Report."
-
-        if "which organization" in normalized or "prepared" in normalized:
-            if re.search(r"world intellectual property organization", compact, re.IGNORECASE):
-                return "World Intellectual Property Organization (WIPO)."
-            if "wipo" in normalized:
-                return "World Intellectual Property Organization (WIPO)."
-
-        if "title and reporting period" in normalized:
-            title_match = re.search(
-                r"(annual financial report and financial statements).*?(year to december 31,\s*2020)",
-                compact,
-                flags=re.IGNORECASE,
+        if "which organization" in normalized or ("prepared" in normalized and "organization" in normalized):
+            org_match = re.search(
+                r"(?:prepared by|organization)\s+([A-Z][a-zA-Z\s]+(?:Organization|Corporation|Company|Ltd|Inc))",
+                compact, re.IGNORECASE,
             )
-            if title_match:
-                return f"{title_match.group(1)}; {title_match.group(2)}."
-            if "wipo" in normalized or "wipo annual financial report" in compact.lower():
-                return "Annual financial report and financial statements; Year to December 31, 2020."
-
-        if "what topic" in normalized and "leac203" in normalized:
-            if re.search(r"financial statements of a company", compact, re.IGNORECASE):
-                return "Financial Statements of a Company; Accountancy."
-
-        if "financial statements" in normalized and "what are" in normalized:
-            if "leac203" in normalized or "financial statements of a company" in compact.lower():
-                return (
-                    "Financial statements are the basic and formal annual reports through which "
-                    "corporate management communicates financial information."
-                )
-            sentence = RAGEngine._best_sentence_with_terms(
-                compact,
-                ("basic and formal annual reports", "corporate management communicates financial information"),
+            if org_match:
+                return org_match.group(1).strip()
+        if "reporting period" in normalized:
+            period_match = re.search(
+                r"(?:year (?:to|ended)\s+)(?:December\s+31,?\s*)?20\d{2}",
+                compact, re.IGNORECASE,
             )
-            if sentence:
-                return sentence
-
+            if period_match:
+                return period_match.group(0).strip()
         if "criteria" in normalized and "current" in normalized:
             terms = ("operating cycle", "within twelve months", "held primarily for trading", "cash and cash equivalent")
             hits = [term for term in terms if term in compact.lower()]
-            if "twelve months" in compact.lower() and "within twelve months" not in hits:
-                hits.append("within twelve months")
             if hits:
                 return "; ".join(hits) + "."
-
-        return cls_text if (cls_text := RAGEngine._first_evidence_sentence(compact)) else None
+        return RAGEngine._first_evidence_sentence(compact)
 
     @staticmethod
     def _best_sentence_with_terms(text: str, terms: tuple[str, ...]) -> str | None:
@@ -1699,11 +1215,10 @@ class RAGEngine:
     def _should_try_deterministic_factual_answer(query: str) -> bool:
         normalized = (query or "").lower()
         factual_markers = (
-            "what topic", "what is the title", "title and reporting period",
-            "which organization", "prepared", "what are financial statements",
-            "according to", "nature section", "basis for preparation",
+            "what is the title", "title and reporting period",
+            "which organization", "prepared",
+            "according to",
             "list two criteria", "criteria that make an item current",
-            "which documents mention", "cash terms",
         )
         return any(marker in normalized for marker in factual_markers)
 
@@ -1734,12 +1249,10 @@ class RAGEngine:
             "surplus": {"reserve", "surplus"},
             "operating": {"operating", "activities"},
             "facilities": {"facility", "facilities", "loan", "credit"},
-            "organization": {"organization", "wipo", "world", "intellectual", "property"},
-            "prepared": {"prepared", "organization", "wipo"},
+            "organization": {"organization", "prepared"},
+            "prepared": {"prepared", "organization"},
             "statements": {"statements", "financial"},
             "current": {"current", "operating", "cycle", "twelve", "months", "trading", "cash"},
-            "leac203.pdf": {"accountancy", "financial", "statements", "company"},
-            "leac203": {"accountancy", "financial", "statements", "company"},
         }
         expanded = set(terms)
         for term in list(terms):
@@ -1896,8 +1409,6 @@ class RAGEngine:
 
             # 2. Build context (with dedup and score threshold)
             context, sources = self.build_context(chunks)
-            sources = self._ensure_supporting_sources(sources, chunks)
-
             # 3. Generate answer (skip LLM if context is insufficient)
             deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
             if deterministic_context_answer:
@@ -1914,8 +1425,6 @@ class RAGEngine:
                     answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
                 else:
                     answer = await self.generate_answer(context, question)
-
-        sources = self._ensure_supporting_sources(sources, chunks)
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000

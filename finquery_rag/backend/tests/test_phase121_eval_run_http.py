@@ -1,8 +1,8 @@
 import json
 
-from src.services import eval_runner
-from src.services.evaluation import EvaluationCase
-from src.eval_cli import main as eval_cli_main
+from src.evaluation import eval_runner
+from src.evaluation.evaluation import EvaluationCase
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 class _FakeResponse:

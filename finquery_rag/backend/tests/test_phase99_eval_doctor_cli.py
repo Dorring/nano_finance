@@ -3,7 +3,7 @@ import sqlite3
 
 from src.services.document_registry import DocumentRegistry
 from src.services.session_manager import SessionManager
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _create_bm25_db(path):

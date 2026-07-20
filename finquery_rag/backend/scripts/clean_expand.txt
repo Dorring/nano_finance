@@ -1,0 +1,40 @@
+    def _expand_retrieval_query(self, query: str) -> str:
+        """Add lightweight retrieval terms for common finance PDF questions.
+
+        Phase 1 revision: All benchmark-specific expansions removed. Only generic
+        financial terminology expansions remain. Works for unknown documents.
+        """
+        if not query:
+            return query
+        expansions = []
+        lowered = query.lower()
+        if self._has_cjk(query):
+            if any(term in query for term in ("标题", "题目", "论文名")):
+                expansions.append("paper title title of this paper")
+            if "作者" in query:
+                expansions.append("paper authors author affiliation")
+            if "摘要" in query:
+                expansions.append("abstract summary")
+            if any(term in query for term in ("主要", "贡献", "研究", "解决")):
+                expansions.append("main contribution problem method approach")
+            if any(term in query for term in ("页", "几页", "多少页")):
+                expansions.append("number of pages page count")
+        if "title" in lowered and "paper title" not in lowered:
+            expansions.append("paper title")
+        if "reporting period" in lowered:
+            expansions.append("year ended reporting period fiscal year")
+        if "total revenue" in lowered:
+            expansions.append("total revenue revenue")
+        if "net assets" in lowered:
+            expansions.append("net assets statement of financial position")
+        if "cash and cash equivalents" in lowered or "cash equivalents" in lowered:
+            expansions.append("cash and cash equivalents current assets")
+        if "credit facilities" in lowered:
+            expansions.append("credit facilities revolving credit facility term loan")
+        if "gross margin" in lowered:
+            expansions.append("gross margin gross profit revenue")
+        if "operating activities" in lowered or "operating cash flow" in lowered:
+            expansions.append("net cash operating activities cash flows")
+        if not expansions:
+            return query
+        return f"{query}\n" + "\n".join(dict.fromkeys(expansions))

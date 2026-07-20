@@ -1,3 +1,4 @@
+import pytest
 """
 Round 4 tests — counter-examples for Round 3 fixes.
 Covers: low confidence, RRF threshold, BM25 dedup/stale, registry reupload,

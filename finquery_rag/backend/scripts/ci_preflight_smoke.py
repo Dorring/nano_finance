@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.eval_cli import main as eval_cli_main  # noqa: E402
+from src.evaluation.eval_cli import main as eval_cli_main  # noqa: E402
 from src.services.document_registry import DocumentRegistry  # noqa: E402
 from src.services.session_manager import SessionManager  # noqa: E402
 from src.services.trace import TraceLogger  # noqa: E402

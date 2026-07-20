@@ -1,3 +1,4 @@
+import pytest
 """Phase 6A tests: optional reranker interface."""
 import os
 import sys

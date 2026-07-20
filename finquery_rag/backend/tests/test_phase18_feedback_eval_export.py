@@ -5,14 +5,14 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import (
+from evaluation.evaluation import (
     export_replay_cases_from_feedback,
     feedback_to_replay_case,
     load_jsonl_cases,
 )
 from services.feedback import FeedbackStore
 from services.trace import TraceLogger
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _trace_logger(tmp_path):
@@ -88,7 +88,7 @@ def test_feedback_replay_export_uses_latest_feedback_per_trace(tmp_path):
 
 
 def test_eval_cli_exposes_feedback_to_replay_command():
-    cli_path = os.path.join(os.path.dirname(__file__), "..", "src", "eval_cli.py")
+    cli_path = os.path.join(os.path.dirname(__file__), "..", "src", "evaluation", "eval_cli.py")
     content = open(cli_path, encoding="utf-8").read()
 
     assert 'feedback-to-replay' in content

@@ -28,8 +28,8 @@ FULL_STACK_MODULES = [
     "src.services.rag_engine",
     "src.services.retrieval",
     "src.services.reranker",
-    "src.services.evaluation",
-    "src.services.eval_runner",
+    "src.evaluation.evaluation",
+    "src.evaluation.eval_runner",
     "src.services.trace",
     "src.services.session_manager",
     "src.services.document_registry",
@@ -42,7 +42,7 @@ FULL_STACK_MODULES = [
     "src.models.schemas",
     "src.models.user",
     "src.database",
-    "src.eval_cli",
+    "src.evaluation.eval_cli",
 ]
 
 ALL_MODULES = PURE_MODULES + FULL_STACK_MODULES
@@ -111,7 +111,7 @@ def test_full_stack_modules_import():
 
 def test_evaluation_no_heavy_deps_in_source():
     """evaluation.py must not import torch or chromadb at module level."""
-    path = _source_path("src.services.evaluation")
+    path = _source_path("src.evaluation.evaluation")
     with open(path, encoding="utf-8") as fh:
         content = fh.read()
     forbidden = ["import torch", "from torch", "import chromadb", "from chromadb"]
@@ -135,7 +135,7 @@ def test_financial_tools_no_llm_deps_in_source():
 
 def test_eval_runner_no_heavy_deps_in_source():
     """eval_runner.py must not import model-heavy libs at module level."""
-    path = _source_path("src.services.eval_runner")
+    path = _source_path("src.evaluation.eval_runner")
     with open(path, encoding="utf-8") as fh:
         content = fh.read()
     forbidden = [

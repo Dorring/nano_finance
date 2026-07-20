@@ -6,9 +6,9 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.eval_runner import run_case, run_jsonl_cases
-from services.evaluation import EvaluationCase, compare_reports
-from src.eval_cli import main as eval_cli_main
+from evaluation.eval_runner import run_case, run_jsonl_cases
+from evaluation.evaluation import EvaluationCase, compare_reports
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 class FakeRAGEngine:

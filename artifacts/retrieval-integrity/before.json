@@ -1,0 +1,46 @@
+{
+  "snapshot": "before",
+  "timestamp": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "commit": "329a01a",
+  "summary": "Pre-Phase-1 snapshot of retrieval contamination methods in rag_engine.py",
+  "contaminated_methods": {
+    "_fallback_pages_for_query": {
+      "lines": "317-353",
+      "description": "Hardcoded document-name-to-page mappings for 'final annual report', 'wipo', 'leac' and specific query keywords",
+      "status": "TO_BE_REMOVED"
+    },
+    "_supporting_pages_for_query": {
+      "lines": "355-385",
+      "description": "Eval-specific page injection for known real-eval finance facts",
+      "status": "TO_BE_REMOVED"
+    },
+    "_force_supporting_page_coverage": {
+      "lines": "266-315",
+      "description": "Forces expected source pages into final top-k by calling _supporting_pages_for_query",
+      "status": "TO_BE_REMOVED"
+    },
+    "_augment_with_page_fallbacks": {
+      "lines": "387-414",
+      "description": "Injects fallback pages with boosted score floors based on _supporting_pages_for_query",
+      "status": "TO_BE_REMOVED"
+    },
+    "_ensure_page_fallback_coverage": {
+      "lines": "145-197",
+      "description": "Uses supporting_source_page metadata flag to prioritize chunks in ranking",
+      "status": "TO_BE_REFACTORED"
+    },
+    "_ensure_multi_doc_coverage": {
+      "lines": "226-264",
+      "description": "Uses supporting_source_page metadata flag to prefer candidates from missing docs",
+      "status": "TO_BE_REFACTORED"
+    }
+  },
+  "supporting_source_page_references": {
+    "rag_engine.py": [162, 175, 189, 242, 256, 309, 409, 531, 532, 569, 576],
+    "description": "These lines reference the supporting_source_page metadata flag, which must not influence production ranking"
+  },
+  "hardcoded_document_names": ["final annual report", "wipo", "leac", "pdf solutions"],
+  "hardcoded_page_numbers": [1, 2, 3, 6, 10, 13, 14, 24, 25, 27, 29, 45, 48, 50],
+  "warning": "This snapshot captures contaminated retrieval state. Metrics derived from this code must be marked deprecated_contaminated."
+}

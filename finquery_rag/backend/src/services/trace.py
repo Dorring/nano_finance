@@ -13,7 +13,7 @@ import uuid
 import re
 from typing import Optional, Dict, Any, List
 
-from .evaluation import write_jsonl
+from src.evaluation.evaluation import write_jsonl
 from .sqlite_migrations import ensure_column, run_component_migrations, table_exists
 
 SCHEMA_VERSION = 2

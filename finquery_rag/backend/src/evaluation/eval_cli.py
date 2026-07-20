@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 import sys
 
-from .services.evaluation import (
+from .evaluation import (
     audit_evaluation_fixtures,
     build_failure_analysis_markdown,
     build_interview_report,
@@ -27,9 +27,9 @@ from .services.evaluation import (
     load_jsonl_predictions,
     write_json_file,
 )
-from .services.feedback import FeedbackStore
-from .services.trace import TraceLogger
-from .services.eval_runner import run_jsonl_cases, run_jsonl_cases_http, validate_n_results
+from src.services.feedback import FeedbackStore
+from src.services.trace import TraceLogger
+from .eval_runner import run_jsonl_cases, run_jsonl_cases_http, validate_n_results
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -247,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         # Import lazily because main initializes FastAPI globals and the OpenAI client.
-        from .main import get_rag_engine
+        from src.main import get_rag_engine
 
         predictions = asyncio.run(run_jsonl_cases(
             args.cases,
@@ -340,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if gate_result["passed"] else 1
 
     if args.command == "doctor":
-        from .services.health import collect_health_snapshot
+        from src.services.health import collect_health_snapshot
 
         snapshot = collect_health_snapshot(
             bm25_db_path=args.bm25_db,
@@ -356,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if snapshot.get("ready") or args.warn_only else 1
 
     if args.command == "migration-audit":
-        from .services.migration_audit import audit_migration_readiness
+        from src.services.migration_audit import audit_migration_readiness
 
         report = audit_migration_readiness(
             bm25_db_path=args.bm25_db,
@@ -372,7 +372,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report["passed"] or args.warn_only else 1
 
     if args.command == "preflight":
-        from .services.preflight import build_preflight_report
+        from src.services.preflight import build_preflight_report
 
         try:
             report = build_preflight_report(
@@ -627,7 +627,7 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(user_id, str):
             print(user_id, file=sys.stderr)
             return 2
-        from .services.retrieval import SqliteBM25Retriever
+        from src.services.retrieval import SqliteBM25Retriever
 
         retriever = SqliteBM25Retriever(db_path=args.db)
         report = retriever.integrity_report(user_id=user_id)
@@ -642,7 +642,7 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(user_id, str):
             print(user_id, file=sys.stderr)
             return 2
-        from .services.retrieval import SqliteBM25Retriever
+        from src.services.retrieval import SqliteBM25Retriever
 
         retriever = SqliteBM25Retriever(db_path=args.db)
         report = retriever.rebuild_fts_index(user_id=user_id)
