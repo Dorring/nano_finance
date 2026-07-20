@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "services": {
+    "rag_engine.py": {
+      "imports": ["vector_store", "retrieval", "reranker", "intent", "memory_profile", "tiktoken (optional)"],
+      "imported_by": ["main.py", "eval_runner.py", "eval_cli.py"],
+      "responsibilities": ["hybrid retrieval orchestration", "RRF fusion", "context assembly", "LLM generation", "citation building", "page fallback coverage", "multi-document coverage"],
+      "issues": ["2019 lines - needs modularization", "contains hardcoded page mappings"]
+    },
+    "retrieval.py": {
+      "imports": ["sqlite3", "jieba_fast", "chunk_id"],
+      "imported_by": ["rag_engine.py"],
+      "responsibilities": ["BM25 sparse retrieval via SQLite FTS5", "RRF fusion algorithm"],
+      "schema_version": 2
+    },
+    "vector_store.py": {
+      "imports": ["chromadb"],
+      "imported_by": ["rag_engine.py", "main.py"],
+      "responsibilities": ["ChromaDB collection management", "embedding storage", "dense retrieval"]
+    },
+    "evaluation.py": {
+      "imports": ["answer_validation", "financial_tools"],
+      "imported_by": ["eval_cli.py", "eval_runner.py", "preflight.py"],
+      "responsibilities": ["offline eval scoring", "report generation", "comparison", "retrieval diagnostics", "fixture audit"],
+      "issues": ["1656 lines - second largest service file"]
+    },
+    "eval_runner.py": {
+      "imports": ["evaluation"],
+      "imported_by": ["eval_cli.py"],
+      "responsibilities": ["in-process eval execution", "HTTP eval execution"]
+    },
+    "intent.py": {
+      "imports": ["re"],
+      "imported_by": ["rag_engine.py"],
+      "responsibilities": ["deterministic query intent classification"],
+      "intents": ["document_qa", "financial_calculation", "document_summary", "conversation", "unsupported"]
+    },
+    "financial_tools.py": {
+      "imports": ["decimal", "re"],
+      "imported_by": ["evaluation.py", "answer_validation.py"],
+      "imported_by_rag_engine": false,
+      "responsibilities": ["deterministic financial calculations"],
+      "operations": ["parse_financial_number", "growth_rate", "percentage_share", "sum_values", "verify_sum", "convert_scale", "format_ratio_percent"]
+    },
+    "answer_validation.py": {
+      "imports": ["decimal", "re"],
+      "imported_by": ["evaluation.py"],
+      "imported_by_rag_engine": false,
+      "responsibilities": ["post-generation percent claim validation"]
+    },
+    "reranker.py": {
+      "imports": ["math", "re"],
+      "imported_by": ["rag_engine.py"],
+      "responsibilities": ["reranker protocol", "heuristic reranker", "cross-encoder reranker", "reranker factory"]
+    },
+    "ingest.py": {
+      "imports": ["pymupdf", "langchain_text_splitters", "process_tables", "chunk_id"],
+      "imported_by": ["main.py"],
+      "responsibilities": ["PDF parsing", "markdown reconstruction", "hierarchical chunking", "front matter extraction"]
+    },
+    "trace.py": {
+      "imports": ["sqlite3", "hashlib", "json"],
+      "imported_by": ["rag_engine.py"],
+      "responsibilities": ["structured query trace logging"],
+      "schema_version": 2
+    },
+    "session_manager.py": {
+      "imports": ["sqlite3", "sqlite_migrations"],
+      "imported_by": ["main.py"],
+      "responsibilities": ["conversation session storage"],
+      "schema_version": 2
+    },
+    "document_registry.py": {
+      "imports": ["sqlite3"],
+      "imported_by": ["main.py"],
+      "responsibilities": ["document lifecycle state machine"]
+    },
+    "feedback.py": {
+      "imports": ["sqlite3"],
+      "imported_by": ["main.py"],
+      "responsibilities": ["user feedback storage"]
+    },
+    "health.py": {
+      "imports": ["sqlite3"],
+      "imported_by": ["main.py", "preflight.py"],
+      "responsibilities": ["health/diagnostics snapshot"]
+    },
+    "preflight.py": {
+      "imports": ["health", "migration_audit", "evaluation"],
+      "imported_by": ["scripts/ci_preflight_smoke.py"],
+      "responsibilities": ["deployment preflight report aggregation"]
+    },
+    "migration_audit.py": {
+      "imports": ["sqlite3", "json"],
+      "imported_by": ["preflight.py"],
+      "responsibilities": ["Chroma/BM25 index integrity checks"]
+    },
+    "memory_profile.py": {
+      "imports": ["sqlite3"],
+      "imported_by": ["rag_engine.py", "main.py"],
+      "responsibilities": ["user memory profile for personalization"]
+    }
+  },
+  "api_layer": {
+    "main.py": {
+      "imports_from_services": ["auth", "ingest", "vector_store", "rag_engine", "document_registry", "session_manager", "memory_profile", "health", "intent", "feedback", "query_scope", "streaming", "retrieval_config", "evaluation"],
+      "endpoints": 30
+    }
+  }
+}

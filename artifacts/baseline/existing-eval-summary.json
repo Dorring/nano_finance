@@ -1,0 +1,69 @@
+{
+  "generated_at": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "smoke_fixtures": {
+    "golden_cases": {
+      "path": "eval/golden_smoke.jsonl",
+      "case_count": 12,
+      "tags": ["smoke", "number", "citation", "single_doc", "multi_doc", "calculation", "no_answer", "growth", "margin", "sum", "scale", "risk", "balance_sheet", "filtered_docs"],
+      "intents": ["document_qa", "financial_calculation"],
+      "operations": ["growth_rate", "percentage_share", "sum_values", "convert_scale"],
+      "has_no_answer_cases": true,
+      "notes": "Synthetic deterministic cases. Per eval/README.md: 'not intended to represent product quality'"
+    },
+    "predictions": {
+      "path": "eval/predictions_smoke.jsonl",
+      "matches_golden": true,
+      "notes": "Deterministic predictions matching all smoke cases"
+    },
+    "baseline_report": {
+      "path": "eval/baseline_smoke_report.json",
+      "notes": "Checked scorer output for regression comparison"
+    }
+  },
+  "real_eval_templates": {
+    "jsonl_template": {
+      "path": "eval/real_eval_template.jsonl",
+      "notes": "Copy/edit template with REPLACE_WITH_* placeholders. Must not be scored directly."
+    },
+    "csv_template": {
+      "path": "eval/real_eval_labeling_template.csv",
+      "case_count": 15,
+      "notes": "Spreadsheet-friendly labeling template. Rows with REPLACE_* placeholders skipped by converter."
+    }
+  },
+  "eval_cli_commands": {
+    "score": "python -m src.eval_cli score --cases <cases.jsonl> --predictions <preds.jsonl> --out <report.json>",
+    "run": "python -m src.eval_cli run --cases <cases.jsonl> --out <preds.jsonl> --user-id <id>",
+    "run_http": "python -m src.eval_cli run-http --cases <cases.jsonl> --out <preds.jsonl> --api-base <url> --token <token>",
+    "compare": "python -m src.eval_cli compare --baseline <base.json> --candidate <cand.json>",
+    "gate": "python -m src.eval_cli gate --cases <cases.jsonl> --predictions <preds.jsonl> --min-pass-rate 1.0 --max-missing 0",
+    "retrieval_diagnostics": "python -m src.eval_cli retrieval-diagnostics --cases <cases.jsonl> --predictions <preds.jsonl> --k 1 --k 3 --k 5",
+    "interview_report": "python -m src.eval_cli interview-report --cases <cases.jsonl> --predictions <preds.jsonl> --k 1 --k 3 --k 5",
+    "failure_analysis": "python -m src.eval_cli failure-analysis --cases <cases.jsonl> --predictions <preds.jsonl>",
+    "audit_fixtures": "python -m src.eval_cli audit-fixtures --cases <cases.jsonl> --min-cases 12 --required-tag smoke",
+    "doctor": "python -m src.eval_cli doctor --warn-only --out <report.json>"
+  },
+  "eval_metrics_available": {
+    "answer": ["exact_match", "contains_match", "numeric_accuracy", "answerable_accuracy"],
+    "citation": ["citation_precision", "citation_recall", "source_page_accuracy"],
+    "retrieval": ["recall_at_1", "recall_at_3", "recall_at_5", "mrr", "ndcg_at_5"],
+    "calculation": ["calculation_consistency"],
+    "no_answer": ["no_answer_precision", "no_answer_recall"],
+    "system": ["latency_ms"]
+  },
+  "missing_eval_capabilities": {
+    "real_dataset": "No real financial document evaluation set exists",
+    "sealed_test": "No document-isolated test split",
+    "oracle_context": "No upper-bound measurement path",
+    "ablation": "No retrieval or system ablation framework",
+    "calculation_metrics": "No operand extraction, unit accuracy, or formula selection metrics",
+    "performance_metrics": "No TTFT, tokens/s, p50/p95 latency benchmarks"
+  },
+  "ci_configuration": {
+    "backend_workflow": ".github/workflows/finquery-rag-backend.yml",
+    "frontend_workflow": ".github/workflows/finquery-rag-frontend.yml",
+    "ci_steps": ["compileall", "pytest -q", "eval gate smoke", "preflight smoke"],
+    "artifact_uploads": ["finquery-eval-gate", "finquery-preflight"]
+  }
+}
