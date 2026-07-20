@@ -4,7 +4,6 @@ Extracted from RAGEngine to isolate context assembly logic.
 """
 import re
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,4 @@
 """Domain objects for RAG orchestration."""
-from src.domain.query import QueryRequest
-from src.domain.evidence import EvidenceItem
-from src.domain.answer import RetrievalResult, AnswerResult
+from src.domain.query import QueryRequest as QueryRequest
+from src.domain.evidence import EvidenceItem as EvidenceItem
+from src.domain.answer import RetrievalResult as RetrievalResult, AnswerResult as AnswerResult

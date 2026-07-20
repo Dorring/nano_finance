@@ -1,23 +1,17 @@
-"""Phase 2 tests: Retrieval quality - context builder and tracing."""
+"""Phase 2 tests: Retrieval quality - context builder and tracing.
+
+Heavy dependencies (chromadb, tiktoken, openai, jose, sqlalchemy, etc.) are
+mocked by ``tests/refactor/conftest.py`` via ``pytest_configure``. This file
+must NOT mutate ``sys.modules`` at import time so that test execution order
+does not affect other test directories.
+"""
 import os
 import sys
 import time
 import tempfile
 import gc
-from unittest.mock import MagicMock
 
-# Mock heavy dependencies before importing RAGEngine
-for _mod in [
-    "chromadb", "chromadb.utils", "chromadb.utils.embedding_functions",
-    "tiktoken", "sentence_transformers", "openai", "jieba_fast",
-    "pymupdf", "fitz", "jose", "jose.jwt", "jose.jws", "jose.jwe",
-    "bcrypt", "sqlalchemy", "sqlalchemy.orm", "sqlalchemy.ext",
-    "sqlalchemy.ext.declarative",
-]:
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from src.services.rag_engine import RAGEngine
 from src.services.trace import TraceLogger

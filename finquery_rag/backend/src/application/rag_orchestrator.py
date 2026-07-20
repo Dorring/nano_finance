@@ -3,10 +3,21 @@
 This is the top-level orchestration layer that ties together the retrieval
 pipeline, context builder, sufficiency evaluator, deterministic answer
 extractor, and LLM gateway into a single query flow.
+
+The orchestrator exposes a typed boundary:
+- Input:  ``QueryRequest`` (domain object)
+- Output: ``AnswerResult`` (domain object)
+
+The legacy ``query`` method is retained as a thin compatibility shim that
+forwards to ``answer`` and unwraps the legacy dict. Production code
+(``RAGEngine``) must use ``answer`` directly so the typed boundary is
+exercised on every request.
 """
 import re
 import time
 
+from src.domain.answer import AnswerPath, AnswerResult
+from src.domain.query import QueryRequest
 from src.retrieval.query_processor import QueryProcessor
 from src.retrieval.retrieval_pipeline import RetrievalPipeline
 from src.retrieval.context_builder import ContextBuilder, EvidenceSufficiencyEvaluator
@@ -62,90 +73,81 @@ class RAGOrchestrator:
         self._numeric_dense_floor = numeric_dense_floor
         self._model_name = model_name
 
-    async def query(
+    # ------------------------------------------------------------------
+    # Typed boundary (production entry point)
+    # ------------------------------------------------------------------
+    async def answer(
         self,
-        question: str,
-        doc_names: list[str] | None = None,
-        user_id: int = None,
+        request: QueryRequest,
+        *,
         n_results: int = 3,
-        conversation_history: list = None,
-        memory_profile: dict | None = None,
-    ) -> dict:
-        """Execute full RAG query pipeline."""
+    ) -> AnswerResult:
+        """Execute the full RAG pipeline and return a typed ``AnswerResult``.
+
+        ``RAGEngine.query`` must call this method, not the legacy ``query``
+        shim, so that ``QueryRequest`` and ``AnswerResult`` are exercised on
+        every production request.
+        """
         t0 = time.time()
-        trace_data = {
-            "tenant_id": user_id,
-            "query_original": question,
+        trace_data: dict = {
+            "tenant_id": request.user_id,
+            "query_original": request.question,
         }
 
-        # Phase 4: Rewrite follow-up question using conversation context
-        original_question = question
-        if conversation_history:
-            question = await self._query_processor.rewrite(
-                question, conversation_history, memory_profile,
-                llm_client=self._llm_gateway._llm_client,
-                model_name=self._llm_gateway._model_name,
+        question = request.question
+        if request.conversation_history:
+            question = await self._llm_gateway.rewrite_query(
+                question,
+                list(request.conversation_history),
+                request.memory_profile,
             )
             trace_data["query_rewritten"] = question
 
         intent = self._classify_intent(question)
         trace_data["intent"] = intent["intent"]
 
+        had_history = bool(request.conversation_history)
         conversational_response = self._handle_conversational_query(question)
         if conversational_response:
-            result = {
-                "answer": conversational_response,
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": "conversation",
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
+            return self._build_conversational_result(
+                answer=conversational_response,
+                intent=intent,
+                rewritten_question=question if had_history else None,
+                had_conversation_history=had_history,
+            )
 
         if not intent["requires_retrieval"]:
-            result = {
-                "answer": "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": intent["intent"],
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
+            return self._build_no_retrieval_result(
+                intent=intent,
+                rewritten_question=question if had_history else None,
+                had_conversation_history=had_history,
+            )
 
-        if doc_names is None:
-            all_docs = self._list_all_documents(user_id)
+        doc_names: list[str]
+        if request.document_names:
+            doc_names = list(request.document_names)
+        else:
+            all_docs = self._list_all_documents(request.user_id)
             doc_names = [doc["name"] for doc in all_docs]
 
         if not doc_names:
-            result = {
-                "answer": "No documents found in database. Please upload documents first.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
+            return self._build_no_documents_result(
+                rewritten_question=question if had_history else None,
+                had_conversation_history=had_history,
+            )
 
         # 1. Retrieve relevant chunks. Front-matter facts use direct metadata lookup first.
-        chunks = self._retrieve_front_matter_chunks(doc_names, question, user_id)
+        chunks = self._retrieve_front_matter_chunks(doc_names, question, request.user_id)
         if not chunks:
             if len(doc_names) == 1:
                 chunks = self._retrieval_pipeline.retrieve_single(
-                    document_name=doc_names[0], query=question, user_id=user_id, top_k=n_results,
+                    document_name=doc_names[0], query=question,
+                    user_id=request.user_id, top_k=n_results,
                 )
             else:
                 chunks = await self._retrieval_pipeline.retrieve_multiple(
-                    document_names=doc_names, query=question, user_id=user_id, top_k=n_results,
+                    document_names=doc_names, query=question,
+                    user_id=request.user_id, top_k=n_results,
                 )
 
         front_matter_answer = self._deterministic_extractor.answer_front_matter_query(question, chunks)
@@ -156,22 +158,20 @@ class RAGOrchestrator:
             context, sources = self._context_builder.build(chunks)
             answer = front_matter_answer["answer"]
             is_sufficient = True
-            best_score = 1.0
-            avg_score = 1.0
             confidence = 1.0
             deterministic_answer = front_matter_answer["diagnostic"]
         else:
             # Phase 3: Check context sufficiency
             sufficiency = self._sufficiency_evaluator.evaluate(chunks)
             is_sufficient = sufficiency.is_sufficient
-            best_score = sufficiency.best_score
-            avg_score = sufficiency.average_score
             confidence = self._sufficiency_evaluator.confidence(chunks)
 
             # 2. Build context (with dedup and score threshold)
             context, sources = self._context_builder.build(chunks)
             # 3. Generate answer (skip LLM if context is insufficient)
-            deterministic_context_answer = self._deterministic_extractor.answer_deterministic_query_from_context(question, context, sources)
+            deterministic_context_answer = self._deterministic_extractor.answer_deterministic_query_from_context(
+                question, context, sources,
+            )
             if deterministic_context_answer:
                 answer = deterministic_context_answer["answer"]
                 is_sufficient = True
@@ -225,22 +225,133 @@ class RAGOrchestrator:
         except Exception:
             pass  # tracing must never break the query path
 
-        return {
-            "answer": answer,
-            "sources": sources,
-            "context": context,
-            "searched_docs": doc_names,
-            "confidence": confidence,
-            "context_sufficient": is_sufficient,
-            "intent": intent["intent"],
-            "intent_confidence": intent["confidence"],
-            "rewritten_question": question if conversation_history else None,
-            "retrieved_chunks": summarize_retrieved_chunks(chunks),
-            "retrieval_debug": dict(self._retrieval_pipeline._last_retrieval_debug),
-            "trace_id": trace_id,
-        }
+        return AnswerResult(
+            answer=answer,
+            sources=tuple(sources),
+            context=context,
+            searched_docs=tuple(doc_names),
+            confidence=confidence,
+            context_sufficient=is_sufficient,
+            intent=intent["intent"],
+            intent_confidence=intent["confidence"],
+            rewritten_question=question if had_history else None,
+            retrieved_chunks=tuple(summarize_retrieved_chunks(chunks)),
+            retrieval_debug=dict(self._retrieval_pipeline._last_retrieval_debug),
+            trace_id=trace_id,
+            path=AnswerPath.FULL,
+            had_conversation_history=had_history,
+        )
 
-    def _retrieve_front_matter_chunks(self, doc_names: list[str], query: str, user_id: int | None = None) -> list:
+    # ------------------------------------------------------------------
+    # Legacy compatibility shim (not for production use)
+    # ------------------------------------------------------------------
+    async def query(
+        self,
+        question: str,
+        doc_names: list[str] | None = None,
+        user_id: int = None,
+        n_results: int = 3,
+        conversation_history: list = None,
+        memory_profile: dict | None = None,
+    ) -> dict:
+        """Legacy entry point retained for tests that mock the orchestrator.
+
+        Production code must call ``answer`` with a ``QueryRequest``.
+        """
+        request = QueryRequest(
+            question=question,
+            document_names=tuple(doc_names or ()),
+            user_id=user_id,
+            conversation_history=tuple(conversation_history or ()),
+            memory_profile=memory_profile,
+        )
+        result = await self.answer(request, n_results=n_results)
+        return result.to_legacy_dict()
+
+    # ------------------------------------------------------------------
+    # Branch constructors for early-return paths
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _build_conversational_result(
+        *,
+        answer: str,
+        intent: dict,
+        rewritten_question: str | None,
+        had_conversation_history: bool = False,
+    ) -> AnswerResult:
+        return AnswerResult(
+            answer=answer,
+            sources=(),
+            context=None,
+            searched_docs=(),
+            confidence=None,
+            context_sufficient=True,
+            intent="conversation",
+            intent_confidence=intent["confidence"],
+            rewritten_question=rewritten_question,
+            retrieved_chunks=(),
+            retrieval_debug={},
+            trace_id=None,
+            path=AnswerPath.CONVERSATIONAL,
+            had_conversation_history=had_conversation_history,
+        )
+
+    @staticmethod
+    def _build_no_retrieval_result(
+        *,
+        intent: dict,
+        rewritten_question: str | None,
+        had_conversation_history: bool = False,
+    ) -> AnswerResult:
+        return AnswerResult(
+            answer=(
+                "This question appears to be outside the uploaded financial documents. "
+                "Please ask about your uploaded reports or financial data."
+            ),
+            sources=(),
+            context=None,
+            searched_docs=(),
+            confidence=None,
+            context_sufficient=True,
+            intent=intent["intent"],
+            intent_confidence=intent["confidence"],
+            rewritten_question=rewritten_question,
+            retrieved_chunks=(),
+            retrieval_debug={},
+            trace_id=None,
+            path=AnswerPath.NO_RETRIEVAL,
+            had_conversation_history=had_conversation_history,
+        )
+
+    @staticmethod
+    def _build_no_documents_result(
+        *,
+        rewritten_question: str | None,
+        had_conversation_history: bool = False,
+    ) -> AnswerResult:
+        return AnswerResult(
+            answer="No documents found in database. Please upload documents first.",
+            sources=(),
+            context=None,
+            searched_docs=(),
+            confidence=None,
+            context_sufficient=True,
+            intent=None,
+            intent_confidence=None,
+            rewritten_question=rewritten_question,
+            retrieved_chunks=(),
+            retrieval_debug={},
+            trace_id=None,
+            path=AnswerPath.NO_DOCUMENTS,
+            had_conversation_history=had_conversation_history,
+        )
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _retrieve_front_matter_chunks(
+        self, doc_names: list[str], query: str, user_id: int | None = None,
+    ) -> list:
         """Direct metadata lookup for deterministic front-matter questions."""
         if not self._query_processor.is_title_query(query) or not doc_names or user_id is None:
             return []

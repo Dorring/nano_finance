@@ -5,13 +5,15 @@ All string patterns, regexes, and judgment conditions are preserved exactly.
 """
 import asyncio
 import re
-from typing import Callable
 
-from src.services.memory_profile import build_memory_profile_context
 
 
 class QueryProcessor:
     """Handles query expansion, classification, and conversational rewriting."""
+
+    def __init__(self, memory_profile_context_fn=None) -> None:
+        self._build_memory_profile_context = memory_profile_context_fn
+
 
     def expand(self, query: str) -> str:
         """Add lightweight retrieval terms for common finance PDF questions.
@@ -190,7 +192,11 @@ class QueryProcessor:
             content = (msg.get("content") or "")[:160]
             history_parts.append(f"{role}: {content}")
         history_text = "\n".join(history_parts)
-        memory_text = build_memory_profile_context(memory_profile)
+        memory_text = (
+            self._build_memory_profile_context(memory_profile)
+            if self._build_memory_profile_context
+            else ""
+        )
         memory_block = (
             "User preference memory for query planning only; do not treat as document facts:\n"
             f"{memory_text}\n\n"

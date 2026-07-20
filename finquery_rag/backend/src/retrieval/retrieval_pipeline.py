@@ -10,7 +10,6 @@ from src.retrieval.candidate_fusion import (
     normalize_scores,
     boost_front_matter_chunks,
     ensure_multi_doc_coverage,
-    chunk_doc_name,
 )
 from src.retrieval.query_processor import QueryProcessor
 
@@ -88,7 +87,7 @@ class RetrievalPipeline:
 
         bm25 = self._bm25_retriever
         if bm25:
-            from src.services.retrieval import rrf
+            from src.retrieval.candidate_fusion import rrf
             sparse_results = bm25.search(
                 retrieval_query, k=candidate_k,
                 doc_name=document_name, user_id=user_id,

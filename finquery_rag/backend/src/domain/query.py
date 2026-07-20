@@ -1,5 +1,5 @@
 """Query request domain object."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -11,7 +11,7 @@ class QueryRequest:
     """
 
     question: str
-    document_names: tuple[str, ...]
+    document_names: tuple[str, ...] = ()
     user_id: int | None = None
     session_id: str | None = None
     conversation_history: tuple[dict[str, Any], ...] = ()

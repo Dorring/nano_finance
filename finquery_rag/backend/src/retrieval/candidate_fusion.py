@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 """Candidate fusion utilities for hybrid retrieval.
 
 Extracted from RAGEngine to isolate score normalization and deduplication.
@@ -138,3 +140,38 @@ def source_from_chunk(chunk: dict) -> dict:
         "section_path": meta.get("section_path"),
         "child_hit_count": meta.get("child_hit_count"),
     }
+
+
+def rrf(ranked_lists, k: int = 60):
+    """
+    使用倒数排名融合算法合并多个排序列表。
+
+    Args:
+        ranked_lists: 包含多个排序列表的列表，每个排序列表包含字典元素，
+                      字典需具有"doc_id"和"score"键。
+        k: RRF算法的常数，用于控制排名的权重，默认为60。
+
+    Returns:
+        List: 按融合得分降序排列的文档信息列表，每个字典包含原始文档信息及新增的"fused_score"键。
+    """
+    fused_scores = defaultdict(float)
+    doc_map = {}
+
+    for ranked_list in ranked_lists:
+        for rank, item in enumerate(ranked_list):
+            doc_id = item["doc_id"]
+            fused_scores[doc_id] += 1 / (k + rank + 1)
+
+            if doc_id not in doc_map:
+                doc_map[doc_id] = item
+
+    sorted_ids = sorted(
+        fused_scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return [
+        {**doc_map[doc_id], "fused_score": score}
+        for doc_id, score in sorted_ids
+    ]

@@ -6,6 +6,7 @@ from .vector_store import query_collection, list_all_documents, get_front_matter
 from .retrieval import SqliteBM25Retriever
 from .reranker import build_reranker
 from .intent import classify_query_intent
+from src.domain.query import QueryRequest
 from src.retrieval.query_processor import QueryProcessor
 from src.retrieval.retrieval_pipeline import RetrievalPipeline
 from src.retrieval.candidate_fusion import (
@@ -23,6 +24,7 @@ from src.generation.llm_gateway import LLMGateway
 from src.generation.response_renderer import validate_answer
 from src.generation.deterministic_answers import DeterministicAnswerExtractor
 from src.application.rag_orchestrator import RAGOrchestrator
+from src.services.memory_profile import build_memory_profile_context
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -102,7 +104,7 @@ class RAGEngine:
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
-        self._query_processor = QueryProcessor()
+        self._query_processor = QueryProcessor(memory_profile_context_fn=build_memory_profile_context)
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -416,18 +418,23 @@ class RAGEngine:
         conversation_history: list = None,
         memory_profile: dict | None = None,
     ) -> dict:
-        # Sync facade state so test mocks on RAGEngine propagate to orchestrator
-        self._orchestrator._sufficiency_evaluator = self._sufficiency_evaluator
-        self._orchestrator._context_builder = self._context_builder
-        self._orchestrator._deterministic_extractor = self._deterministic_extractor
-        self._orchestrator._llm_gateway = self._llm_gateway
-        self._orchestrator._query_processor = self._query_processor
-        self._orchestrator._trace_logger = self.trace_logger
-        self._orchestrator._retrieval_pipeline = self._retrieval_pipeline
-        return await self._orchestrator.query(
-            question, doc_names, user_id, n_results,
-            conversation_history, memory_profile,
+        """Facade entry point: build a ``QueryRequest``, delegate to the
+        orchestrator, and unwrap the legacy dict for API compatibility.
+
+        Dependencies are injected once at construction time. This method
+        must NOT reassign ``self._orchestrator._*`` fields to keep the
+        facade in sync with test mocks; tests should mock the orchestrator
+        boundary (``engine._orchestrator.answer``) instead.
+        """
+        request = QueryRequest(
+            question=question,
+            document_names=tuple(doc_names or ()),
+            user_id=user_id,
+            conversation_history=tuple(conversation_history or ()),
+            memory_profile=memory_profile,
         )
+        result = await self._orchestrator.answer(request, n_results=n_results)
+        return result.to_legacy_dict()
 
     def _handle_conversational_query(self, query: str) -> str | None:
         return RAGOrchestrator._handle_conversational_query(query)
