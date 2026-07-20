@@ -10,6 +10,16 @@ from .reranker import build_reranker
 from .intent import classify_query_intent
 from .memory_profile import build_memory_profile_context
 from src.retrieval.query_processor import QueryProcessor
+from src.retrieval.retrieval_pipeline import RetrievalPipeline
+from src.retrieval.candidate_fusion import (
+    normalize_scores as _normalize_scores,
+    dedupe_chunks as _dedupe_chunks,
+    chunk_doc_name as _chunk_doc_name,
+    ensure_multi_doc_coverage as _ensure_multi_doc_coverage,
+    boost_front_matter_chunks as _boost_front_matter_chunks,
+    summarize_retrieved_chunks as _summarize_retrieved_chunks,
+    source_from_chunk as _source_from_chunk,
+)
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -90,6 +100,14 @@ class RAGEngine:
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
         self._query_processor = QueryProcessor()
+        self._retrieval_pipeline = RetrievalPipeline(
+            dense_query_fn=query_collection,
+            bm25_retriever=self.bm25_retriever,
+            reranker=self.reranker,
+            query_processor=self._query_processor,
+            candidate_multiplier=self.retrieval_candidate_multiplier,
+            use_hybrid=self.use_hybrid,
+        )
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -107,16 +125,9 @@ class RAGEngine:
         return self.bm25_retriever
 
     def _normalize_scores(self, chunks: list) -> list:
-        """统一分数字段，将 RRF 融合后的 fused_score 统一写入 score 字段。"""
-        for chunk in chunks:
-            if "fused_score" in chunk:
-                chunk["score"] = chunk["fused_score"]
-            elif "score" not in chunk:
-                chunk["score"] = 0
-        return chunks
+        return _normalize_scores(chunks)
 
     def _make_retrieval_debug(self, candidate_count: int, returned_count: int) -> dict:
-        """Small metadata payload used by eval/replay to audit retrieval changes."""
         return {
             "reranker": self.reranker.name if self.reranker else None,
             "reranker_enabled": self.reranker is not None,
@@ -126,7 +137,6 @@ class RAGEngine:
         }
 
     def _apply_reranker(self, query: str, chunks: list, top_k: int) -> list:
-        """Apply optional reranker while preserving default retrieval behavior."""
         candidate_count = len(chunks)
         if not self.reranker:
             selected = chunks[:top_k]
@@ -138,62 +148,16 @@ class RAGEngine:
         )
         return selected
 
+    @staticmethod
     def _dedupe_chunks(chunks: list) -> list:
-        deduped = []
-        seen = set()
-        for chunk in chunks or []:
-            doc_id = chunk.get("doc_id")
-            key = doc_id or ((chunk.get("metadata") or {}).get("doc_name"), (chunk.get("metadata") or {}).get("page"), (chunk.get("content") or "")[:80])
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(chunk)
-        return deduped
+        return _dedupe_chunks(chunks)
 
     @staticmethod
     def _chunk_doc_name(chunk: dict) -> str | None:
-        metadata = chunk.get("metadata") or {}
-        doc_name = metadata.get("doc_name")
-        if doc_name:
-            return doc_name
-        doc_id = chunk.get("doc_id") or ""
-        if "::" not in doc_id:
-            return None
-        prefix = doc_id.split("::", 1)[0]
-        if prefix.startswith("user_"):
-            return "_".join(prefix.split("_")[2:])
-        return prefix or None
+        return _chunk_doc_name(chunk)
 
     def _ensure_multi_doc_coverage(self, candidates: list, selected: list, doc_names: list[str], top_k: int | None) -> list:
-        """Keep at least one candidate per requested document for multi-document questions."""
-        if top_k is None or top_k <= 0 or len(doc_names or []) <= 1:
-            return selected
-        selected = list(selected or [])
-        selected_ids = {chunk.get("doc_id") for chunk in selected}
-        selected_docs = {self._chunk_doc_name(chunk) for chunk in selected}
-        wanted_docs = [doc for doc in doc_names if doc not in selected_docs]
-        if not wanted_docs:
-            return selected[:top_k]
-
-        for doc_name in wanted_docs:
-            doc_candidates = [chunk for chunk in candidates if self._chunk_doc_name(chunk) == doc_name]
-            best = max(
-                doc_candidates,
-                key=lambda chunk: (
-float(chunk.get("score", 0) or 0),
-                ),
-                default=None,
-            )
-            if not best or best.get("doc_id") in selected_ids:
-                continue
-            if len(selected) < top_k:
-                selected.append(best)
-            else:
-                replace_index = len(selected) - 1
-                selected[replace_index] = best
-            selected_ids.add(best.get("doc_id"))
-            selected_docs.add(doc_name)
-        return selected[:top_k]
+        return _ensure_multi_doc_coverage(candidates, selected, doc_names, top_k)
 
     def _has_cjk(self, text: str) -> bool:
         return self._query_processor._has_cjk(text)
@@ -205,116 +169,32 @@ float(chunk.get("score", 0) or 0),
         return self._query_processor.expand(query)
 
     def _boost_front_matter_chunks(self, query: str, chunks: list) -> list:
-        """Prefer page-1 evidence for title/author/abstract style questions."""
-        if not chunks or not self._is_document_front_matter_query(query):
-            return chunks
-        boosted = []
-        for chunk in chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            item["metadata"] = metadata
-            score = float(item.get("score", 0) or 0)
-            if metadata.get("page") == 1:
-                item["score"] = score + 0.02
-                item["front_matter_boost"] = 0.02
-            boosted.append(item)
-        boosted.sort(key=lambda item: item.get("score", 0), reverse=True)
-        return boosted
+        return _boost_front_matter_chunks(
+            query, chunks,
+            is_front_matter_query_fn=self._query_processor.is_front_matter_query,
+        )
 
     @staticmethod
     def _summarize_retrieved_chunks(chunks: list) -> list:
-        """Return eval-safe retrieval metadata without copying chunk content."""
-        summary = []
-        for chunk in chunks:
-            meta = chunk.get("metadata", {}) or {}
-            item = {
-                "doc_id": chunk.get("doc_id", ""),
-                "filename": meta.get("doc_name"),
-                "page": meta.get("page"),
-                "type": meta.get("type"),
-                "score": chunk.get("score", 0),
-                "rerank_score": chunk.get("rerank_score"),
-                "reranker": chunk.get("reranker"),
-            }
-            for key in ("parent_id", "section_path", "context_expanded_from"):
-                value = meta.get(key)
-                if value is not None:
-                    item[key] = value
-            summary.append(item)
-        return summary
+        return _summarize_retrieved_chunks(chunks)
 
     @staticmethod
     def _source_from_chunk(chunk: dict) -> dict:
-        meta = chunk.get("metadata", {}) or {}
-        doc_id = chunk.get("doc_id", "")
-        filename = meta.get("doc_name")
-        if not filename:
-            filename = doc_id.split("::", 1)[0] if "::" in doc_id else doc_id
-            if filename.startswith("user_"):
-                filename = "_".join(filename.split("_")[2:])
-        return {
-            "filename": filename,
-            "page": meta.get("page"),
-            "type": meta.get("type"),
-            "score": chunk.get("score", 0),
-            "chunk_id": doc_id,
-            "parent_id": meta.get("parent_id"),
-            "section_path": meta.get("section_path"),
-            "child_hit_count": meta.get("child_hit_count"),
-        }
+        return _source_from_chunk(chunk)
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
-        """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
-        retrieval_query = self._expand_retrieval_query(query)
-        if not self.use_hybrid:
-            results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=n_results, user_id=user_id)
-            results = self._normalize_scores(results)
-            results = self._boost_front_matter_chunks(query, results)
-            selected = self._apply_reranker(query, results, n_results)
-            return selected[:n_results] if n_results else selected
-
-        # Hybrid search
-        candidate_k = n_results * self.retrieval_candidate_multiplier
-        dense_results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=candidate_k, user_id=user_id)
-
-        bm25_retriever = self._get_bm25_retriever(doc_name, user_id)
-        if bm25_retriever:
-            print(f"✓ BM25 retrieved for '{doc_name}'")
-            sparse_results = bm25_retriever.search(retrieval_query, k=candidate_k, doc_name=doc_name, user_id=user_id)
-            fused = rrf([dense_results, sparse_results])
-            results = self._normalize_scores(fused)
-            results = self._boost_front_matter_chunks(query, results)
-            selected = self._apply_reranker(query, results, n_results)
-            return selected[:n_results] if n_results else selected
-
-        results = self._normalize_scores(dense_results)
-        results = self._boost_front_matter_chunks(query, results)
-        selected = self._apply_reranker(query, results, n_results)
-        return selected[:n_results] if n_results else selected
+        result = self._retrieval_pipeline.retrieve_single(
+            document_name=doc_name, query=query, user_id=user_id, top_k=n_results,
+        )
+        self._last_retrieval_debug = self._retrieval_pipeline._last_retrieval_debug
+        return result
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:
-        """异步并发地从多个文档中检索相关文本块，并按相关性得分降序返回前 N 个结果。"""
-        loop = asyncio.get_event_loop()
-
-        tasks = [
-            loop.run_in_executor(
-                None,
-                self.retrieve_single_document,
-                doc_name, query, user_id, n_results
-            )
-            for doc_name in doc_names
-        ]
-
-        results_list = await asyncio.gather(*tasks)
-
-        all_results = []
-        for results in results_list:
-            all_results.extend(results)
-
-        all_results.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-        selected = self._apply_reranker(query, all_results, n_results)
-        return self._ensure_multi_doc_coverage(all_results, selected, doc_names, n_results)
+        result = await self._retrieval_pipeline.retrieve_multiple(
+            document_names=doc_names, query=query, user_id=user_id, top_k=n_results,
+        )
+        self._last_retrieval_debug = self._retrieval_pipeline._last_retrieval_debug
+        return result
 
     def _is_title_query(self, query: str) -> bool:
         return self._query_processor.is_title_query(query)
