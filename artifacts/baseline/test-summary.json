@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "test_suites": {
+    "finquery_backend": {
+      "directory": "finquery_rag/backend/tests",
+      "total_tests_collected": 585,
+      "test_files": 84,
+      "framework": "pytest",
+      "phase_coverage": {
+        "phase_0_core": ["test_phase0.py", "test_phase1.py", "test_phase2.py", "test_phase3.py", "test_phase4.py", "test_phase4_round4.py"],
+        "phase_5_eval": ["test_phase5_eval.py", "test_phase5_runner.py"],
+        "phase_6_reranker": ["test_phase6_reranker.py"],
+        "phase_7_tools": ["test_phase7_answer_validation.py", "test_phase7_financial_tools.py"],
+        "phase_8_sessions": ["test_phase8_session_cleanup.py", "test_phase8_trace_query.py"],
+        "phase_9_health": ["test_phase9_health_config.py"],
+        "phase_10_intent": ["test_phase10_intent.py"],
+        "phase_11_bm25": ["test_phase11_bm25_maintenance.py", "test_phase11_runtime_paths.py"],
+        "phase_12_trace": ["test_phase12_stream_trace.py", "test_phase12_trace_id.py"],
+        "phase_100_diagnostics": [
+          "test_phase100_retrieval_diagnostics.py",
+          "test_phase101_eval_fixture_audit.py",
+          "test_phase102_migration_audit.py",
+          "test_phase103_preflight.py",
+          "test_phase104_ci_preflight_smoke.py",
+          "test_phase105_sft1147_runbook.py",
+          "test_phase106_llm_adapter_smoke.py",
+          "test_phase107_langchain_core_import.py",
+          "test_phase108_pdf_table_fallback.py",
+          "test_phase109_chroma_where_and_failed_delete.py",
+          "test_phase110_rewrite_quality_gate.py",
+          "test_phase111_crosslingual_front_matter.py",
+          "test_phase112_default_reranker.py",
+          "test_phase113_front_matter_title.py",
+          "test_phase115_interview_eval_report.py",
+          "test_phase116_hierarchical_context.py",
+          "test_phase117_memory_profile.py",
+          "test_phase118_retrieval_model_config.py",
+          "test_phase120_real_eval_labeling.py",
+          "test_phase121_eval_run_http.py",
+          "test_phase122_eval_failure_analysis.py",
+          "test_phase123_real_eval_quality_fixes.py"
+        ]
+      }
+    },
+    "architecture_tests": {
+      "directory": "finquery_rag/backend/tests/architecture",
+      "test_files": 5,
+      "test_functions": 44,
+      "breakdown": {
+        "test_imports.py": 8,
+        "test_api_contract.py": 13,
+        "test_config_defaults.py": 13,
+        "test_service_initialization.py": 10
+      },
+      "notes": "12 of 44 architecture tests skipped. 11 TestAPIContract tests require running database server. 1 test_full_stack_modules_import marked slow and skipped. No test assertions were modified to achieve passing status."
+    },
+    "totals": {
+      "existing_backend_tests": 585,
+      "new_architecture_tests": 44,
+      "total_collected": 629,
+      "passed": 617,
+      "skipped": 12,
+      "failed": 0,
+      "skip_reasons": {
+        "database_absent": "11 TestAPIContract integration tests require a running PostgreSQL/backend database server",
+        "slow_marker": "1 full-stack module import test marked with @pytest.mark.slow"
+      }
+    },
+    "root_tests": {
+      "directory": "tests",
+      "test_files": 3,
+      "files": ["test_engine.py", "test_attention_fallback.py", "test_finance_eval.py"],
+      "notes": "Not runnable in current environment without GPU and model checkpoints."
+    }
+  },
+  "phase_0_notes": "Phase 0 baseline audit added 44 architecture tests across 5 files (including __init__.py). 12 architecture tests cannot complete due to absent database. No production code was modified. 0 tests failed."
+}

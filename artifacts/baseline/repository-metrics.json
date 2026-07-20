@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "file_counts": {
+    "nanochat_core": 19,
+    "scripts": 19,
+    "finquery_services": 26,
+    "finquery_tests": 84,
+    "root_tests": 3,
+    "total_python_files": 151
+  },
+  "line_counts": {
+    "nanochat_core": 4869,
+    "scripts": 4985,
+    "finquery_services": 8575,
+    "finquery_tests": 11150,
+    "finquery_main_py": 1354,
+    "finquery_eval_cli_py": 922,
+    "total_python_lines": 31855
+  },
+  "key_file_sizes": {
+    "rag_engine.py": 2019,
+    "evaluation.py": 1656,
+    "main.py": 1354,
+    "eval_cli.py": 922,
+    "base_train.py": 652,
+    "gpt.py": 525,
+    "ingest.py": 399,
+    "chat_openai_compat.py": "~600"
+  },
+  "api_endpoints": {
+    "total": 30,
+    "categories": {
+      "auth": ["POST /register", "POST /login"],
+      "documents": ["GET /documents", "GET /documents/{doc_name}", "POST /upload", "DELETE /documents", "DELETE /documents/{doc_name}"],
+      "query": ["POST /query", "POST /query/stream"],
+      "eval": ["POST /eval/score", "POST /eval/compare"],
+      "trace": ["GET /traces", "GET /traces/{trace_id}", "GET /replay/traces"],
+      "feedback": ["POST /feedback", "GET /feedback", "GET /replay/feedback"],
+      "sessions": ["GET /sessions", "POST /sessions/clear", "GET /sessions/{session_id}", "DELETE /sessions"],
+      "memory": ["GET /memory/profile", "PUT /memory/profile", "DELETE /memory/profile"],
+      "health": ["GET /", "GET /healthz", "GET /readyz", "GET /ops/summary"],
+      "user": ["GET /me"],
+      "registry": ["GET /document-registry"]
+    }
+  },
+  "dependencies": {
+    "python_projects": {
+      "nanochat": {"manager": "uv", "python": ">=3.10", "location": "repo root"},
+      "finquery": {"manager": "uv", "python": ">=3.12", "location": "finquery_rag/backend"}
+    },
+    "frontend": {"manager": "npm", "framework": "React 19 + Vite", "location": "finquery_rag/frontend"}
+  }
+}

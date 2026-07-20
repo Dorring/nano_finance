@@ -1,0 +1,150 @@
+{
+  "generated_at": "2026-07-20",
+  "branch": "chore/nf-00-baseline-audit",
+  "risks": [
+    {
+      "id": "R-001",
+      "severity": "CRITICAL",
+      "title": "Production Retrieval Contains Hardcoded Eval Page Mappings",
+      "affected_files": ["finquery_rag/backend/src/services/rag_engine.py"],
+      "affected_lines": "317-413",
+      "detail": "_fallback_pages_for_query() and _supporting_pages_for_query() contain hardcoded document-name-to-page-number mappings for specific files (final annual report, wipo, leac).",
+      "phase": 1
+    },
+    {
+      "id": "R-002",
+      "severity": "CRITICAL",
+      "title": "supporting_source_page Metadata Flag Used as Ranking Signal",
+      "affected_files": ["finquery_rag/backend/src/services/rag_engine.py"],
+      "affected_lines": "145-197, 226-264, 266-315, 387-414",
+      "detail": "The supporting_source_page flag is set based on eval-specific knowledge and used to boost chunk scores in ranking.",
+      "phase": 1
+    },
+    {
+      "id": "R-003",
+      "severity": "CRITICAL",
+      "title": "No Sealed Test Set Exists",
+      "affected_files": ["finquery_rag/backend/eval/"],
+      "affected_lines": null,
+      "detail": "Only synthetic smoke fixtures (12 cases) exist. No real financial document evaluation dataset with document-level isolation.",
+      "phase": 5
+    },
+    {
+      "id": "R-004",
+      "severity": "HIGH",
+      "title": "Financial Tools Not Wired Into Main Pipeline",
+      "affected_files": ["finquery_rag/backend/src/services/financial_tools.py", "finquery_rag/backend/src/services/rag_engine.py"],
+      "affected_lines": null,
+      "detail": "7 deterministic calculation operations implemented but rag_engine.py never imports or calls them.",
+      "phase": 3
+    },
+    {
+      "id": "R-005",
+      "severity": "HIGH",
+      "title": "Answer Validation Not Wired Into Main Pipeline",
+      "affected_files": ["finquery_rag/backend/src/services/answer_validation.py", "finquery_rag/backend/src/services/rag_engine.py"],
+      "affected_lines": null,
+      "detail": "Post-generation validation exists but is never called by the production query flow.",
+      "phase": 4
+    },
+    {
+      "id": "R-006",
+      "severity": "HIGH",
+      "title": "rag_engine.py is ~2019 Lines",
+      "affected_files": ["finquery_rag/backend/src/services/rag_engine.py"],
+      "affected_lines": "1-2019",
+      "detail": "Monolithic orchestrator containing retrieval, fusion, reranking, context, generation, citations, and fallback logic.",
+      "phase": 2
+    },
+    {
+      "id": "R-007",
+      "severity": "HIGH",
+      "title": "Model Metrics Not Verifiable From Artifacts",
+      "affected_files": ["multiple"],
+      "affected_lines": null,
+      "detail": "Parameter count, training tokens, and compression rate claims cannot be verified from committed artifacts.",
+      "phase": 6
+    },
+    {
+      "id": "R-008",
+      "severity": "HIGH",
+      "title": "No Oracle Context Path for Upper-Bound Measurement",
+      "affected_files": ["finquery_rag/backend/src/services/evaluation.py", "finquery_rag/backend/src/services/eval_runner.py"],
+      "affected_lines": null,
+      "detail": "Cannot measure generation upper bound with perfect evidence; cannot distinguish retrieval vs generation failures.",
+      "phase": 1
+    },
+    {
+      "id": "R-009",
+      "severity": "MEDIUM",
+      "title": "Intent Classification is Keyword-Only",
+      "affected_files": ["finquery_rag/backend/src/services/intent.py"],
+      "affected_lines": "85-167",
+      "detail": "Keyword-based classification may misclassify ambiguous queries that span multiple intent categories.",
+      "phase": 3
+    },
+    {
+      "id": "R-010",
+      "severity": "MEDIUM",
+      "title": "No Staged Latency Tracking in Trace",
+      "affected_files": ["finquery_rag/backend/src/services/trace.py"],
+      "affected_lines": null,
+      "detail": "Trace records total latency only; no per-stage breakdown.",
+      "phase": 7
+    },
+    {
+      "id": "R-011",
+      "severity": "MEDIUM",
+      "title": "No Serving Benchmarks",
+      "affected_files": ["scripts/"],
+      "affected_lines": null,
+      "detail": "No TTFT, tokens/s, or latency benchmarks exist for the inference service.",
+      "phase": 7
+    },
+    {
+      "id": "R-012",
+      "severity": "MEDIUM",
+      "title": "SFT V2 Data Mixture Script Missing",
+      "affected_files": ["SFT_V2_OPTIMIZATION.md"],
+      "affected_lines": null,
+      "detail": "build_sft_v2.py referenced in documentation but not found in repository.",
+      "phase": 6
+    },
+    {
+      "id": "R-013",
+      "severity": "MEDIUM",
+      "title": "No Docker or Unified Deployment Config",
+      "affected_files": null,
+      "affected_lines": null,
+      "detail": "No docker-compose.yml or single-command startup for the full system.",
+      "phase": 7
+    },
+    {
+      "id": "R-014",
+      "severity": "LOW",
+      "title": "NVIDIA API Dependency in Table Processing",
+      "affected_files": ["finquery_rag/backend/src/services/process_tables.py"],
+      "affected_lines": "83-159",
+      "detail": "Optional NVIDIA API for table enhancement; graceful fallback exists.",
+      "phase": null
+    },
+    {
+      "id": "R-015",
+      "severity": "LOW",
+      "title": "No GPU Monitoring Script in CI",
+      "affected_files": ["scripts/gpu_monitor.py"],
+      "affected_lines": null,
+      "detail": "GPU monitor exists but not integrated into CI or health checks.",
+      "phase": 7
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "by_severity": {
+      "CRITICAL": 3,
+      "HIGH": 5,
+      "MEDIUM": 5,
+      "LOW": 2
+    }
+  }
+}
