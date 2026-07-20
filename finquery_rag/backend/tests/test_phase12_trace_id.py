@@ -19,8 +19,8 @@ sys.modules["chromadb.utils.embedding_functions"] = mock_st_ef
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.eval_runner import run_case
-from services.evaluation import EvaluationCase
+from evaluation.eval_runner import run_case
+from evaluation.evaluation import EvaluationCase
 from services.rag_engine import RAGEngine
 
 

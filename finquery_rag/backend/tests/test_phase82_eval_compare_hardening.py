@@ -7,8 +7,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import compare_reports
-from src.eval_cli import main as eval_cli_main
+from evaluation.evaluation import compare_reports
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _write_report(path, pass_rate):

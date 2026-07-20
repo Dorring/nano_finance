@@ -12,7 +12,7 @@ if "jieba_fast" not in sys.modules:
     sys.modules["jieba_fast"] = jieba
 
 from services.retrieval import SqliteBM25Retriever
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _chunk(doc_id, content="alpha revenue", doc_name="r.pdf"):

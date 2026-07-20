@@ -7,14 +7,14 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import (
+from evaluation.evaluation import (
     export_replay_cases_from_feedback,
     export_replay_cases_from_traces,
     trace_to_replay_case,
 )
 from services.feedback import FeedbackStore
 from services.trace import TraceLogger
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _trace(trace_id="t1", **overrides):

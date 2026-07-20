@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import trace_to_replay_case
+from evaluation.evaluation import trace_to_replay_case
 
 
 def test_trace_to_replay_case_keeps_n_results_metadata():

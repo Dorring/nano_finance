@@ -6,8 +6,11 @@ Checks:
 2. Production source does not reference expected_pages/expected_sources
 3. No hardcoded filename-to-page-number dictionary mappings
 4. No hardcoded question-to-page-number dictionary mappings
-5. supporting_source_page does not appear in production ranking code
+5. supporting_source_page / page_fallback do not appear in production ranking code
 6. eval/tests/fixtures directories are not imported by production services
+7. No hardcoded filename-to-answer mappings
+8. No benchmark entity names in production code
+9. SyntaxError in production source is a scan failure
 
 Exit codes: 0 = no leakage, 1 = leakage detected, 2 = config error
 """
@@ -21,18 +24,46 @@ from pathlib import Path
 
 
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
-SERVICES_DIR = SRC_DIR / "services"
-SRC_DIR = Path(__file__).resolve().parent.parent / "src"
-MAIN_PY = SRC_DIR / "main.py"
+EVAL_DIR_PATH = SRC_DIR / "evaluation"
 
-FORBIDDEN_IMPORTS = ["evaluation.oracle_context", "eval."]
-FORBIDDEN_KEYWORDS = ["expected_pages", "expected_sources", "expected_source", "golden_page", "oracle_page", "support_page"]
-
-# Evaluation modules that legitimately reference expected_sources in golden cases.
-# These are NOT production services; they only run in offline eval CLI.
-# Path-based exclusion: only src/evaluation/ can read golden labels
-EVAL_DIR_PATH = Path(__file__).resolve().parent.parent / "src" / "evaluation"
+FORBIDDEN_IMPORTS = [
+    "evaluation.oracle_context",
+    "eval.",
+    "tests.fixtures",
+]
+FORBIDDEN_KEYWORDS = [
+    "expected_pages",
+    "expected_sources",
+    "expected_source",
+    "golden_page",
+    "oracle_page",
+    "support_page",
+]
 FORBIDDEN_FIELDS = ["supporting_source_page", "page_fallback"]
+
+# Benchmark document names that must not appear in production code
+BENCHMARK_ENTITY_NAMES = [
+    "FINAL Annual Report.pdf",
+    "wipo_pub_rn2021_18e.pdf",
+    "leac203.pdf",
+]
+
+# Patterns for hardcoded filename-to-page mappings
+FILENAME_PAGE_PATTERN = re.compile(
+    r'"(?:' + "|".join(re.escape(n) for n in BENCHMARK_ENTITY_NAMES) + r')".*\[\d+',
+    re.IGNORECASE,
+)
+
+# Patterns for hardcoded filename-to-answer mappings
+FILENAME_ANSWER_PATTERN = re.compile(
+    r'"(?:' + "|".join(re.escape(n) for n in BENCHMARK_ENTITY_NAMES) + r')".*:\s*\d+[\d,]*',
+    re.IGNORECASE,
+)
+
+
+class SourceParseError(RuntimeError):
+    """Raised when a production source file has a SyntaxError."""
+    pass
 
 
 def _python_files(directory: Path) -> list[Path]:
@@ -47,15 +78,30 @@ def _python_files(directory: Path) -> list[Path]:
 
 def _is_eval_module(filepath: Path) -> bool:
     """Only src/evaluation/ can legitimately use expected_sources."""
-    return (EVAL_DIR_PATH in filepath.parents or str(EVAL_DIR_PATH) in str(filepath) or filepath.name in ("evaluation.py", "eval_runner.py"))
+    try:
+        filepath.resolve().relative_to(EVAL_DIR_PATH.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def production_python_files() -> list[Path]:
+    """All production Python files under src/, excluding src/evaluation/."""
+    return [
+        path
+        for path in _python_files(SRC_DIR)
+        if not _is_eval_module(path)
+    ]
 
 
 def _scan_imports(filepath: Path) -> set[str]:
     with open(filepath, encoding="utf-8") as fh:
         try:
             tree = ast.parse(fh.read())
-        except SyntaxError:
-            return set()
+        except SyntaxError as exc:
+            raise SourceParseError(
+                f"{filepath}:{exc.lineno}: SyntaxError: {exc.msg}"
+            ) from exc
     imports = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -68,74 +114,128 @@ def _scan_imports(filepath: Path) -> set[str]:
 
 def check_forbidden_imports() -> list[str]:
     violations = []
-    for fp in _python_files(SERVICES_DIR):
+    for fp in production_python_files():
         for imp in _scan_imports(fp):
             for forbidden in FORBIDDEN_IMPORTS:
                 if forbidden in imp:
-                    violations.append(f"{fp.name}: imports '{imp}'")
-    if MAIN_PY.is_file():
-        for imp in _scan_imports(MAIN_PY):
-            for forbidden in FORBIDDEN_IMPORTS:
-                if forbidden in imp:
-                    violations.append(f"main.py: imports '{imp}'")
+                    violations.append(f"{fp.relative_to(SRC_DIR)}: imports '{imp}'")
     return violations
 
 
 def check_forbidden_keywords() -> list[str]:
     violations = []
-    for fp in _python_files(SERVICES_DIR):
+    for fp in production_python_files():
         with open(fp, encoding="utf-8") as fh:
             lines = fh.readlines()
         for i, line in enumerate(lines, 1):
             s = line.strip()
-            if s.startswith("#") or "Phase 1" in s:
-                continue
-            if _is_eval_module(fp):
+            if s.startswith("#"):
                 continue
             for kw in FORBIDDEN_KEYWORDS:
                 if kw in s:
-                    violations.append(f"{fp.name}:{i}: {s[:120]}")
+                    violations.append(f"{fp.relative_to(SRC_DIR)}:{i}: {s[:120]}")
     return violations
 
 
 def check_ranking_fields() -> list[str]:
     violations = []
-    for fp in _python_files(SERVICES_DIR):
+    for fp in production_python_files():
         with open(fp, encoding="utf-8") as fh:
             lines = fh.readlines()
         for i, line in enumerate(lines, 1):
             s = line.strip()
-            if s.startswith("#") or "Phase 1" in s:
+            if s.startswith("#"):
                 continue
             for field in FORBIDDEN_FIELDS:
                 if field in s and any(op in s for op in ["sort(", "priority", "score", "boost", "weight"]):
-                    violations.append(f"{fp.name}:{i}: {s[:120]}")
+                    violations.append(f"{fp.relative_to(SRC_DIR)}:{i}: {s[:120]}")
     return violations
 
 
 def check_eval_imports() -> list[str]:
     violations = []
-    for fp in _python_files(SERVICES_DIR):
+    for fp in production_python_files():
         for imp in _scan_imports(fp):
             if imp == "eval" or (imp or "").startswith("eval."):
-                violations.append(f"{fp.name}: imports '{imp}'")
-    if MAIN_PY.is_file():
-        for imp in _scan_imports(MAIN_PY):
-            if imp == "eval" or (imp or "").startswith("eval."):
-                violations.append(f"main.py: imports '{imp}'")
+                violations.append(f"{fp.relative_to(SRC_DIR)}: imports '{imp}'")
+    return violations
+
+
+def check_benchmark_entities() -> list[str]:
+    """Check for benchmark document names in production code."""
+    violations = []
+    for fp in production_python_files():
+        with open(fp, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        for i, line in enumerate(lines, 1):
+            s = line.strip()
+            if s.startswith("#"):
+                continue
+            for name in BENCHMARK_ENTITY_NAMES:
+                if name in s:
+                    violations.append(f"{fp.relative_to(SRC_DIR)}:{i}: benchmark entity '{name}'")
+    return violations
+
+
+def check_hardcoded_answers() -> list[str]:
+    """Check for hardcoded numeric answers in production code."""
+    violations = []
+    for fp in production_python_files():
+        with open(fp, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        for i, line in enumerate(lines, 1):
+            s = line.strip()
+            if s.startswith("#"):
+                continue
+            if FILENAME_ANSWER_PATTERN.search(s):
+                violations.append(f"{fp.relative_to(SRC_DIR)}:{i}: hardcoded filename-answer: {s[:120]}")
+    return violations
+
+
+def check_filename_page_mappings() -> list[str]:
+    """Check for hardcoded filename-to-page-number mappings."""
+    violations = []
+    for fp in production_python_files():
+        with open(fp, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        for i, line in enumerate(lines, 1):
+            s = line.strip()
+            if s.startswith("#"):
+                continue
+            if FILENAME_PAGE_PATTERN.search(s):
+                violations.append(f"{fp.relative_to(SRC_DIR)}:{i}: filename-page mapping: {s[:120]}")
+    return violations
+
+
+def check_syntax_errors() -> list[str]:
+    """Check for SyntaxErrors in production source files."""
+    violations = []
+    for fp in production_python_files():
+        with open(fp, encoding="utf-8") as fh:
+            try:
+                ast.parse(fh.read())
+            except SyntaxError as exc:
+                violations.append(f"{fp.relative_to(SRC_DIR)}:{exc.lineno}: SyntaxError: {exc.msg}")
     return violations
 
 
 def main() -> int:
-    if not SERVICES_DIR.is_dir():
-        print(f"ERROR: services dir not found: {SERVICES_DIR}", file=sys.stderr)
+    if not SRC_DIR.is_dir():
+        print(f"ERROR: src dir not found: {SRC_DIR}", file=sys.stderr)
         return 2
+
+    prod_files = production_python_files()
+    print(f"Scanning {len(prod_files)} production Python files under {SRC_DIR}")
 
     checks = {
         "forbidden_imports": check_forbidden_imports(),
         "forbidden_keywords": check_forbidden_keywords(),
         "ranking_fields": check_ranking_fields(),
         "eval_imports": check_eval_imports(),
+        "benchmark_entities": check_benchmark_entities(),
+        "hardcoded_answers": check_hardcoded_answers(),
+        "filename_page_mappings": check_filename_page_mappings(),
+        "syntax_errors": check_syntax_errors(),
     }
 
     total = 0

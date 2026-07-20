@@ -27,7 +27,6 @@ class CloseableMockLLM:
 
 class TestLowConfidenceNoLLM:
     """Item 8: Low-confidence context must NOT call LLM."""
-    @pytest.mark.skip(reason="Phase 1 revision")
     def test_insufficient_context_skips_llm(self, tmp_path):
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=False)
@@ -44,7 +43,6 @@ class TestLowConfidenceNoLLM:
         finally:
             loop.close()
 
-    @pytest.mark.skip(reason="Phase 1 revision")
     def test_sufficient_context_calls_llm(self, tmp_path):
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=True, response='Revenue was 10M.')

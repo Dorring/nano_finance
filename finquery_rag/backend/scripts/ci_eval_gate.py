@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.eval_cli import main as eval_cli_main  # noqa: E402
+from src.evaluation.eval_cli import main as eval_cli_main  # noqa: E402
 
 
 def main() -> int:

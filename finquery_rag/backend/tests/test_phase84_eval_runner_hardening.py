@@ -8,9 +8,9 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.eval_runner import run_case, run_jsonl_cases, validate_n_results
-from services.evaluation import EvaluationCase
-from src.eval_cli import main as eval_cli_main
+from evaluation.eval_runner import run_case, run_jsonl_cases, validate_n_results
+from evaluation.evaluation import EvaluationCase
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 class GuardedRAGEngine:

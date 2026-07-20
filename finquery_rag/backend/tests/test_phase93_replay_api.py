@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import feedback_to_replay_case, trace_to_replay_case
+from evaluation.evaluation import feedback_to_replay_case, trace_to_replay_case
 
 
 def _trace(trace_id="trace-1", question="What is revenue?"):

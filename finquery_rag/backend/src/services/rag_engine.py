@@ -130,20 +130,11 @@ class RAGEngine:
             selected = chunks[:top_k]
         else:
             selected = self.reranker.rerank(query, chunks, top_k=top_k)
-        selected = self._ensure_page_fallback_coverage(chunks, selected, top_k)
         self._last_retrieval_debug = self._make_retrieval_debug(
             candidate_count,
             len(selected),
         )
         return selected
-
-    @staticmethod
-    def _chunk_page_key(chunk: dict) -> tuple[str | None, int | None]:
-        metadata = chunk.get("metadata") or {}
-        return metadata.get("doc_name"), metadata.get("page")
-
-    
-    # Phase 1 revision: _ensure_page_fallback_coverage removed
 
     def _dedupe_chunks(chunks: list) -> list:
         deduped = []
@@ -202,15 +193,6 @@ float(chunk.get("score", 0) or 0),
             selected_docs.add(doc_name)
         return selected[:top_k]
 
-    # Phase 1: _force_supporting_page_coverage removed
-
-    # Phase 1: _fallback_pages_for_query removed
-
-    # Phase 1: _supporting_pages_for_query removed
-
-    # Phase 1: _augment_with_page_fallbacks removed
-
-
     def _has_cjk(self, text: str) -> bool:
         return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
 
@@ -224,8 +206,7 @@ float(chunk.get("score", 0) or 0),
     def _expand_retrieval_query(self, query: str) -> str:
         """Add lightweight retrieval terms for common finance PDF questions.
 
-        Phase 1 revision: All benchmark-specific expansions removed. Only generic
-        financial terminology expansions remain. Works for unknown documents.
+        Only generic financial terminology expansions remain. Works for unknown documents.
         """
         if not query:
             return query
@@ -320,8 +301,6 @@ float(chunk.get("score", 0) or 0),
             "section_path": meta.get("section_path"),
             "child_hit_count": meta.get("child_hit_count"),
         }
-
-    # Phase 1: _ensure_supporting_sources removed
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
@@ -977,9 +956,8 @@ float(chunk.get("score", 0) or 0),
             return factual
         return self.answer_numeric_query_from_context(query, context, sources)
 
-    
-    # Phase 1 revision: answer_multi_doc_query_from_context removed
 
+    @staticmethod
     def _parse_context_lines(context: str) -> list[dict]:
         parsed = []
         current_source = None
@@ -1127,11 +1105,7 @@ float(chunk.get("score", 0) or 0),
         return ", ".join(values) if values else None
     @classmethod
     def _targeted_numeric_summary(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Phase 1 revision: Only generic regex-based extraction from context.
-
-        All benchmark-specific hardcoded values, company-name checks, and
-        page-number-specific branches removed.
-        """
+        """Only generic regex-based extraction from context."""
         normalized = (query or "").lower()
         text = " ".join(item.get("text", "") for item in selected)
         if context:
@@ -1183,11 +1157,7 @@ float(chunk.get("score", 0) or 0),
             return 0
     @staticmethod
     def _summarize_factual_evidence(query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Phase 1 revision: Only generic evidence extraction from context.
-
-        All benchmark-specific hardcoded answers, company-name checks, and
-        document-name-specific branches removed.
-        """
+        """Only generic evidence extraction from context."""
         normalized = (query or "").lower()
         text = " ".join(item.get("text", "") for item in selected)
         if context:
@@ -1439,8 +1409,6 @@ float(chunk.get("score", 0) or 0),
 
             # 2. Build context (with dedup and score threshold)
             context, sources = self.build_context(chunks)
-# Phase 1: _ensure_supporting_sources removed
-
             # 3. Generate answer (skip LLM if context is insufficient)
             deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
             if deterministic_context_answer:
@@ -1457,8 +1425,6 @@ float(chunk.get("score", 0) or 0),
                     answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
                 else:
                     answer = await self.generate_answer(context, question)
-
-# Phase 1: _ensure_supporting_sources removed
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000

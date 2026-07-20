@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 from src.services.health import collect_config_snapshot
 from src.services.retrieval_config import (
     DEFAULT_EMBEDDING_MODEL,

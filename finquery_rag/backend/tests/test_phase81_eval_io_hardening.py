@@ -7,8 +7,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import load_jsonl_cases, write_json_file, write_jsonl
-from src.eval_cli import main as eval_cli_main
+from evaluation.evaluation import load_jsonl_cases, write_json_file, write_jsonl
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def test_write_jsonl_rejects_non_object_without_clobbering_existing_file(tmp_path):

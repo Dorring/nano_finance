@@ -115,7 +115,6 @@ def test_heuristic_reranker_adds_metadata_and_reorders_by_query_overlap():
     assert result[0]["rerank_score"] > result[1]["rerank_score"]
 
 
-@pytest.mark.skip(reason="Phase 1 revision")
 def test_rag_engine_default_reranker_disabled_preserves_order():
     engine, path = make_engine()
     try:
@@ -126,7 +125,6 @@ def test_rag_engine_default_reranker_disabled_preserves_order():
         cleanup(path)
 
 
-@pytest.mark.skip(reason="Phase 1 revision")
 def test_rag_engine_heuristic_reranker_can_reorder():
     engine, path = make_engine(reranker_name="heuristic")
     try:
@@ -142,7 +140,6 @@ def test_rag_engine_heuristic_reranker_can_reorder():
         cleanup(path)
 
 
-@pytest.mark.skip(reason="Phase 1 revision")
 def test_rag_engine_reranker_respects_top_k():
     engine, path = make_engine(reranker_name="heuristic")
     try:
@@ -158,7 +155,6 @@ def test_rag_engine_reranker_respects_top_k():
         cleanup(path)
 
 
-@pytest.mark.skip(reason="Phase 1 revision")
 def test_rag_engine_retrieval_debug_tracks_candidate_counts():
     engine, path = make_engine(reranker_name="heuristic", retrieval_candidate_multiplier=3)
     try:

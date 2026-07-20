@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .evaluation import (
+from src.evaluation.evaluation import (
     audit_evaluation_fixtures,
     compare_reports,
     diagnose_retrieval,

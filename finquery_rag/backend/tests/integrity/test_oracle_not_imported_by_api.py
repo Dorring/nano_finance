@@ -115,3 +115,85 @@ def test_oracle_module_exists_and_is_isolated():
     assert not forbidden, (
         f"oracle_context.py must not import production RAG modules: {forbidden}"
     )
+
+
+def test_oracle_builds_context_from_evidence_content():
+    """Oracle can build context when real evidence content is provided."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    from evaluation.oracle_context import build_oracle_context
+
+    case = {
+        "expected_sources": [
+            {
+                "filename": "report.pdf",
+                "page": 10,
+                "content": "Revenue was $100 million.",
+                "chunk_id": "report.pdf::page_10::chunk_1",
+            }
+        ]
+    }
+    context, sources = build_oracle_context(case)
+    assert "Revenue was $100 million" in context
+    assert len(sources) == 1
+    assert sources[0]["oracle"] is True
+
+
+def test_oracle_raises_when_only_expected_answer_contains():
+    """Oracle must raise when case has expected_answer_contains but no evidence content."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    from evaluation.oracle_context import build_oracle_context
+
+    case = {
+        "expected_answer_contains": "$100 million",
+        "expected_sources": [],
+    }
+    with pytest.raises(ValueError, match="no expected_sources"):
+        build_oracle_context(case)
+
+
+def test_oracle_context_does_not_contain_expected_answer():
+    """Oracle context must not auto-inject the expected answer."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    from evaluation.oracle_context import build_oracle_context
+
+    case = {
+        "expected_answer_contains": "SECRET_ANSWER_12345",
+        "expected_sources": [
+            {
+                "filename": "report.pdf",
+                "page": 10,
+                "content": "Revenue was $100 million.",
+                "chunk_id": "report.pdf::page_10::chunk_1",
+            }
+        ]
+    }
+    context, sources = build_oracle_context(case)
+    assert "SECRET_ANSWER_12345" not in context
+
+
+def test_production_modules_cannot_import_oracle():
+    """Production service modules must not be able to import oracle_context."""
+    import importlib
+    # Verify that importing oracle from a production module path fails
+    try:
+        # This should work (evaluation is not production)
+        mod = importlib.import_module("src.evaluation.oracle_context")
+        # But production services should not import it
+        for prod_module in ["src.services.rag_engine", "src.services.retrieval", "src.services.reranker"]:
+            try:
+                m = importlib.import_module(prod_module)
+                source = ""
+                mod_file = getattr(m, "__file__", "")
+                if mod_file and os.path.isfile(mod_file):
+                    with open(mod_file, encoding="utf-8") as fh:
+                        source = fh.read()
+                assert "oracle_context" not in source, (
+                    f"{prod_module} must not reference oracle_context"
+                )
+            except ImportError:
+                pass  # Module may not be importable without deps
+    except ImportError:
+        pytest.skip("oracle_context module not available")

@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from services.evaluation import compare_reports, evaluate_payload
+from evaluation.evaluation import compare_reports, evaluate_payload
 
 
 def _case(case_id="c1"):

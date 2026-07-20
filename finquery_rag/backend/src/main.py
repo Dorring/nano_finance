@@ -18,7 +18,7 @@ from .services.feedback import FeedbackStore
 from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, make_stream_error_event, safe_log_query_trace
 from .services.retrieval_config import get_reranker_model, get_reranker_name
-from .services.evaluation import compare_reports, evaluate_payload, feedback_to_replay_case, trace_to_replay_case
+from .evaluation.evaluation import compare_reports, evaluate_payload, feedback_to_replay_case, trace_to_replay_case
 from .models.schemas import *  #全部 Pydantic 模型
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型

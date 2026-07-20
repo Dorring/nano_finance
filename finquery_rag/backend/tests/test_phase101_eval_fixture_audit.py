@@ -1,7 +1,7 @@
 import json
 
-from src.eval_cli import main as eval_cli_main
-from src.services.evaluation import EvaluationCase, audit_evaluation_fixtures
+from src.evaluation.eval_cli import main as eval_cli_main
+from src.evaluation.evaluation import EvaluationCase, audit_evaluation_fixtures
 
 
 def _write_jsonl(path, rows):

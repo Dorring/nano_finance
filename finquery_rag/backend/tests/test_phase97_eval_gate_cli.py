@@ -1,6 +1,6 @@
 import json
 
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _write_jsonl(path, rows):

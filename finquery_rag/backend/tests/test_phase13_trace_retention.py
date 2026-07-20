@@ -8,7 +8,7 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from services.trace import TraceLogger
-from src.eval_cli import main as eval_cli_main
+from src.evaluation.eval_cli import main as eval_cli_main
 
 
 def _set_created_at(db_path, trace_id, created_at):

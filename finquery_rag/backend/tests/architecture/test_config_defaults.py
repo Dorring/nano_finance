@@ -83,8 +83,8 @@ def test_answer_validation_tolerance_default():
 
 
 def test_eval_runner_n_results_bounds():
-    from src.services.eval_runner import EVAL_RUN_N_RESULTS_MIN, EVAL_RUN_N_RESULTS_MAX
-    from src.services.eval_runner import validate_n_results
+    from src.evaluation.eval_runner import EVAL_RUN_N_RESULTS_MIN, EVAL_RUN_N_RESULTS_MAX
+    from src.evaluation.eval_runner import validate_n_results
     import pytest
     assert EVAL_RUN_N_RESULTS_MIN == 1
     assert EVAL_RUN_N_RESULTS_MAX == 20
