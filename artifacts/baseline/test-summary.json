@@ -43,11 +43,36 @@
         ]
       }
     },
+    "architecture_tests": {
+      "directory": "finquery_rag/backend/tests/architecture",
+      "test_files": 5,
+      "test_functions": 44,
+      "breakdown": {
+        "test_imports.py": 8,
+        "test_api_contract.py": 13,
+        "test_config_defaults.py": 13,
+        "test_service_initialization.py": 10
+      },
+      "notes": "12 of 44 architecture tests skipped. 11 TestAPIContract tests require running database server. 1 test_full_stack_modules_import marked slow and skipped. No test assertions were modified to achieve passing status."
+    },
+    "totals": {
+      "existing_backend_tests": 585,
+      "new_architecture_tests": 44,
+      "total_collected": 629,
+      "passed": 617,
+      "skipped": 12,
+      "failed": 0,
+      "skip_reasons": {
+        "database_absent": "11 TestAPIContract integration tests require a running PostgreSQL/backend database server",
+        "slow_marker": "1 full-stack module import test marked with @pytest.mark.slow"
+      }
+    },
     "root_tests": {
       "directory": "tests",
       "test_files": 3,
-      "files": ["test_engine.py", "test_attention_fallback.py", "test_finance_eval.py"]
+      "files": ["test_engine.py", "test_attention_fallback.py", "test_finance_eval.py"],
+      "notes": "Not runnable in current environment without GPU and model checkpoints."
     }
   },
-  "notes": "585 backend tests collected. Root tests not runnable without GPU and model checkpoints."
+  "phase_0_notes": "Phase 0 baseline audit added 44 architecture tests across 5 files (including __init__.py). 12 architecture tests cannot complete due to absent database. No production code was modified. 0 tests failed."
 }
