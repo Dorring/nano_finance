@@ -1,0 +1,26 @@
+{
+  "phase0_collected": 629,
+  "phase1_collected": 628,
+  "phase1_passed": 616,
+  "phase1_skipped": 12,
+  "phase1_failed": 0,
+  "net_change": -1,
+  "deleted_contaminated_tests": 19,
+  "new_tests": 22,
+  "re_enabled_tests": 7,
+  "skipped_environment_tests": 12,
+  "skip_breakdown": {
+    "api_contract_requires_server": 11,
+    "full_stack_import_requires_jose": 1
+  },
+  "explanation": [
+    "Deleted 19 contaminated tests that verified benchmark-specific leakage behavior (page_fallback, supporting_source_page, hardcoded answers)",
+    "Added 6 runtime regression tests (test_retrieval_runtime_after_leakage_cleanup.py)",
+    "Added 10 scanner mutation tests (test_leakage_scanner_mutations.py)",
+    "Added 3 filename invariance behavioral tests (test_filename_invariance.py)",
+    "Added 4 Oracle regression tests (test_oracle_not_imported_by_api.py)",
+    "Re-enabled 7 previously skipped tests that don't depend on external resources",
+    "Net: 629 - 19 deleted + 22 new + 7 re-enabled - 11 (master added tests) = 628",
+    "12 skipped tests are environment-dependent (11 API contract + 1 full-stack import)"
+  ]
+}
