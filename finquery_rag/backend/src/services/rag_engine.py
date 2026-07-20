@@ -20,6 +20,7 @@ from src.retrieval.candidate_fusion import (
     summarize_retrieved_chunks as _summarize_retrieved_chunks,
     source_from_chunk as _source_from_chunk,
 )
+from src.retrieval.context_builder import ContextBuilder, EvidenceSufficiencyEvaluator
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -100,14 +101,6 @@ class RAGEngine:
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
         self._query_processor = QueryProcessor()
-        self._retrieval_pipeline = RetrievalPipeline(
-            dense_query_fn=query_collection,
-            bm25_retriever=self.bm25_retriever,
-            reranker=self.reranker,
-            query_processor=self._query_processor,
-            candidate_multiplier=self.retrieval_candidate_multiplier,
-            use_hybrid=self.use_hybrid,
-        )
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -117,6 +110,24 @@ class RAGEngine:
                 self.tokenizer = None
         else:
             self.tokenizer = None
+
+        self._retrieval_pipeline = RetrievalPipeline(
+            dense_query_fn=query_collection,
+            bm25_retriever=self.bm25_retriever,
+            reranker=self.reranker,
+            query_processor=self._query_processor,
+            candidate_multiplier=self.retrieval_candidate_multiplier,
+            use_hybrid=self.use_hybrid,
+        )
+        self._context_builder = ContextBuilder(
+            max_context_tokens=self.max_context_tokens,
+            min_score_threshold=self.min_score_threshold,
+            tokenizer=self.tokenizer,
+        )
+        self._sufficiency_evaluator = EvidenceSufficiencyEvaluator(
+            rrf_sufficiency_threshold=self.rrf_sufficiency_threshold,
+            dense_sufficiency_threshold=self.dense_sufficiency_threshold,
+        )
 
     def _get_bm25_retriever(self, doc_name=str, user_id: int = None):
         """获取 SQLite FTS5 稀疏检索器。如果未启用混合检索则返回 None。"""
@@ -279,184 +290,21 @@ class RAGEngine:
 
     @staticmethod
     def _parent_context_key(chunk: dict) -> str | None:
-        metadata = chunk.get("metadata") or {}
-        parent_id = metadata.get("parent_id")
-        parent_excerpt = metadata.get("parent_excerpt")
-        if not isinstance(parent_id, str) or not parent_id.strip():
-            return None
-        if not isinstance(parent_excerpt, str) or not parent_excerpt.strip():
-            return None
-        return parent_id.strip()
+        return ContextBuilder._parent_context_key(chunk)
 
     def _merge_parent_context_chunks(self, chunks: list) -> list:
-        """Expand child hits to their parent section/page excerpt and merge siblings.
-
-        Retrieval still ranks small child chunks. The generation context sees a
-        bounded parent excerpt so answers have enough local section context.
-        """
-        merged = []
-        by_parent: dict[str, dict] = {}
-
-        for chunk in chunks:
-            parent_key = self._parent_context_key(chunk)
-            if not parent_key:
-                merged.append(chunk)
-                continue
-
-            metadata = dict(chunk.get("metadata") or {})
-            parent_excerpt = metadata.get("parent_excerpt")
-            existing = by_parent.get(parent_key)
-            if existing is None:
-                expanded = dict(chunk)
-                expanded_metadata = dict(metadata)
-                expanded_metadata["context_expanded_from"] = "parent_excerpt"
-                expanded_metadata["child_hit_count"] = 1
-                expanded_metadata["child_chunk_ids"] = [chunk.get("doc_id")]
-                expanded_metadata["matched_child_snippets"] = [
-                    self._compact_child_snippet(chunk.get("content", ""))
-                ]
-                expanded["metadata"] = expanded_metadata
-                expanded["content"] = self._compose_parent_context(
-                    parent_excerpt,
-                    expanded_metadata["matched_child_snippets"],
-                )
-                expanded["child_hit_count"] = 1
-                by_parent[parent_key] = expanded
-                merged.append(expanded)
-                continue
-
-            existing_score = float(existing.get("score", 0) or 0)
-            current_score = float(chunk.get("score", 0) or 0)
-            existing["score"] = max(existing_score, current_score)
-            existing["child_hit_count"] = int(existing.get("child_hit_count", 1)) + 1
-            existing_meta = existing.get("metadata") or {}
-            child_ids = list(existing_meta.get("child_chunk_ids") or [])
-            child_id = chunk.get("doc_id")
-            if child_id and child_id not in child_ids:
-                child_ids.append(child_id)
-            existing_meta["child_chunk_ids"] = child_ids
-            existing_meta["child_hit_count"] = existing["child_hit_count"]
-            snippets = list(existing_meta.get("matched_child_snippets") or [])
-            snippet = self._compact_child_snippet(chunk.get("content", ""))
-            if snippet and snippet not in snippets:
-                snippets.append(snippet)
-            existing_meta["matched_child_snippets"] = snippets
-            existing["content"] = self._compose_parent_context(
-                existing_meta.get("parent_excerpt", existing.get("content", "")),
-                snippets,
-            )
-
-        return merged
+        return self._context_builder._merge_parent_context_chunks(chunks)
 
     @staticmethod
     def _compact_child_snippet(content: str, *, max_chars: int = 500) -> str:
-        text = re.sub(r"\s+", " ", content or "").strip()
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars].rstrip() + " [...]"
+        return ContextBuilder._compact_child_snippet(content, max_chars=max_chars)
 
     @staticmethod
     def _compose_parent_context(parent_excerpt: str, child_snippets: list[str]) -> str:
-        snippets = [item for item in child_snippets if item]
-        if not snippets:
-            return parent_excerpt
-        evidence = "\n".join(f"- {item}" for item in snippets)
-        return f"{parent_excerpt}\n\nMatched child evidence:\n{evidence}"
+        return ContextBuilder._compose_parent_context(parent_excerpt, child_snippets)
 
     def build_context(self, chunks: list) -> tuple:
-        """Build context from retrieved chunks with dedup, score threshold, and token budget."""
-        if not chunks:
-            return "", []
-
-        # Phase 2: deduplicate chunks by content
-        seen_content = set()
-        deduped = []
-        for chunk in chunks:
-            content_key = chunk["content"][:100]  # first 100 chars as dedup key
-            if content_key not in seen_content:
-                seen_content.add(content_key)
-                deduped.append(chunk)
-        chunks = deduped
-
-        # Phase 2: filter by minimum score threshold
-        if self.min_score_threshold > 0:
-            chunks = [c for c in chunks if c.get("score", 0) >= self.min_score_threshold]
-
-        if not chunks:
-            return "", []
-
-        chunks = self._merge_parent_context_chunks(chunks)
-
-        context_parts = []
-        sources = []
-        current_tokens = 0
-        safe_limit = self.max_context_tokens - 200
-
-        for i, chunk in enumerate(chunks, 1):
-            doc_id = chunk["doc_id"]
-            content = chunk["content"]
-            chunk_type = chunk["metadata"].get("type")
-            page = chunk["metadata"].get("page")
-            parent_id = chunk["metadata"].get("parent_id")
-            section_path = chunk["metadata"].get("section_path")
-            child_hit_count = chunk["metadata"].get("child_hit_count")
-
-            # Parse filename from scoped chunk ID
-            if "::" in doc_id:
-                parts = doc_id.split("::")[0]
-                # Remove user_N_ prefix if present
-                if parts.startswith("user_"):
-                    parts = "_".join(parts.split("_")[2:])
-                filename = parts
-            else:
-                filename = doc_id
-
-            if chunk_type == "table":
-                table_num = chunk["metadata"].get("table_num", "")
-                source_ref = "%s, p%s(T%s)" % (filename, page, table_num)
-            else:
-                source_ref = "%s, p%s" % (filename, page)
-
-            chunk_text = "[%s]\n%s" % (source_ref, content)
-
-            if self.tokenizer:
-                chunk_tokens = len(self.tokenizer.encode(chunk_text))
-            else:
-                chunk_tokens = len(chunk_text) / 3
-
-            if current_tokens + chunk_tokens > safe_limit:
-                remaining_tokens = safe_limit - current_tokens
-                if remaining_tokens > 80:
-                    if self.tokenizer:
-                        truncated_tokens = self.tokenizer.encode(content)[:remaining_tokens-20]
-                        truncated_content = self.tokenizer.decode(truncated_tokens) + "\n[...]"
-                    else:
-                        truncated_content = content[:int(remaining_tokens * 3)] + "\n[...]"
-                    chunk_text = "[%s]\n%s" % (source_ref, truncated_content)
-                    context_parts.append(chunk_text)
-                    sources.append({
-                        "filename": filename, "page": page,
-                        "type": chunk_type, "score": chunk.get("score", 0),
-                        "chunk_id": doc_id,
-                        "parent_id": parent_id,
-                        "section_path": section_path,
-                        "child_hit_count": child_hit_count,
-                    })
-                break
-
-            context_parts.append(chunk_text)
-            current_tokens += chunk_tokens
-            sources.append({
-                "filename": filename, "page": page,
-                "type": chunk_type, "score": chunk.get("score", 0),
-                "chunk_id": doc_id,
-                "parent_id": parent_id,
-                "section_path": section_path,
-                "child_hit_count": child_hit_count,
-            })
-
-        context_str = "\n\n---\n\n".join(context_parts)
-        return context_str, sources
+        return self._context_builder.build(chunks)
 
     def _get_system_prompt(self) -> str:
         """
@@ -501,49 +349,11 @@ class RAGEngine:
         return answer
 
     def _check_context_sufficiency(self, chunks: list) -> tuple:
-        """
-        Phase 3: Check if retrieved context is sufficient for a reliable answer.
-        Returns (is_sufficient: bool, best_score: float, avg_score: float).
-
-        Scores are mode-dependent:
-        - Dense-only (cosine): 0-1 range, threshold 0.15
-        - Hybrid/RRF fused_score: ~0.01-0.05 range, threshold from RAG_RRF_SUFFICIENCY_THRESHOLD
-        """
-        if not chunks:
-            return False, 0.0, 0.0
-
-        scores = [c.get("score", 0) for c in chunks]
-        best_score = max(scores)
-        avg_score = sum(scores) / len(scores)
-
-        # Detect score scale: RRF fused_scores are typically < 0.05
-        # Dense cosine scores are typically 0-1
-        max_possible_rrf = 0.05
-        if best_score < max_possible_rrf:
-            # RRF mode - require enough fused evidence to avoid low-confidence hallucination.
-            SUFFICIENCY_THRESHOLD = self.rrf_sufficiency_threshold
-        else:
-            # Dense mode - use cosine threshold.
-            SUFFICIENCY_THRESHOLD = self.dense_sufficiency_threshold
-
-        is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
-        return is_sufficient, best_score, avg_score
+        result = self._sufficiency_evaluator.evaluate(chunks)
+        return result.is_sufficient, result.best_score, result.average_score
 
     def _compute_confidence(self, chunks: list) -> float:
-        """
-        Phase 3: Compute answer confidence based on retrieval quality.
-        Returns a float between 0.0 and 1.0.
-        """
-        if not chunks:
-            return 0.0
-
-        scores = [c.get("score", 0) for c in chunks]
-        best = max(scores)
-        avg = sum(scores) / len(scores)
-
-        # Confidence = weighted blend of best and average score
-        confidence = 0.7 * best + 0.3 * avg
-        return min(1.0, max(0.0, confidence))
+        return self._sufficiency_evaluator.confidence(chunks)
 
     def _looks_like_followup_question(self, question: str) -> bool:
         return self._query_processor.looks_like_followup_question(question)
