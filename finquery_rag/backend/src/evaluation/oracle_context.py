@@ -64,7 +64,7 @@ def build_oracle_context(case: dict[str, Any]) -> tuple[str, list[dict]]:
             continue
         filename = source.get("filename") or source.get("doc_name") or f"source_{idx}"
         page = source.get("page")
-        content = source.get("content") or source.get("expected_answer_contains") or ""
+        content = source.get("content") or ""
         chunk_id = source.get("chunk_id") or source.get("doc_id") or f"oracle_{idx}"
 
         context_parts.append(

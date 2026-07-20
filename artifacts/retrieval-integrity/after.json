@@ -1,42 +1,14 @@
 {
-  "snapshot": "after",
+  "snapshot": "structural-after",
   "timestamp": "2026-07-20",
   "branch": "fix/nf-01-retrieval-integrity",
-  "summary": "Post-Phase-1 snapshot after removing retrieval contamination methods",
-  "removed_methods": {
-    "_fallback_pages_for_query": "REMOVED - was hardcoded doc->page rules",
-    "_supporting_pages_for_query": "REMOVED - was eval-specific page injection",
-    "_force_supporting_page_coverage": "REMOVED - was forced top-k inclusion",
-    "_augment_with_page_fallbacks": "REMOVED - was score floor injection",
-    "_ensure_supporting_sources": "REMOVED - was supporting source propagation"
-  },
-  "supporting_source_page_references": 0,
+  "rag_engine_line_count": "see git diff --stat",
   "rag_engine_line_count_before": 2020,
-  "rag_engine_line_count_after": null,
-  "test_results": {
-    "total": 583,
-    "passed": 583,
-    "failed": 0,
-    "updated_tests": [
-      "test_supporting_source_pages_are_retained_in_final_sources",
-      "test_real_eval_page_fallback_rules_cover_known_miss_pages",
-      "test_page_fallback_chunks_are_added_before_reranking",
-      "test_supporting_source_pages_for_real_eval_metric_queries",
-      "test_force_supporting_page_coverage_adds_missing_pdfsol_cover_metric_page",
-      "test_leac_cash_equivalents_queries_fallback_to_statement_page",
-      "test_multi_doc_coverage_keeps_one_candidate_per_requested_document"
-    ]
-  },
-  "new_files": {
-    "oracle_context": "src/evaluation/oracle_context.py",
-    "contamination_notice": "eval/CONTAMINATION_NOTICE.md",
-    "integrity_tests": [
-      "tests/integrity/test_no_golden_import_in_production.py",
-      "tests/integrity/test_no_query_specific_page_rules.py",
-      "tests/integrity/test_filename_invariance.py",
-      "tests/integrity/test_oracle_not_imported_by_api.py"
-    ],
-    "leakage_scanner": "scripts/check_eval_leakage.py"
-  },
-  "warning": "Clean retrieval metrics may be lower than contaminated metrics. This is expected and correct. Do not restore hardcoded rules to recover scores."
+  "removed_methods": 7,
+  "cleaned_methods": 4,
+  "supporting_source_page_references": 0,
+  "benchmark_entity_names_in_production": 0,
+  "hardcoded_numeric_values_in_production": 0,
+  "test_collection": "583 collected, 0 errors",
+  "note": "Structural snapshot. Not a behavioral benchmark."
 }

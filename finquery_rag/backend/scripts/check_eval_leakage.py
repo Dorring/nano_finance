@@ -20,16 +20,19 @@ import sys
 from pathlib import Path
 
 
-SERVICES_DIR = Path(__file__).resolve().parent.parent / "src" / "services"
-MAIN_PY = Path(__file__).resolve().parent.parent / "src" / "main.py"
+SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+SERVICES_DIR = SRC_DIR / "services"
+SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+MAIN_PY = SRC_DIR / "main.py"
 
 FORBIDDEN_IMPORTS = ["evaluation.oracle_context", "eval."]
 FORBIDDEN_KEYWORDS = ["expected_pages", "expected_sources", "expected_source", "golden_page", "oracle_page", "support_page"]
 
 # Evaluation modules that legitimately reference expected_sources in golden cases.
 # These are NOT production services; they only run in offline eval CLI.
-EVAL_MODULE_ALLOWLIST = {"evaluation.py", "eval_runner.py", "oracle_context.py"}
-FORBIDDEN_FIELDS = ["supporting_source_page"]
+# Path-based exclusion: only src/evaluation/ can read golden labels
+EVAL_DIR_PATH = Path(__file__).resolve().parent.parent / "src" / "evaluation"
+FORBIDDEN_FIELDS = ["supporting_source_page", "page_fallback"]
 
 
 def _python_files(directory: Path) -> list[Path]:
@@ -43,8 +46,8 @@ def _python_files(directory: Path) -> list[Path]:
 
 
 def _is_eval_module(filepath: Path) -> bool:
-    """Check if file is an eval-only module that legitimately uses expected_sources."""
-    return filepath.name in EVAL_MODULE_ALLOWLIST or "evaluation" in str(filepath.parent)
+    """Only src/evaluation/ can legitimately use expected_sources."""
+    return (EVAL_DIR_PATH in filepath.parents or str(EVAL_DIR_PATH) in str(filepath) or filepath.name in ("evaluation.py", "eval_runner.py"))
 
 
 def _scan_imports(filepath: Path) -> set[str]:
