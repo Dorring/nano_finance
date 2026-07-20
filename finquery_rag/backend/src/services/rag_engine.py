@@ -159,7 +159,7 @@ class RAGEngine:
         seen_pages = set()
         for chunk in candidates:
             metadata = chunk.get("metadata") or {}
-            if not metadata.get("page_fallback") and not metadata.get("supporting_source_page"):
+            if not metadata.get("page_fallback"):
                 continue
             page_key = self._chunk_page_key(chunk)
             if page_key in seen_pages or page_key in selected_pages:
@@ -171,10 +171,7 @@ class RAGEngine:
             return selected[:top_k]
 
         fallback_by_page.sort(
-            key=lambda chunk: (
-                1 if (chunk.get("metadata") or {}).get("supporting_source_page") else 0,
-                float(chunk.get("score", 0) or 0),
-            ),
+            key=lambda chunk: float(chunk.get("score", 0) or 0),
             reverse=True,
         )
         for fallback in fallback_by_page:
@@ -186,7 +183,7 @@ class RAGEngine:
                 replace_index = None
                 for index in range(len(selected) - 1, -1, -1):
                     metadata = selected[index].get("metadata") or {}
-                    if not metadata.get("page_fallback") and not metadata.get("supporting_source_page"):
+                    if not metadata.get("page_fallback"):
                         replace_index = index
                         break
                 if replace_index is None:
@@ -239,7 +236,6 @@ class RAGEngine:
             best = max(
                 doc_candidates,
                 key=lambda chunk: (
-                    1 if (chunk.get("metadata") or {}).get("supporting_source_page") else 0,
                     1 if (chunk.get("metadata") or {}).get("page_fallback") else 0,
                     float(chunk.get("score", 0) or 0),
                 ),
@@ -253,7 +249,7 @@ class RAGEngine:
                 replace_index = None
                 for index in range(len(selected) - 1, -1, -1):
                     metadata = selected[index].get("metadata") or {}
-                    if not metadata.get("supporting_source_page") and not metadata.get("page_fallback"):
+                    if not metadata.get("page_fallback"):
                         replace_index = index
                         break
                 if replace_index is None:
@@ -263,155 +259,13 @@ class RAGEngine:
             selected_docs.add(doc_name)
         return selected[:top_k]
 
-    def _force_supporting_page_coverage(
-        self,
-        doc_name: str,
-        query: str,
-        selected: list,
-        user_id: int | None,
-        top_k: int | None,
-    ) -> list:
-        """Fetch and retain required citation pages after reranking.
+    # Phase 1: _force_supporting_page_coverage removed
 
-        This is stricter than normal fallback augmentation: eval and replay rely on
-        final retrieved_chunks/sources, so known source pages must survive the final
-        top-k selection even if reranking prefers a neighboring page.
-        """
-        if user_id is None or top_k is None or top_k <= 0:
-            return selected
-        required_pages = self._supporting_pages_for_query(doc_name, query)
-        if not required_pages:
-            return selected
+    # Phase 1: _fallback_pages_for_query removed
 
-        selected_pages = {
-            (chunk.get("metadata") or {}).get("page")
-            for chunk in selected or []
-            if self._chunk_doc_name(chunk) == doc_name
-        }
-        missing_pages = [page for page in sorted(required_pages) if page not in selected_pages]
-        if not missing_pages:
-            return selected[:top_k]
+    # Phase 1: _supporting_pages_for_query removed
 
-        page_chunks = get_page_chunks(
-            doc_name=doc_name,
-            user_id=user_id,
-            pages=missing_pages,
-            limit_per_page=3,
-        )
-        if not page_chunks:
-            return selected[:top_k]
-
-        forced = []
-        for chunk in page_chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            metadata["page_fallback"] = True
-            metadata["supporting_source_page"] = True
-            item["metadata"] = metadata
-            item["score"] = max(float(item.get("score", 0) or 0), self.min_score_threshold, 0.12)
-            forced.append(item)
-
-        candidates = self._dedupe_chunks(list(selected or []) + forced)
-        return self._ensure_page_fallback_coverage(candidates, selected, top_k)
-
-    def _fallback_pages_for_query(self, doc_name: str, query: str) -> list[int]:
-        normalized_doc = (doc_name or "").lower()
-        normalized_query = (query or "").lower()
-        pages: list[int] = []
-
-        if self._is_document_front_matter_query(query) or any(term in normalized_query for term in ("topic", "meaning", "prepared", "organization", "reporting period")):
-            pages.extend([1, 2, 3, 6])
-
-        if "final annual report" in normalized_doc or "pdf solutions" in normalized_query:
-            if any(term in normalized_query for term in ("record revenue", "platform revenue", "volume-based revenue", "gross margin", "compare")):
-                pages.extend([3, 45])
-            if any(term in normalized_query for term in ("cash and cash equivalents", "credit facilities")):
-                pages.append(48)
-            if "operating activities" in normalized_query or "operating cash" in normalized_query:
-                pages.append(50)
-
-        if "wipo" in normalized_doc or "wipo" in normalized_query:
-            if any(term in normalized_query for term in ("total revenue", "pct", "madrid", "percentage", "compare")):
-                pages.extend([10, 25])
-            if any(term in normalized_query for term in ("cash and cash equivalents", "net assets", "cash terms")):
-                pages.append(24)
-            if "budget" in normalized_query or "actual 2020" in normalized_query:
-                pages.append(29)
-
-        if "leac" in normalized_doc or "leac" in normalized_query:
-            if any(term in normalized_query for term in ("topic", "financial statements", "meaning")):
-                pages.append(1)
-            if "nature" in normalized_query or "periodical" in normalized_query:
-                pages.append(2)
-            if "black swan" in normalized_query:
-                pages.append(27)
-            elif any(term in normalized_query for term in ("current item", "criteria", "amba", "cash terms", "cash and cash equivalents")):
-                pages.append(10)
-            if "sunfill" in normalized_query or "reserve and surplus" in normalized_query:
-                pages.extend([13, 14])
-
-        return list(dict.fromkeys(page for page in pages if page > 0))
-
-    def _supporting_pages_for_query(self, doc_name: str, query: str) -> set[int]:
-        """Pages that should remain visible as citation support for known real-eval finance facts."""
-        normalized_doc = (doc_name or "").lower()
-        normalized_query = (query or "").lower()
-        pages: list[int] = []
-
-        is_pdfsol = "final annual report" in normalized_doc or "pdf solutions" in normalized_query
-        if is_pdfsol:
-            if any(term in normalized_query for term in ("record revenue", "platform revenue", "volume-based revenue", "gross margin", "compare")):
-                pages.extend([3, 45])
-            if "cash and cash equivalents" in normalized_query:
-                pages.append(48)
-
-        is_wipo = "wipo" in normalized_doc or "wipo" in normalized_query
-        if is_wipo:
-            if "title" in normalized_query or "reporting period" in normalized_query:
-                pages.extend([1, 3])
-            if "prepared" in normalized_query or "organization" in normalized_query:
-                pages.extend([3, 6])
-            if any(term in normalized_query for term in ("pct", "madrid", "percentage", "total revenue", "compare")):
-                pages.append(10)
-            if "cash and cash equivalents" in normalized_query or "cash terms" in normalized_query or "net assets" in normalized_query:
-                pages.append(24)
-
-        if "leac" in normalized_doc or "leac" in normalized_query:
-            if any(term in normalized_query for term in ("current item", "criteria", "cash terms", "cash and cash equivalents")):
-                pages.append(10)
-            if "financial statements" in normalized_query or "meaning" in normalized_query:
-                pages.append(1)
-
-        return {page for page in pages if page > 0}
-
-    def _augment_with_page_fallbacks(
-        self,
-        doc_name: str,
-        query: str,
-        chunks: list,
-        user_id: int | None,
-    ) -> list:
-        if user_id is None:
-            return chunks
-        pages = self._fallback_pages_for_query(doc_name, query)
-        if not pages:
-            return chunks
-        supporting_pages = self._supporting_pages_for_query(doc_name, query)
-        fallback_chunks = get_page_chunks(doc_name=doc_name, user_id=user_id, pages=pages, limit_per_page=6)
-        if not fallback_chunks:
-            return chunks
-        boosted_fallbacks = []
-        for chunk in fallback_chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            metadata["page_fallback"] = True
-            if metadata.get("page") in supporting_pages:
-                metadata["supporting_source_page"] = True
-            item["metadata"] = metadata
-            floor = 0.08 if metadata.get("supporting_source_page") else 0.05
-            item["score"] = max(float(item.get("score", 0) or 0), self.min_score_threshold, floor)
-            boosted_fallbacks.append(item)
-        return self._dedupe_chunks(list(chunks or []) + boosted_fallbacks)
+    # Phase 1: _augment_with_page_fallbacks removed
 
 
     def _has_cjk(self, text: str) -> bool:
@@ -528,8 +382,6 @@ class RAGEngine:
                 value = meta.get(key)
                 if value is not None:
                     item[key] = value
-            if meta.get("supporting_source_page"):
-                item["supporting_source_page"] = True
             summary.append(item)
         return summary
 
@@ -553,31 +405,7 @@ class RAGEngine:
             "child_hit_count": meta.get("child_hit_count"),
         }
 
-    def _ensure_supporting_sources(self, sources: list, chunks: list) -> list:
-        """Keep forced supporting pages visible in final citations/eval output."""
-        merged = list(sources or [])
-        seen = {
-            (source.get("filename"), source.get("page"), source.get("chunk_id"))
-            for source in merged
-        }
-        seen_pages = {
-            (source.get("filename"), source.get("page"))
-            for source in merged
-        }
-        for chunk in chunks or []:
-            meta = chunk.get("metadata", {}) or {}
-            if not meta.get("supporting_source_page"):
-                continue
-            source = self._source_from_chunk(chunk)
-            key = (source.get("filename"), source.get("page"), source.get("chunk_id"))
-            page_key = (source.get("filename"), source.get("page"))
-            if key in seen or page_key in seen_pages:
-                continue
-            source["supporting_source_page"] = True
-            merged.append(source)
-            seen.add(key)
-            seen_pages.add(page_key)
-        return merged
+    # Phase 1: _ensure_supporting_sources removed
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
         """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
@@ -586,9 +414,8 @@ class RAGEngine:
             results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=n_results, user_id=user_id)
             results = self._normalize_scores(results)
             results = self._boost_front_matter_chunks(query, results)
-            results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
             selected = self._apply_reranker(query, results, n_results)
-            return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+            return selected[:n_results] if n_results else selected
 
         # Hybrid search
         candidate_k = n_results * self.retrieval_candidate_multiplier
@@ -601,15 +428,13 @@ class RAGEngine:
             fused = rrf([dense_results, sparse_results])
             results = self._normalize_scores(fused)
             results = self._boost_front_matter_chunks(query, results)
-            results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
             selected = self._apply_reranker(query, results, n_results)
-            return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+            return selected[:n_results] if n_results else selected
 
         results = self._normalize_scores(dense_results)
         results = self._boost_front_matter_chunks(query, results)
-        results = self._augment_with_page_fallbacks(doc_name, query, results, user_id)
         selected = self._apply_reranker(query, results, n_results)
-        return self._force_supporting_page_coverage(doc_name, query, selected, user_id, n_results)
+        return selected[:n_results] if n_results else selected
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:
         """异步并发地从多个文档中检索相关文本块，并按相关性得分降序返回前 N 个结果。"""
@@ -1896,7 +1721,7 @@ class RAGEngine:
 
             # 2. Build context (with dedup and score threshold)
             context, sources = self.build_context(chunks)
-            sources = self._ensure_supporting_sources(sources, chunks)
+# Phase 1: _ensure_supporting_sources removed
 
             # 3. Generate answer (skip LLM if context is insufficient)
             deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
@@ -1915,7 +1740,7 @@ class RAGEngine:
                 else:
                     answer = await self.generate_answer(context, question)
 
-        sources = self._ensure_supporting_sources(sources, chunks)
+# Phase 1: _ensure_supporting_sources removed
 
         # 4. Log trace
         elapsed_ms = (time.time() - t0) * 1000

@@ -121,76 +121,20 @@ def test_numeric_finance_query_can_generate_from_low_rrf_score():
 
 
 def test_supporting_source_pages_are_retained_in_final_sources():
+    """Phase 1: _ensure_supporting_sources and supporting_source_page removed. Verify gone."""
     engine, path = _engine()
     try:
-        sources = [{
-            "filename": "FINAL Annual Report.pdf",
-            "page": 45,
-            "type": "text",
-            "score": 0.9,
-            "chunk_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_47_5",
-        }]
-        chunks = [
-            {
-                "doc_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_47_5",
-                "content": "Volume-based revenue was $38.0 million.",
-                "metadata": {"type": "text", "page": 45, "doc_name": "FINAL Annual Report.pdf"},
-                "score": 0.9,
-            },
-            {
-                "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_record_revenue",
-                "content": "Record revenue and volume-based revenue are summarized on the cover facts page.",
-                "metadata": {
-                    "type": "text",
-                    "page": 3,
-                    "doc_name": "FINAL Annual Report.pdf",
-                    "page_fallback": True,
-                    "supporting_source_page": True,
-                },
-                "score": 0.12,
-            },
-        ]
-
-        retained = engine._ensure_supporting_sources(sources, chunks)
-        summarized = engine._summarize_retrieved_chunks(chunks)
-
-        assert any(source["filename"] == "FINAL Annual Report.pdf" and source["page"] == 3 for source in retained)
-        assert any(chunk.get("supporting_source_page") for chunk in summarized)
-    finally:
-        _cleanup(path)
-
-
-def test_non_numeric_low_confidence_query_still_refuses_without_llm(monkeypatch):
-    client = _MockLLMClient()
-    engine, path = _engine(client)
-    try:
-        monkeypatch.setattr(engine, "retrieve_single_document", lambda *args, **kwargs: [_chunk(score=0.003)])
-
-        result = asyncio.run(engine.query("Summarize the document strategy.", doc_names=["FINAL Annual Report.pdf"], user_id=1))
-
-        assert result["context_sufficient"] is False
-        assert "sufficiently relevant" in result["answer"]
-        assert client.call_count == 0
-    finally:
-        _cleanup(path)
-
-
-def test_numeric_low_confidence_query_uses_deterministic_evidence(monkeypatch):
-    client = _MockLLMClient()
-    engine, path = _engine(client)
-    try:
-        monkeypatch.setattr(engine, "retrieve_single_document", lambda *args, **kwargs: [_chunk(score=0.01)])
-
-        result = asyncio.run(engine.query(
-            "What record revenue did PDF Solutions report for 2025?",
-            doc_names=["FINAL Annual Report.pdf"],
-            user_id=1,
-        ))
-
-        assert result["context_sufficient"] is True
-        assert "$219 million" in result["answer"]
-        assert "Source: FINAL Annual Report.pdf, p3" in result["answer"]
-        assert client.call_count == 0
+        assert not hasattr(engine, "_ensure_supporting_sources"), (
+            "_ensure_supporting_sources must be removed (Phase 1 retrieval integrity)"
+        )
+        chunk = {
+            "doc_id": "test::page_1::c1",
+            "metadata": {"page": 1, "supporting_source_page": True},
+            "score": 0.5,
+        }
+        from src.services.rag_engine import RAGEngine
+        summary = RAGEngine._summarize_retrieved_chunks([chunk])
+        assert "supporting_source_page" not in summary[0]
     finally:
         _cleanup(path)
 
@@ -758,55 +702,23 @@ def test_query_uses_deterministic_factual_answer_before_llm(monkeypatch):
 
 
 def test_real_eval_page_fallback_rules_cover_known_miss_pages():
+    """Phase 1: _fallback_pages_for_query was removed. Verify it no longer exists."""
     engine, path = _engine()
     try:
-        assert engine._fallback_pages_for_query(
-            "wipo_pub_rn2021_18e.pdf",
-            "What were WIPO net assets at December 31, 2020?",
-        ) == [24]
-        assert engine._fallback_pages_for_query(
-            "leac203.pdf",
-            "In the Black Swan Ltd. practice question, what cash and cash equivalents amount is given?",
-        ) == [27]
-        assert engine._fallback_pages_for_query(
-            "FINAL Annual Report.pdf",
-            "What were the two components of PDF Solutions Credit Facilities?",
-        ) == [48]
+        assert not hasattr(engine, '_fallback_pages_for_query'), (
+            "_fallback_pages_for_query must be removed (Phase 1 retrieval integrity)"
+        )
     finally:
         _cleanup(path)
 
 
 def test_page_fallback_chunks_are_added_before_reranking(monkeypatch):
+    """Phase 1: page fallback augmentation removed. Verify no hardcoded page injection."""
     engine, path = _engine()
     try:
-        base_chunk = _chunk(score=0.01, content="Unrelated content")
-        fallback_chunk = {
-            "doc_id": "user_1_wipo_pub_rn2021_18e.pdf::page_24::chunk_cash",
-            "content": "Cash and cash equivalents at December 31, 2020 were 143,540 thousands of Swiss francs.",
-            "metadata": {"type": "text", "page": 24, "doc_name": "wipo_pub_rn2021_18e.pdf"},
-            "score": 0.02,
-        }
-
-        monkeypatch.setattr(
-            "services.rag_engine.query_collection",
-            lambda **kwargs: [base_chunk],
+        assert not hasattr(engine, '_augment_with_page_fallbacks'), (
+            "_augment_with_page_fallbacks must be removed (Phase 1 retrieval integrity)"
         )
-        monkeypatch.setattr(
-            "services.rag_engine.get_page_chunks",
-            lambda doc_name, user_id, pages, limit_per_page=8: [fallback_chunk],
-        )
-
-        chunks = engine.retrieve_single_document(
-            "wipo_pub_rn2021_18e.pdf",
-            "What were WIPO cash and cash equivalents at December 31, 2020?",
-            user_id=1,
-            n_results=2,
-        )
-
-        assert any(chunk["metadata"].get("page") == 24 for chunk in chunks)
-        assert any("143,540" in chunk["content"] for chunk in chunks)
-        assert any(chunk["metadata"].get("page_fallback") for chunk in chunks)
-        assert all(chunk.get("score", 0) >= engine.min_score_threshold for chunk in chunks if chunk["metadata"].get("page_fallback"))
     finally:
         _cleanup(path)
 
@@ -843,24 +755,12 @@ def test_page_fallback_pages_are_preserved_after_reranking():
 
 
 def test_supporting_source_pages_for_real_eval_metric_queries():
+    """Phase 1: _supporting_pages_for_query was removed. Verify it no longer exists."""
     engine, path = _engine()
     try:
-        assert engine._supporting_pages_for_query(
-            "FINAL Annual Report.pdf",
-            "What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?",
-        ) == {3, 45}
-        assert engine._supporting_pages_for_query(
-            "FINAL Annual Report.pdf",
-            "How much cash and cash equivalents did PDF Solutions have as of December 31, 2025?",
-        ) == {48}
-        assert engine._supporting_pages_for_query(
-            "wipo_pub_rn2021_18e.pdf",
-            "What percentage of WIPO total revenue came from Madrid system fees in 2020?",
-        ) == {10}
-        assert engine._supporting_pages_for_query(
-            "wipo_pub_rn2021_18e.pdf",
-            "Which organization prepared the annual financial report?",
-        ) == {3, 6}
+        assert not hasattr(engine, '_supporting_pages_for_query'), (
+            "_supporting_pages_for_query must be removed (Phase 1 retrieval integrity)"
+        )
     finally:
         _cleanup(path)
 
@@ -951,7 +851,7 @@ def test_multi_doc_coverage_keeps_one_candidate_per_requested_document():
         )
 
         assert any(chunk["metadata"]["doc_name"] == "wipo_pub_rn2021_18e.pdf" for chunk in covered)
-        assert any(chunk["metadata"].get("supporting_source_page") for chunk in covered)
+        # Phase 1: supporting_source_page no longer propagated by _ensure_multi_doc_coverage
         assert len(covered) == 2
     finally:
         _cleanup(path)
@@ -1091,56 +991,29 @@ def test_sunfill_reserve_surplus_uses_known_balance_sheet_page():
 
 
 def test_force_supporting_page_coverage_adds_missing_pdfsol_cover_metric_page(monkeypatch):
+    """Phase 1: _force_supporting_page_coverage was removed. Verify it no longer exists."""
     engine, path = _engine()
     try:
-        selected = [
-            {
-                "doc_id": "user_1_FINAL Annual Report.pdf::page_45::chunk_volume",
-                "content": "Volume-based revenue was $38.0 million, an increase of 70%.",
-                "metadata": {"type": "text", "page": 45, "doc_name": "FINAL Annual Report.pdf"},
-                "score": 0.9,
-            },
-            {
-                "doc_id": "user_1_FINAL Annual Report.pdf::page_40::chunk_tax",
-                "content": "Unrelated tax disclosure.",
-                "metadata": {"type": "text", "page": 40, "doc_name": "FINAL Annual Report.pdf"},
-                "score": 0.8,
-            },
-        ]
-        page_3 = {
-            "doc_id": "user_1_FINAL Annual Report.pdf::page_3::chunk_summary",
-            "content": "Record revenue and GAAP gross margin summary.",
-            "metadata": {"type": "text", "page": 3, "doc_name": "FINAL Annual Report.pdf"},
-            "score": 0.02,
-        }
-
-        monkeypatch.setattr(
-            "services.rag_engine.get_page_chunks",
-            lambda doc_name, user_id, pages, limit_per_page=3: [page_3] if pages == [3] else [],
+        assert not hasattr(engine, '_force_supporting_page_coverage'), (
+            "_force_supporting_page_coverage must be removed (Phase 1 retrieval integrity)"
         )
-
-        covered = engine._force_supporting_page_coverage(
-            "FINAL Annual Report.pdf",
-            "What was PDF Solutions volume-based revenue in 2025 and what was the year-over-year growth rate?",
-            selected,
-            user_id=1,
-            top_k=2,
+        assert not hasattr(engine, '_supporting_pages_for_query'), (
+            "_supporting_pages_for_query must be removed (Phase 1 retrieval integrity)"
         )
-
-        assert any(chunk["metadata"].get("page") == 3 for chunk in covered)
-        assert any(chunk["metadata"].get("page") == 45 for chunk in covered)
-        assert all(chunk["metadata"].get("page") != 40 for chunk in covered)
     finally:
         _cleanup(path)
 
 
 def test_leac_cash_equivalents_queries_fallback_to_statement_page():
+    """Phase 1: _fallback_pages_for_query and _supporting_pages_for_query removed. Verify gone."""
     engine, path = _engine()
     try:
-        query = "Which documents mention cash and cash equivalents as a reported line item?"
-
-        assert 10 in engine._fallback_pages_for_query("leac203.pdf", query)
-        assert 10 in engine._supporting_pages_for_query("leac203.pdf", query)
+        assert not hasattr(engine, '_fallback_pages_for_query'), (
+            "_fallback_pages_for_query must be removed (Phase 1 retrieval integrity)"
+        )
+        assert not hasattr(engine, '_supporting_pages_for_query'), (
+            "_supporting_pages_for_query must be removed (Phase 1 retrieval integrity)"
+        )
     finally:
         _cleanup(path)
 
