@@ -1,14 +1,11 @@
 from .trace import TraceLogger
-import time
 import os
 import re
 
-import asyncio
-from .vector_store import query_collection, list_all_documents, get_front_matter_chunks, get_page_chunks
-from .retrieval import SqliteBM25Retriever, rrf
+from .vector_store import query_collection, list_all_documents, get_front_matter_chunks
+from .retrieval import SqliteBM25Retriever
 from .reranker import build_reranker
 from .intent import classify_query_intent
-from .memory_profile import build_memory_profile_context
 from src.retrieval.query_processor import QueryProcessor
 from src.retrieval.retrieval_pipeline import RetrievalPipeline
 from src.retrieval.candidate_fusion import (
