@@ -25,6 +25,7 @@ from src.generation.prompt_builder import get_system_prompt
 from src.generation.llm_gateway import LLMGateway
 from src.generation.response_renderer import validate_answer
 from src.generation.deterministic_answers import DeterministicAnswerExtractor
+from src.application.rag_orchestrator import RAGOrchestrator
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -139,6 +140,21 @@ class RAGEngine:
         )
         self._deterministic_extractor = DeterministicAnswerExtractor(
             query_processor=self._query_processor,
+        )
+        self._orchestrator = RAGOrchestrator(
+            query_processor=self._query_processor,
+            retrieval_pipeline=self._retrieval_pipeline,
+            context_builder=self._context_builder,
+            sufficiency_evaluator=self._sufficiency_evaluator,
+            llm_gateway=self._llm_gateway,
+            deterministic_extractor=self._deterministic_extractor,
+            trace_logger=self.trace_logger,
+            intent_classifier=classify_query_intent,
+            list_all_documents_fn=list_all_documents,
+            get_front_matter_chunks_fn=get_front_matter_chunks,
+            numeric_rrf_floor=self.numeric_rrf_floor,
+            numeric_dense_floor=self.numeric_dense_floor,
+            model_name=self.model_name,
         )
 
     def _get_bm25_retriever(self, doc_name=str, user_id: int = None):
@@ -400,209 +416,10 @@ class RAGEngine:
         conversation_history: list = None,
         memory_profile: dict | None = None,
     ) -> dict:
-        """查询一个或多个文档的统一入口方法（全异步）。默认 top-k=3 适配短上下文。"""
-        t0 = time.time()
-        trace_data = {
-            "tenant_id": user_id,
-            "query_original": question,
-        }
-
-        # Phase 4: Rewrite follow-up question using conversation context
-        original_question = question
-        if conversation_history:
-            question = await self._rewrite_query_with_context(question, conversation_history, memory_profile)
-            trace_data["query_rewritten"] = question
-            if build_memory_profile_context(memory_profile):
-                trace_data["memory_profile_used"] = True
-
-        intent = classify_query_intent(question)
-        trace_data["intent"] = intent["intent"]
-
-        conversational_response = self._handle_conversational_query(question)
-        if conversational_response:
-            result = {
-                "answer": conversational_response,
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": "conversation",
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        if not intent["requires_retrieval"]:
-            result = {
-                "answer": "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": intent["intent"],
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        if doc_names is None:
-            all_docs = list_all_documents(user_id)
-            doc_names = [doc["name"] for doc in all_docs]
-
-        if not doc_names:
-            result = {
-                "answer": "No documents found in database. Please upload documents first.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        # 1. Retrieve relevant chunks. Front-matter facts use direct metadata lookup first.
-        chunks = self.retrieve_front_matter_chunks(doc_names, question, user_id)
-        if not chunks:
-            if len(doc_names) == 1:
-                chunks = self.retrieve_single_document(doc_names[0], question, user_id, n_results)
-            else:
-                chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
-
-        front_matter_answer = self.answer_front_matter_query(question, chunks)
-        deterministic_answer = None
-        if front_matter_answer:
-            chunks = front_matter_answer["chunks"]
-            context, sources = self.build_context(chunks)
-            answer = front_matter_answer["answer"]
-            is_sufficient = True
-            best_score = 1.0
-            avg_score = 1.0
-            confidence = 1.0
-            deterministic_answer = front_matter_answer["diagnostic"]
-        else:
-            # Phase 3: Check context sufficiency
-            is_sufficient, best_score, avg_score = self._check_context_sufficiency(chunks)
-            confidence = self._compute_confidence(chunks)
-
-            # 2. Build context (with dedup and score threshold)
-            context, sources = self.build_context(chunks)
-            # 3. Generate answer (skip LLM if context is insufficient)
-            deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
-            if deterministic_context_answer:
-                answer = deterministic_context_answer["answer"]
-                is_sufficient = True
-                deterministic_answer = deterministic_context_answer["diagnostic"]
-                low_confidence_numeric_override = False
-            else:
-                low_confidence_numeric_override = self._should_generate_with_low_confidence(question, chunks)
-                if low_confidence_numeric_override:
-                    is_sufficient = True
-
-                if not is_sufficient:
-                    answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
-                else:
-                    answer = await self.generate_answer(context, question)
-
-        # 4. Log trace
-        elapsed_ms = (time.time() - t0) * 1000
-        trace_data.update({
-            "filter_conditions": {"doc_names": doc_names, "n_results": n_results},
-            "candidates": [
-                {
-                    "doc_id": c.get("doc_id", ""),
-                    "score": c.get("score", 0),
-                    "rerank_score": c.get("rerank_score"),
-                    "reranker": c.get("reranker"),
-                }
-                for c in chunks
-            ],
-            "final_context": context,
-            "answer": answer,
-            "sources": sources,
-            "diagnostics": {
-                "confidence": confidence,
-                "context_sufficient": is_sufficient,
-                "intent_confidence": intent["confidence"],
-                "deterministic_answer": deterministic_answer,
-                "low_confidence_numeric_override": (
-                    low_confidence_numeric_override if not front_matter_answer else False
-                ),
-            },
-            "model_name": self.model_name,
-            "latency_ms": elapsed_ms,
-        })
-        trace_id = None
-        try:
-            trace_id = self.trace_logger.log(**trace_data)
-        except Exception:
-            pass  # tracing must never break the query path
-
-        return {
-            "answer": answer,
-            "sources": sources,
-            "context": context,
-            "searched_docs": doc_names,
-            "confidence": confidence,
-            "context_sufficient": is_sufficient,
-            "intent": intent["intent"],
-            "intent_confidence": intent["confidence"],
-            "rewritten_question": question if conversation_history else None,
-            "retrieved_chunks": self._summarize_retrieved_chunks(chunks),
-            "retrieval_debug": dict(self._last_retrieval_debug),
-            "trace_id": trace_id,
-        }
+        return await self._orchestrator.query(
+            question, doc_names, user_id, n_results,
+            conversation_history, memory_profile,
+        )
 
     def _handle_conversational_query(self, query: str) -> str | None:
-        """
-        处理对话性/元问题（无需 RAG 检索）。
-        增加财务关键词前置保护，防止合法查询被误判为闲聊。
-        """
-        query_lower = query.lower().strip()
-
-        # 财务强相关关键词，出现这些词绝不能被判定为闲聊
-        financial_indicators = [
-            "revenue", "expense", "profit", "loss", "income", "cash",
-            "balance", "debt", "equity", "margin", "growth", "quarter",
-            "fiscal", "earnings", "dividend", "asset", "liability",
-            "$", "%", "million", "billion", "q1", "q2", "q3", "q4",
-            "fy", "yoy", "table", "page", "report", "statement", "cost",
-            # 中文金融关键词
-            "营收", "利润", "亏损", "收入", "现金", "负债", "资产", "权益",
-            "增长", "季度", "财报", "股息", "报表", "成本", "费用", "净利"
-        ]
-        if any(ind in query_lower for ind in financial_indicators):
-            return None  # 强制走 RAG 路径
-
-        # Greetings
-        greetings = ["hi", "hello", "hi there", "hey", "good morning", "good afternoon", "good evening"]
-        if any(query_lower.startswith(g) for g in greetings) and len(query_lower.split()) <= 3:
-            return "Hello! I'm FinQuery, your financial document assistant. I can help you find information in your uploaded documents. What would you like to know?"
-
-        # Identity questions
-        identity_keywords = [
-            "what are you", "who are you", "what is finquery",
-            "tell me about yourself", "what do you do", "what can you do",
-            "how do you work", "what's your purpose"
-        ]
-        if any(keyword in query_lower for keyword in identity_keywords):
-            return "I'm FinQuery, an AI assistant that helps you analyze financial documents. Upload PDFs of reports, statements, or other financial documents, and I'll answer questions about them using the exact information from those documents."
-
-        # Capability questions
-        capability_keywords = ["how does this work", "how to use", "help me", "what can i ask", "how do i use this"]
-        if any(keyword in query_lower for keyword in capability_keywords):
-            return "Here's how to use FinQuery:\n1. Upload financial documents (PDFs)\n2. Ask questions about the content\n3. I'll provide answers with page citations\n\nTry: 'What was the revenue in Q3?' or 'Summarize key financial metrics'"
-
-        # Thanks/gratitude
-        thanks_keywords = ["thank you", "thanks", "thx", "appreciate"]
-        if any(keyword in query_lower for keyword in thanks_keywords) and len(query_lower.split()) <= 5:
-            return "You're welcome! Let me know if you have any other questions about your documents."
-
-        # Goodbyes
-        goodbye_keywords = ["bye", "goodbye", "see you", "exit", "quit"]
-        if any(keyword in query_lower for keyword in goodbye_keywords) and len(query_lower.split()) <= 3:
-            return "Goodbye! Feel free to come back anytime you need to analyze financial documents."
-
-        return None
+        return RAGOrchestrator._handle_conversational_query(query)
