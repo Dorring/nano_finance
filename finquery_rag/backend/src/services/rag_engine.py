@@ -236,8 +236,7 @@ class RAGEngine:
             best = max(
                 doc_candidates,
                 key=lambda chunk: (
-                    1 if (chunk.get("metadata") or {}).get("page_fallback") else 0,
-                    float(chunk.get("score", 0) or 0),
+float(chunk.get("score", 0) or 0),
                 ),
                 default=None,
             )
@@ -246,14 +245,7 @@ class RAGEngine:
             if len(selected) < top_k:
                 selected.append(best)
             else:
-                replace_index = None
-                for index in range(len(selected) - 1, -1, -1):
-                    metadata = selected[index].get("metadata") or {}
-                    if not metadata.get("page_fallback"):
-                        replace_index = index
-                        break
-                if replace_index is None:
-                    replace_index = len(selected) - 1
+                replace_index = len(selected) - 1
                 selected[replace_index] = best
             selected_ids.add(best.get("doc_id"))
             selected_docs.add(doc_name)
@@ -1524,11 +1516,10 @@ class RAGEngine:
     def _should_try_deterministic_factual_answer(query: str) -> bool:
         normalized = (query or "").lower()
         factual_markers = (
-            "what topic", "what is the title", "title and reporting period",
-            "which organization", "prepared", "what are financial statements",
-            "according to", "nature section", "basis for preparation",
+            "what is the title", "title and reporting period",
+            "which organization", "prepared",
+            "according to",
             "list two criteria", "criteria that make an item current",
-            "which documents mention", "cash terms",
         )
         return any(marker in normalized for marker in factual_markers)
 
@@ -1559,12 +1550,10 @@ class RAGEngine:
             "surplus": {"reserve", "surplus"},
             "operating": {"operating", "activities"},
             "facilities": {"facility", "facilities", "loan", "credit"},
-            "organization": {"organization", "wipo", "world", "intellectual", "property"},
-            "prepared": {"prepared", "organization", "wipo"},
+            "organization": {"organization", "prepared"},
+            "prepared": {"prepared", "organization"},
             "statements": {"statements", "financial"},
             "current": {"current", "operating", "cycle", "twelve", "months", "trading", "cash"},
-            "leac203.pdf": {"accountancy", "financial", "statements", "company"},
-            "leac203": {"accountancy", "financial", "statements", "company"},
         }
         expanded = set(terms)
         for term in list(terms):
