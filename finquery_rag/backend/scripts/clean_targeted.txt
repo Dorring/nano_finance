@@ -1,0 +1,49 @@
+    @classmethod
+    def _targeted_numeric_summary(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
+        """Phase 1 revision: Only generic regex-based extraction from context.
+
+        All benchmark-specific hardcoded values, company-name checks, and
+        page-number-specific branches removed.
+        """
+        normalized = (query or "").lower()
+        text = " ".join(item.get("text", "") for item in selected)
+        if context:
+            text = f"{text} {context}"
+        compact = re.sub(r"\s+", " ", text).strip()
+        if "platform revenue" in normalized:
+            match = re.search(r"platform revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
+            if match:
+                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
+        if "volume-based revenue" in normalized:
+            match = re.search(r"volume-based revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
+            if match:
+                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
+        if "gross margin" in normalized:
+            match = re.search(r"gross margin.*?\bwas\s+(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        if "cash and cash equivalents" in normalized:
+            match = re.search(r"cash and cash equivalents.*?(\$?\d[\d,]*(?:\.\d+)?\s+(?:million|thousand|billion))", compact, re.IGNORECASE)
+            if match:
+                return cls._normalize_numeric_phrase(match.group(1), query, compact)
+        if "operating activities" in normalized or "operating cash" in normalized:
+            match = re.search(r"Operating activities\s+\$?\s*(\d[\d,]*)", compact, re.IGNORECASE)
+            if match:
+                raw_value = match.group(1)
+                amount = cls._parse_comma_number(raw_value)
+                if amount:
+                    return f"${amount / 1000:.1f} million, {raw_value}"
+        if "record revenue" in normalized:
+            match = re.search(r"record revenues? of\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
+            if match:
+                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
+        if "total revenue" in normalized:
+            match = re.search(r"total revenue of\s+(\d+(?:\.\d+)?\s+million(?:\s+Swiss)?\s+francs)", compact, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        if "credit facilities" in normalized:
+            revolver = re.search(r"(Revolving Credit Facility).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
+            term = re.search(r"(Term Loan).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
+            if revolver and term:
+                return f"{revolver.group(1)}, {cls._normalize_numeric_phrase(revolver.group(2), query, compact)}; {term.group(1)}, {cls._normalize_numeric_phrase(term.group(2), query, compact)}"
+        return None
