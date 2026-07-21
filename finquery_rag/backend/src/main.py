@@ -911,6 +911,7 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             trace_id=result.get("trace_id"),
             retrieved_chunks=result.get("retrieved_chunks", []),
             retrieval_debug=result.get("retrieval_debug", {}),
+            calculations=result.get("calculations", []),
         )
 
     except HTTPException:
@@ -924,7 +925,12 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
 async def query_documents_stream(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
     使用服务器发送事件（SSE）流式传输查询响应。
-    统一共享 /query 的改写、充分性判断和 session 行为。
+
+    Phase 3 热修复：统一调用 ``engine.query()``，使计算链路在生产
+    流式接口中生效。当 ``calculations`` 非空时（EXECUTED/BLOCKED/
+    FAILED），确定性答案作为单个 token 事件输出，不调用 LLM 流式
+    生成；非计算请求的答案同样通过 ``engine.query()`` 获取并以
+    SSE 协议输出。
 
     Args:
         request (QueryRequest): 查询请求体。
@@ -936,226 +942,75 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
     )
 
     async def generate():
-        trace_id = None
         try:
             engine = get_rag_engine()
             session_id = _validate_session_id(request.session_id) if request.session_id else None
-            started_at = time.time()
-            trace_data = {
-                "tenant_id": current_user.id,
-                "query_original": request.question,
-                "model_name": llm_model_name,
-            }
 
-            def finish_trace(answer, sources=None, doc_names=None, chunks=None, context=None, diagnostics=None):
-                elapsed_ms = (time.time() - started_at) * 1000
-                trace_data.update({
-                    "filter_conditions": {"doc_names": doc_names or [], "n_results": request.n_results},
-                    "candidates": [
-                        {
-                            "doc_id": c.get("doc_id", ""),
-                            "score": c.get("score", 0),
-                            "rerank_score": c.get("rerank_score"),
-                            "reranker": c.get("reranker"),
-                        }
-                        for c in (chunks or [])
-                    ],
-                    "final_context": context,
-                    "answer": answer,
-                    "sources": sources or [],
-                    "diagnostics": diagnostics,
-                    "latency_ms": elapsed_ms,
-                })
-                return safe_log_query_trace(engine, trace_data)
-
-            # Phase 4: Load conversation history and rewrite query
-            question = request.question
+            # Load conversation history for query rewriting (shared with /query).
             conversation_history = None
             if session_id:
                 conversation_history = session_manager.get_recent_messages(
                     session_id, current_user.id
                 )
             memory_profile = memory_store.get_profile(current_user.id)
-            if conversation_history:
-                question = await engine._rewrite_query_with_context(question, conversation_history, memory_profile)
-                trace_data["query_rewritten"] = question
-                if memory_profile:
-                    trace_data["memory_profile_used"] = True
 
-            intent = classify_query_intent(question)
-            trace_data["intent"] = intent["intent"]
+            # Unified: call engine.query() which runs the full orchestrator
+            # including the Phase 3 calculation pipeline. This ensures the
+            # streaming path exercises the same calculation logic as /query.
+            result = await engine.query(
+                question=request.question,
+                doc_names=resolved_doc_names,
+                n_results=request.n_results,
+                user_id=current_user.id,
+                conversation_history=conversation_history,
+                memory_profile=memory_profile,
+            )
 
-            # Phase 3: Check if conversational (no RAG needed)
-            conversational = engine._handle_conversational_query(question)
-            if conversational:
-                trace_id = finish_trace(conversational)
-                yield f"data: {json.dumps({'type': 'token', 'content': conversational})}\n\n"
-                yield make_stream_done_event(sources=[], context_sufficient=True, intent='conversation', intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
+            answer = result["answer"]
+            sources = result.get("sources", [])
+            confidence = result.get("confidence")
+            context_sufficient = result.get("context_sufficient")
+            intent = result.get("intent")
+            intent_confidence = result.get("intent_confidence")
+            trace_id = result.get("trace_id")
+            calculations = result.get("calculations", [])
 
-            if not intent["requires_retrieval"]:
-                refusal = "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data."
-                trace_id = finish_trace(refusal)
-                yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-                yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
-
-            # Get document names resolved from ready lifecycle state.
-            doc_names = resolved_doc_names
-
-            if not doc_names:
-                answer = 'No documents found. Please upload documents first.'
-                trace_id = finish_trace(answer, doc_names=[])
-                yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
-                yield make_stream_done_event(sources=[], context_sufficient=True, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
-
-            # Phase 3: Retrieve chunks and check sufficiency. Front-matter facts use direct metadata lookup first.
-            chunks = engine.retrieve_front_matter_chunks(doc_names, question, current_user.id)
-            if not chunks:
-                if len(doc_names) == 1:
-                    chunks = engine.retrieve_single_document(doc_names[0], question, current_user.id, request.n_results)
-                else:
-                    chunks = await engine.retrieve_multiple_documents(doc_names, question, current_user.id, request.n_results)
-
-            front_matter_answer = engine.answer_front_matter_query(question, chunks)
-            if front_matter_answer:
-                chunks = front_matter_answer["chunks"]
-                context, sources = engine.build_context(chunks)
-                answer = front_matter_answer["answer"]
-                diagnostics = {
-                    "confidence": 1.0,
-                    "context_sufficient": True,
-                    "intent_confidence": intent["confidence"],
-                    "deterministic_answer": front_matter_answer["diagnostic"],
-                }
-                trace_id = finish_trace(answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
-                if session_id:
-                    session_manager.add_message(session_id, current_user.id, "user", request.question)
-                    session_manager.add_message(
-                        session_id,
-                        current_user.id,
-                        "assistant",
-                        answer,
-                        metadata=_assistant_session_metadata(
-                            sources=sources,
-                            trace_id=trace_id,
-                            context_sufficient=True,
-                            confidence=1.0,
-                            intent=intent["intent"],
-                            intent_confidence=intent["confidence"],
-                        ),
-                    )
-                yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
-                yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=1.0, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
-
-            is_sufficient, best_score, avg_score = engine._check_context_sufficiency(chunks)
-            confidence = engine._compute_confidence(chunks)
-
-            # Phase 3: Build context
-            context, sources = engine.build_context(chunks)
-
-            deterministic_context_answer = engine.answer_deterministic_query_from_context(question, context, sources)
-            if deterministic_context_answer:
-                full_answer = deterministic_context_answer["answer"]
-                diagnostics = {
-                    "confidence": confidence,
-                    "context_sufficient": True,
-                    "intent_confidence": intent["confidence"],
-                    "deterministic_answer": deterministic_context_answer["diagnostic"],
-                }
-                if session_id:
-                    session_manager.add_message(session_id, current_user.id, "user", request.question)
-                trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
-                if session_id:
-                    session_manager.add_message(
-                        session_id,
-                        current_user.id,
-                        "assistant",
-                        full_answer,
-                        metadata=_assistant_session_metadata(
-                            sources=sources,
-                            trace_id=trace_id,
-                            context_sufficient=True,
-                            confidence=confidence,
-                            intent=intent["intent"],
-                            intent_confidence=intent["confidence"],
-                        ),
-                    )
-                yield f"data: {json.dumps({'type': 'token', 'content': full_answer})}\n\n"
-                yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
-
-            # Phase 3: If context is insufficient, return refusal without calling LLM
-            low_confidence_numeric_override = engine._should_generate_with_low_confidence(question, chunks)
-            if low_confidence_numeric_override:
-                is_sufficient = True
-
-            if not is_sufficient:
-                refusal = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
-                if session_id:
-                    session_manager.add_message(session_id, current_user.id, "user", request.question)
-                diagnostics = {
-                    "confidence": confidence,
-                    "context_sufficient": False,
-                    "intent_confidence": intent["confidence"],
-                }
-                trace_id = finish_trace(refusal, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
-                if session_id:
-                    session_manager.add_message(
-                        session_id,
-                        current_user.id,
-                        "assistant",
-                        refusal,
-                        metadata=_assistant_session_metadata(
-                            sources=sources,
-                            trace_id=trace_id,
-                            context_sufficient=False,
-                            confidence=confidence,
-                            intent=intent["intent"],
-                            intent_confidence=intent["confidence"],
-                        ),
-                    )
-                yield f"data: {json.dumps({'type': 'token', 'content': refusal})}\n\n"
-                yield make_stream_done_event(sources=sources, context_sufficient=False, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
-                return
-
-            # Phase 4: Save user question to session
+            # Save session messages (compatible with /query behavior).
             if session_id:
                 session_manager.add_message(session_id, current_user.id, "user", request.question)
-
-            # Stream LLM response
-            full_answer = ""
-            for token in engine.generate_answer_stream(context, question):
-                full_answer += token
-                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
-
-            diagnostics = {
-                "confidence": confidence,
-                "context_sufficient": True,
-                "intent_confidence": intent["confidence"],
-                "low_confidence_numeric_override": low_confidence_numeric_override,
-            }
-            trace_id = finish_trace(full_answer, sources=sources, doc_names=doc_names, chunks=chunks, context=context, diagnostics=diagnostics)
-
-            # Phase 4: Save assistant answer to session with trace/source metadata.
-            if session_id:
                 session_manager.add_message(
                     session_id,
                     current_user.id,
                     "assistant",
-                    full_answer,
+                    answer,
                     metadata=_assistant_session_metadata(
+                        result=result,
                         sources=sources,
                         trace_id=trace_id,
-                        context_sufficient=True,
+                        context_sufficient=context_sufficient,
                         confidence=confidence,
-                        intent=intent["intent"],
-                        intent_confidence=intent["confidence"],
+                        intent=intent,
+                        intent_confidence=intent_confidence,
                     ),
                 )
-            yield make_stream_done_event(sources=sources, context_sufficient=True, confidence=confidence, intent=intent['intent'], intent_confidence=intent['confidence'], trace_id=trace_id)
+
+            # Emit the answer as a token event. For calculation results
+            # (EXECUTED/BLOCKED/FAILED) the LLM stream is never invoked —
+            # the answer is deterministic. For non-calculation results the
+            # answer was already generated by engine.query() and is emitted
+            # as a single token event.
+            yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
+
+            # Emit the done event with all fields including calculations.
+            yield make_stream_done_event(
+                sources=sources,
+                confidence=confidence,
+                context_sufficient=context_sufficient,
+                intent=intent,
+                intent_confidence=intent_confidence,
+                trace_id=trace_id,
+                calculations=calculations,
+            )
 
         except Exception as exc:
             error_message = "Streaming query failed. Please retry."

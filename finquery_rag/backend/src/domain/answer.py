@@ -6,7 +6,13 @@ legacy dict shape: each production code path constructs an ``AnswerResult``
 and ``to_legacy_dict`` reproduces the exact field set that the pre-refactor
 ``RAGOrchestrator.query`` returned, so the public API remains bit-for-bit
 compatible.
+
+Phase 3 Commit 8 adds an optional ``calculations`` field carrying
+structured calculation diagnostics when the deterministic calculation
+pipeline is invoked. ``to_legacy_dict`` emits ``calculations`` only when
+non-empty, so existing API consumers are unaffected.
 """
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -95,6 +101,11 @@ class AnswerResult:
     the exact dict shape that ``RAGOrchestrator.query`` returned before this
     refactor, including which fields are omitted per branch and whether
     ``rewritten_question`` is included when ``conversation_history`` is empty.
+
+    ``calculations`` (added in Phase 3 Commit 8) carries structured
+    calculation diagnostics when the deterministic calculation pipeline
+    produces an answer. It defaults to an empty tuple and is omitted from
+    ``to_legacy_dict`` when empty, so existing API consumers are unaffected.
     """
 
     answer: str
@@ -112,6 +123,7 @@ class AnswerResult:
     warnings: tuple[str, ...] = ()
     path: AnswerPath = AnswerPath.FULL
     had_conversation_history: bool = False
+    calculations: tuple[dict[str, Any], ...] = ()
 
     def to_legacy_dict(self) -> dict[str, Any]:
         """Convert to the legacy API response dict format.
@@ -121,6 +133,9 @@ class AnswerResult:
         ``rewritten_question`` is included conditionally:
         - ``FULL``: always present (possibly None).
         - Other paths: present iff ``had_conversation_history`` is True.
+
+        ``calculations`` and ``warnings`` are emitted only when non-empty
+        (additive fields that do not affect the legacy field set).
         """
         result: dict[str, Any] = {}
         include_rewritten = (
@@ -134,6 +149,8 @@ class AnswerResult:
 
         if self.warnings:
             result["warnings"] = list(self.warnings)
+        if self.calculations:
+            result["calculations"] = list(self.calculations)
         return result
 
     def _legacy_value(self, name: str) -> Any:

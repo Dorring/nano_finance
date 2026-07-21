@@ -51,6 +51,14 @@ def test_resolve_query_deduplicates_preserving_order():
 
 
 def test_main_query_endpoints_use_ready_document_resolver_static():
+    """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+    Both /query and /query/stream resolve document names via
+    ``_resolve_query_document_names_for_user`` and pass the resolved
+    names to ``engine.query(doc_names=...)``. The legacy
+    ``doc_names = resolved_doc_names`` assignment was removed when
+    /query/stream was unified.
+    """
     main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
     content = open(main_path, encoding="utf-8").read()
 
@@ -58,4 +66,3 @@ def test_main_query_endpoints_use_ready_document_resolver_static():
     assert "document_registry.list_documents(user_id)" in content
     assert "Documents are not ready or not found" in content
     assert "doc_names=resolved_doc_names" in content
-    assert "doc_names = resolved_doc_names" in content

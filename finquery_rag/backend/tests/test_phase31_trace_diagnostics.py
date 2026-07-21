@@ -65,15 +65,24 @@ def test_trace_logger_migrates_legacy_schema_with_diagnostics(tmp_path):
 
 
 def test_query_paths_pass_diagnostics_to_trace_static():
+    """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+    Diagnostics are constructed inside RAGOrchestrator.answer() and logged
+    via trace_logger. The stream endpoint delegates to engine.query() which
+    runs the full orchestrator including trace logging. This static test
+    verifies the orchestrator still emits diagnostics and the trace lookup
+    helper still exists.
+    """
     main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
     orchestrator_path = os.path.join(os.path.dirname(__file__), "..", "src", "application", "rag_orchestrator.py")
     main = open(main_path, encoding="utf-8").read()
     orchestrator = open(orchestrator_path, encoding="utf-8").read()
 
-    assert '"diagnostics": diagnostics' in main
-    assert 'trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}' in main
+    # Orchestrator must still construct diagnostics and log trace.
     assert '"diagnostics": {' in orchestrator
     assert '"context_sufficient": is_sufficient' in orchestrator
+    # main.py trace lookup helper must still exist.
+    assert 'trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}' in main
 
 
 

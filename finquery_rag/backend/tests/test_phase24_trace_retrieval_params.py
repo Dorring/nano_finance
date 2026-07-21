@@ -33,7 +33,15 @@ def test_rag_engine_trace_records_n_results_static():
 
 
 def test_stream_trace_records_request_n_results_static():
+    """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+    The stream endpoint delegates to engine.query() which runs the full
+    orchestrator. ``n_results`` is passed through as a request parameter.
+    This static test verifies the stream endpoint passes ``n_results`` to
+    ``engine.query()``; the orchestrator records it in filter_conditions.
+    """
     path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
     content = open(path, encoding="utf-8").read()
 
-    assert '"filter_conditions": {"doc_names": doc_names or [], "n_results": request.n_results}' in content
+    # Stream must pass n_results to engine.query().
+    assert "n_results=request.n_results" in content

@@ -196,35 +196,41 @@ class TestClearAllIdempotent:
 class TestStreamSuite:
     """Item 10 audit round4: stream behavior matches /query for key paths."""
     def test_stream_no_docs_returns_message(self):
+        """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+        The no-docs case is handled inside engine.query() (via the
+        orchestrator). The stream endpoint delegates to engine.query()
+        and emits whatever answer it returns. This test verifies the
+        stream endpoint calls engine.query().
+        """
         import ast
         mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
         tree = ast.parse(open(mp, encoding='utf-8').read())
         for node in ast.walk(tree):
             if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents_stream':
-                found_no_docs = False
+                # Must call engine.query() inside generate()
+                calls_engine_query = False
                 for child in ast.walk(node):
-                    if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                        if 'No documents found' in child.value:
-                            found_no_docs = True
-                assert found_no_docs, 'stream should handle no-docs case'
+                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                        if child.func.attr == 'query':
+                            calls_engine_query = True
+                assert calls_engine_query, 'stream must call engine.query()'
                 break
 
     def test_stream_has_sufficiency_check(self):
+        """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+        Context sufficiency is evaluated inside the orchestrator
+        (RAGOrchestrator.answer). The stream endpoint delegates to
+        engine.query() which runs the full orchestrator. This test
+        verifies the stream endpoint reads ``context_sufficient`` from
+        the result dict.
+        """
         import ast
         mp = os.path.join(os.path.dirname(__file__), '..', 'src', 'main.py')
-        tree = ast.parse(open(mp, encoding='utf-8').read())
-        for node in ast.walk(tree):
-            if isinstance(node, ast.AsyncFunctionDef) and node.name == 'query_documents_stream':
-                has_suff_check = False
-                for child in ast.walk(node):
-                    if isinstance(child, ast.Call):
-                        f = child.func
-                        if isinstance(f, ast.Attribute) and f.attr == '_check_context_sufficiency':
-                            has_suff_check = True
-                    if isinstance(child, ast.Name) and child.id in ('is_sufficient', 'best_score'):
-                        has_suff_check = True
-                assert has_suff_check, 'stream must check context sufficiency'
-                break
+        content = open(mp, encoding='utf-8').read()
+        # The stream endpoint must read context_sufficient from result.
+        assert 'context_sufficient = result.get("context_sufficient")' in content
 
     def test_stream_has_session_handling(self):
         import ast

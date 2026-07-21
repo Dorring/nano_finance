@@ -1,0 +1,90 @@
+[
+  {
+    "case_id": "ordinary_document_qa",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "direct_numeric_query",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "front_matter_title",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "document_summary",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "conversation",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "no_documents",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "multi_document_query",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  },
+  {
+    "case_id": "insufficient_evidence_non_calc",
+    "query_expansion_equal": true,
+    "retrieval_order_equal": true,
+    "context_equal": true,
+    "prompt_equal": true,
+    "ordinary_answer_equal": true,
+    "sources_equal": true,
+    "legacy_fields_equal": true,
+    "trace_existing_fields_equal": true
+  }
+]

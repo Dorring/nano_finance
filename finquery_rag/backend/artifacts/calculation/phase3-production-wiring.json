@@ -1,0 +1,57 @@
+{
+  "artifact": "phase3-production-wiring",
+  "description": "Phase 3 production wiring verification. Each boolean field is backed by a real test that exercises the production HTTP/SSE path end-to-end.",
+  "generated_at": "2026-07-22",
+  "checks": {
+    "rag_engine_default_pipeline_enabled": {
+      "value": true,
+      "test": "tests/finance/test_rag_engine_calculation_wiring.py::TestRAGEngineCalculationWiring::test_default_engine_has_calculation_pipeline",
+      "evidence": "Default RAGEngine() creates a CalculationPipeline instance and injects it into RAGOrchestrator."
+    },
+    "http_query_exposes_calculations": {
+      "value": true,
+      "test": "tests/finance/test_calculation_http_endpoint.py::TestCalculationHTTPEndpoint::test_post_query_calculation_success",
+      "evidence": "POST /query returns QueryResponse with non-empty calculations array for calculation requests."
+    },
+    "http_stream_executes_calculation_pipeline": {
+      "value": true,
+      "test": "tests/finance/test_calculation_streaming_endpoint.py::TestCalculationStreamingEndpoint::test_done_event_includes_calculations",
+      "evidence": "POST /query/stream unified path calls engine.query() and the done SSE event carries calculations."
+    },
+    "http_stream_bypasses_llm_on_executed": {
+      "value": true,
+      "test": "tests/finance/test_calculation_streaming_endpoint.py::TestCalculationStreamingEndpoint::test_calculation_success_bypasses_llm_stream",
+      "evidence": "EXECUTED calculation does not invoke engine.generate_answer_stream; deterministic answer emitted as token event."
+    },
+    "http_stream_bypasses_llm_on_blocked": {
+      "value": true,
+      "test": "tests/finance/test_calculation_streaming_endpoint.py::TestCalculationStreamingEndpoint::test_blocked_bypasses_llm_stream",
+      "evidence": "BLOCKED calculation does not invoke engine.generate_answer_stream."
+    },
+    "http_stream_bypasses_llm_on_failed": {
+      "value": true,
+      "test": "tests/finance/test_calculation_streaming_endpoint.py::TestCalculationStreamingEndpoint::test_failed_bypasses_llm_stream",
+      "evidence": "FAILED calculation does not invoke engine.generate_answer_stream."
+    },
+    "public_payload_excludes_internal_error_message": {
+      "value": true,
+      "test": "tests/finance/test_calculation_http_endpoint.py::TestCalculationHTTPEndpoint::test_failed_no_internal_error_message",
+      "evidence": "FAILED CalculationResponse schema has no error_message field; to_public_dict() omits error_message."
+    },
+    "public_payload_limits_evidence_excerpt": {
+      "value": true,
+      "test": "tests/finance/test_calculation_http_endpoint.py::TestCalculationHTTPEndpoint::test_success_response_has_formula_version_and_evidence",
+      "evidence": "CalculationOperandResponse uses evidence_excerpt (<=240 chars via _safe_excerpt) instead of full source_text."
+    }
+  },
+  "summary": {
+    "all_checks_passed": true,
+    "production_paths_verified": [
+      "RAGEngine.__init__ -> CalculationPipeline injected by default",
+      "POST /query -> QueryResponse.calculations populated",
+      "POST /query/stream -> unified engine.query() path -> SSE done event with calculations",
+      "LLM stream bypassed for EXECUTED/BLOCKED/FAILED",
+      "Public payload sanitized (no error_message, truncated evidence_excerpt)"
+    ]
+  }
+}
