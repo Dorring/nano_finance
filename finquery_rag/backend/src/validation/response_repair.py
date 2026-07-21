@@ -194,7 +194,9 @@ class ResponseRepair:
             )
 
         # REPAIRABLE -> attempt deterministic repair.
-        repaired, notes = self._attempt_repair(answer, validation)
+        repaired, was_actually_repaired, notes = self._attempt_repair(
+            answer, validation
+        )
 
         if repaired is None or not repaired.strip():
             # Repair produced an empty answer -> fallback.
@@ -207,7 +209,7 @@ class ResponseRepair:
 
         return RepairResult(
             answer=repaired,
-            was_repaired=True,
+            was_repaired=was_actually_repaired,
             fallback_used=False,
             repair_notes=notes,
         )
@@ -220,15 +222,15 @@ class ResponseRepair:
         self,
         answer: str,
         validation: ValidationResult,
-    ) -> tuple[str | None, tuple[str, ...]]:
+    ) -> tuple[str | None, bool, tuple[str, ...]]:
         """Attempt a single deterministic repair.
 
         Current strategy: strip sentences containing ungrounded numeric
         claims. If the answer has no ungrounded claims (only citation
-        issues), attempt to append citations.
+        issues), the answer is returned as-is (non-blocking).
 
-        Returns ``(repaired_answer, notes)``. If the repair fails,
-        returns ``(None, notes)``.
+        Returns ``(repaired_answer, was_actually_repaired, notes)``.
+        If the repair fails, returns ``(None, False, notes)``.
         """
         notes: list[str] = []
 
@@ -247,15 +249,15 @@ class ResponseRepair:
         if has_blocking and not strip_claims:
             # Blocking issues that we cannot repair by stripping.
             notes.append("repair:unrepairable_blocking_issues")
-            return None, tuple(notes)
+            return None, False, tuple(notes)
 
         if strip_claims:
             repaired = self._strip_claims(answer, strip_claims)
             notes.append("repair:stripped_ungrounded_claims")
             if repaired is None or not repaired.strip():
                 notes.append("repair:all_content_stripped")
-                return None, tuple(notes)
-            return repaired, tuple(notes)
+                return None, False, tuple(notes)
+            return repaired, True, tuple(notes)
 
         # No strip-able claims; try citation repair.
         citation_issues = [
@@ -264,18 +266,15 @@ class ResponseRepair:
             and i.severity.value != "critical"
         ]
         if citation_issues:
-            # Citation repair: append a generic "[source]" marker.
-            # This is a minimal deterministic repair — we don't try to
-            # resolve specific evidence indices because that would
-            # require retrieval access (not allowed in the validator).
+            # Citation repair: for WARNING-level citation issues, the
+            # answer is still usable — return as-is (no actual repair
+            # applied, but no fallback needed).
             notes.append("repair:citation_issues_non_blocking")
-            # For WARNING-level citation issues, the answer is still
-            # usable — return as-is.
-            return answer, tuple(notes)
+            return answer, False, tuple(notes)
 
         # No repairable issues found.
         notes.append("repair:no_repairable_issues")
-        return answer, tuple(notes)
+        return answer, False, tuple(notes)
 
     @classmethod
     def _strip_claims(

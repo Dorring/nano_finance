@@ -225,6 +225,7 @@ class TestDeterministicRepair:
         """The repair is applied at most once (no recursive repairs)."""
         repair = ResponseRepair()
         answer = (
+            "Good text remains. "
             "Claim A is $999,999,999. "
             "Claim B is $888,888,888."
         )
@@ -242,10 +243,12 @@ class TestDeterministicRepair:
             ),
         )
         result = repair.repair(answer=answer, validation=validation)
-        # Both claims should be stripped in a single pass.
+        # Both bad claims should be stripped in a single pass.
         assert result.was_repaired is True
         assert "$999,999,999" not in result.answer
         assert "$888,888,888" not in result.answer
+        # Good text survives.
+        assert "Good text remains" in result.answer
 
     def test_repair_does_not_call_llm(self):
         """The repair is deterministic (no LLM call).
