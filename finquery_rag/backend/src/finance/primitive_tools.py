@@ -64,6 +64,8 @@ _SCALE_FACTORS = {
     "bn": Decimal("1000000000"),
     "万": Decimal("10000"),
     "万元": Decimal("10000"),
+    "千万": Decimal("10000000"),
+    "千万元": Decimal("10000000"),
     "百万": Decimal("1000000"),
     "百万元": Decimal("1000000"),
     "亿": Decimal("100000000"),
