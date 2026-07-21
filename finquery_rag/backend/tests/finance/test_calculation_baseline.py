@@ -1,20 +1,21 @@
 """Phase 3 baseline: characterize current financial calculation behavior.
 
-These tests pin down the *current* (pre-orchestrator-integration) behavior of
-the RAG pipeline when handling financial calculation questions. Phase 3 will
-introduce a deterministic calculation pipeline that bypasses the LLM for
-solvable calculations; these baseline tests document the state so that
-behavior changes are intentional and visible.
+These tests pin down the behavior of the RAG pipeline when handling financial
+calculation questions. Phase 3 introduced a deterministic calculation pipeline
+that bypasses the LLM for solvable calculations; these baseline tests document
+the state so that behavior changes are intentional and visible.
 
-Locked behaviors:
+Locked behaviors (updated in Phase 3 Commit 8):
 - Intent classification routes calculation keywords to ``financial_calculation``
   and reported-metric lookups to ``document_qa``.
-- ``AnswerResult`` has no ``calculations`` field; ``to_legacy_dict`` does not
-  emit a ``calculations`` key.
+- ``AnswerResult`` now has a ``calculations`` field (default empty tuple);
+  ``to_legacy_dict`` emits ``calculations`` only when non-empty (additive).
 - Deterministic financial primitives live at ``src.finance.primitive_tools``
   (migrated from ``src.services.financial_tools`` in Commit 3); the legacy
   module re-exports them for backward compatibility.
-- ``RAGOrchestrator`` has no ``calculation_pipeline`` dependency yet.
+- ``RAGOrchestrator`` now accepts an optional ``calculation_pipeline``
+  constructor param (default None). When set, the orchestrator invokes the
+  pipeline after context build; when None, behavior is unchanged.
 
 When Phase 3 commits change these behaviors, update the corresponding tests
 in lockstep — do NOT silently delete them.
@@ -102,29 +103,45 @@ class TestIntentClassificationBaseline:
 
 
 class TestAnswerResultBaseline:
-    """Lock current AnswerResult shape: no ``calculations`` field yet.
+    """Lock AnswerResult shape after Phase 3 Commit 8.
 
-    Phase 3 Commit 8 will add ``calculations: tuple[dict, ...] = ()`` and
-    ``to_legacy_dict`` will emit ``calculations`` when non-empty. Update
-    these tests in that commit.
+    Commit 8 added ``calculations: tuple[dict, ...] = ()`` as an additive
+    field. ``to_legacy_dict`` emits ``calculations`` only when non-empty,
+    so existing API consumers are unaffected.
     """
 
-    def test_answer_result_has_no_calculations_field(self):
+    def test_answer_result_has_calculations_field(self):
+        """Phase 3 Commit 8: ``calculations`` field now exists (default empty)."""
         result = AnswerResult(answer="test")
-        assert not hasattr(result, "calculations")
+        assert hasattr(result, "calculations")
+        assert result.calculations == ()
 
-    def test_legacy_dict_omits_calculations_key_full_path(self):
+    def test_legacy_dict_omits_calculations_when_empty(self):
+        """Empty calculations must not appear in the legacy dict."""
         result = AnswerResult(answer="test", path=AnswerPath.FULL)
         legacy = result.to_legacy_dict()
         assert "calculations" not in legacy
 
-    def test_legacy_dict_omits_calculations_key_conversational_path(self):
+    def test_legacy_dict_emits_calculations_when_non_empty(self):
+        """Non-empty calculations must appear in the legacy dict (additive)."""
+        calc = {"status": "executed", "operation": "gross_margin", "value": "0.4000"}
+        result = AnswerResult(
+            answer="test",
+            path=AnswerPath.FULL,
+            calculations=(calc,),
+        )
+        legacy = result.to_legacy_dict()
+        assert "calculations" in legacy
+        assert legacy["calculations"] == [calc]
+
+    def test_legacy_dict_omits_calculations_conversational_path(self):
+        """Conversational path never has calculations."""
         result = AnswerResult(answer="test", path=AnswerPath.CONVERSATIONAL)
         legacy = result.to_legacy_dict()
         assert "calculations" not in legacy
 
-    def test_legacy_full_path_field_set(self):
-        """Lock the exact field set for FULL path (no calculations yet)."""
+    def test_legacy_full_path_field_set_unchanged(self):
+        """Lock the base field set for FULL path (calculations is additive)."""
         result = AnswerResult(answer="test", path=AnswerPath.FULL)
         legacy = result.to_legacy_dict()
         expected = {
@@ -190,27 +207,29 @@ class TestFinancialPrimitivesLocationBaseline:
 
 
 class TestOrchestratorCalculationBaseline:
-    """Lock that the orchestrator has no calculation-pipeline hook yet.
+    """Lock that the orchestrator has the calculation-pipeline hook (Commit 8).
 
-    Phase 3 Commit 8 will add a ``calculation_pipeline`` constructor param
-    and call ``calculation_pipeline.try_calculate(...)`` after context build.
-    Update these tests in that commit.
+    Phase 3 Commit 8 added a ``calculation_pipeline`` constructor param
+    (optional, default None) and calls ``calculation_pipeline.try_calculate(...)``
+    after context build when set.
     """
 
-    def test_rag_orchestrator_has_no_calculation_pipeline_param(self):
+    def test_rag_orchestrator_has_calculation_pipeline_param(self):
+        """Phase 3 Commit 8: ``calculation_pipeline`` param now exists."""
         from src.application.rag_orchestrator import RAGOrchestrator
 
         sig = inspect.signature(RAGOrchestrator.__init__)
-        assert "calculation_pipeline" not in sig.parameters
+        assert "calculation_pipeline" in sig.parameters
+        assert sig.parameters["calculation_pipeline"].default is None
 
-    def test_rag_orchestrator_has_no_calculation_pipeline_attribute(self):
-        """Constructor must not set ``_calculation_pipeline`` before Phase 3."""
+    def test_rag_orchestrator_sets_calculation_pipeline_attribute(self):
+        """Constructor sets ``_calculation_pipeline`` (None by default)."""
         from src.application.rag_orchestrator import RAGOrchestrator
 
         source = inspect.getsource(RAGOrchestrator.__init__)
-        assert "_calculation_pipeline" not in source
+        assert "_calculation_pipeline" in source
 
-    def test_answer_result_factory_does_not_build_calculations(self):
-        """``AnswerResult`` construction must not reference calculations."""
+    def test_answer_result_factory_builds_calculations(self):
+        """``AnswerResult`` construction references calculations (Commit 8)."""
         source = inspect.getsource(AnswerResult)
-        assert "calculations" not in source
+        assert "calculations" in source

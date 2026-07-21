@@ -1,0 +1,136 @@
+"""Calculation pipeline: orchestrates the deterministic calculation flow.
+
+The pipeline ties together the operation router, evidence extractor, plan
+builder, executor, and renderer into a single ``try_calculate`` entry
+point. It is called by the RAG orchestrator after retrieval and context
+build, before the LLM/deterministic answer extractor.
+
+Flow:
+1. Route the question through ``route_calculation``.
+   - NOT_APPLICABLE -> return ``NOT_APPLICABLE_RESULT`` (orchestrator
+     continues the normal RAG flow).
+2. Extract operands from retrieved evidence via ``extract_operands``.
+3. Build a ``CalculationPlan`` from the routing decision and extraction
+   result. If required operands are missing, the plan is BLOCKED.
+4. Execute the plan via ``execute_plan``.
+5. Return the ``CalculationResult``. The orchestrator inspects the
+   status to decide whether to bypass the LLM.
+
+The pipeline is purely deterministic: no LLM calls, no retrieval, no
+side effects. It imports from ``src.domain`` and ``src.finance`` only.
+
+Layer dependency: ``domain -> finance -> application -> services``.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from src.domain.calculation import (
+    NOT_APPLICABLE_RESULT,
+    CalculationOperation,
+    CalculationPlan,
+    CalculationResult,
+    CalculationStatus,
+)
+from src.domain.evidence import EvidenceItem
+from src.finance.calculation_executor import execute_plan
+from src.finance.calculation_registry import get_operation_entry
+from src.finance.evidence_extractor import extract_operands
+from src.finance.operation_router import RoutingDecision, route_calculation
+
+
+class CalculationPipeline:
+    """Orchestrates the deterministic financial calculation pipeline.
+
+    The pipeline is stateless and safe to call concurrently. The
+    orchestrator constructs one instance and calls ``try_calculate``
+    on every query that requires retrieval.
+    """
+
+    def try_calculate(
+        self,
+        question: str,
+        intent: dict[str, Any],
+        evidence: tuple[EvidenceItem, ...],
+    ) -> CalculationResult:
+        """Attempt a deterministic calculation for the given question.
+
+        Args:
+            question: The user's (possibly rewritten) question text.
+            intent: The intent dict returned by ``classify_query_intent``.
+            evidence: The retrieved evidence items from the RAG pipeline.
+
+        Returns:
+            A ``CalculationResult``. The orchestrator inspects
+            ``result.status``:
+            - ``EXECUTED``  -> bypass LLM, render the result as the answer.
+            - ``BLOCKED``   -> bypass LLM, render a deterministic refusal.
+            - ``NOT_APPLICABLE`` -> continue the normal RAG flow.
+            - ``FAILED``    -> continue the normal RAG flow (LLM fallback).
+        """
+        # 1. Route the question through the conservative 3-gate router.
+        routing = route_calculation(question, intent)
+        if routing.status is CalculationStatus.NOT_APPLICABLE:
+            return NOT_APPLICABLE_RESULT
+
+        # 2. Extract numeric operands from retrieved evidence.
+        extraction = extract_operands(evidence, routing)
+
+        # 3. Build a CalculationPlan from the routing decision and extraction.
+        plan = self._build_plan(routing, extraction)
+
+        # 4. Execute the plan deterministically.
+        return execute_plan(plan)
+
+    @staticmethod
+    def _build_plan(
+        routing: RoutingDecision,
+        extraction: Any,
+    ) -> CalculationPlan:
+        """Build a ``CalculationPlan`` from routing and extraction results.
+
+        If required operand roles are missing, the plan is created with
+        status ``BLOCKED`` so the executor returns a deterministic refusal
+        without invoking any primitive.
+        """
+        operation = routing.operation or CalculationOperation.SUM
+        formula_version = routing.formula_version or "unknown.v1"
+        target_metric = routing.metric or operation.value
+
+        # If the routing expected specific roles but some are missing,
+        # block the plan immediately.
+        if extraction.expected_roles and extraction.missing_roles:
+            missing = ", ".join(extraction.missing_roles)
+            return CalculationPlan(
+                operation=operation,
+                operands=extraction.operands,
+                formula_version=formula_version,
+                target_metric=target_metric,
+                status=CalculationStatus.BLOCKED,
+                block_reason=f"missing operands: {missing}",
+            )
+
+        # For generic operations (no fixed roles), check that the extractor
+        # found at least one operand. If not, block with a clear reason.
+        if not extraction.expected_roles and not extraction.operands:
+            entry = get_operation_entry(operation)
+            min_needed = entry.min_operands if entry else 1
+            return CalculationPlan(
+                operation=operation,
+                operands=(),
+                formula_version=formula_version,
+                target_metric=target_metric,
+                status=CalculationStatus.BLOCKED,
+                block_reason=(
+                    f"no operands extracted for generic operation "
+                    f"'{operation.value}' (requires at least {min_needed})"
+                ),
+            )
+
+        return CalculationPlan(
+            operation=operation,
+            operands=extraction.operands,
+            formula_version=formula_version,
+            target_metric=target_metric,
+        )
