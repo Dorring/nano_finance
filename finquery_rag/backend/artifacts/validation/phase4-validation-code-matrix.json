@@ -1,0 +1,95 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_claim_and_numeric_validation.py",
+    "tests/validation/test_citation_and_calculation_validation.py",
+    "tests/validation/test_response_validation_pipeline.py"
+  ],
+  "codes": {
+    "NUMERIC_UNGROUND": {
+      "severity": "critical (strict) / error (non-strict) / warning (warn action)",
+      "validator": "NumericClaimValidator",
+      "description": "Numeric claim value not found in any evidence chunk with matching metric and period."
+    },
+    "NUMERIC_VALUE_MISMATCH": {
+      "severity": "critical",
+      "validator": "NumericClaimValidator",
+      "description": "Numeric value found in evidence but with different value representation."
+    },
+    "METRIC_VALUE_MISMATCH": {
+      "severity": "critical",
+      "validator": "NumericClaimValidator",
+      "description": "Value found but metric does not match on the same evidence chunk."
+    },
+    "PERIOD_VALUE_MISMATCH": {
+      "severity": "critical",
+      "validator": "NumericClaimValidator",
+      "description": "Value found but period/year does not match on the same evidence chunk."
+    },
+    "PERIOD_AMBIGUOUS": {
+      "severity": "warning",
+      "validator": "ClaimExtractor",
+      "description": "Multiple periods found in proximity; cannot determine which applies."
+    },
+    "CITATION_MISSING": {
+      "severity": "warning or critical (per policy)",
+      "validator": "CitationValidator",
+      "description": "Numeric claim has no citation reference."
+    },
+    "CITATION_UNRESOLVED": {
+      "severity": "warning",
+      "validator": "CitationValidator",
+      "description": "Citation reference could not be resolved to any source."
+    },
+    "CITATION_NOT_RETRIEVED": {
+      "severity": "critical",
+      "validator": "CitationValidator",
+      "description": "Source chunk_id not found in retrieved evidence."
+    },
+    "CITATION_PAGE_MISMATCH": {
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "Source page does not match evidence page for the given chunk_id."
+    },
+    "CITATION_DOCUMENT_MISMATCH": {
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "Source document_name does not match evidence document_name (lenient match)."
+    },
+    "CITATION_CHUNK_MISSING": {
+      "severity": "warning",
+      "validator": "CitationValidator",
+      "description": "Source has no chunk_id and cannot be verified."
+    },
+    "CITATION_DOES_NOT_SUPPORT_CLAIM": {
+      "severity": "critical",
+      "validator": "CitationValidator",
+      "description": "Cited source evidence does not contain the claim's value."
+    },
+    "DOCUMENT_COVERAGE_MISSING": {
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "Requested document has no evidence coverage."
+    },
+    "CALCULATION_MISMATCH": {
+      "severity": "critical",
+      "validator": "CalculationValidator",
+      "description": "Answer contains a numeric value that contradicts the calculation result."
+    },
+    "UNIT_MISMATCH": {
+      "severity": "error",
+      "validator": "UnitPeriodValidator",
+      "description": "Unit in answer does not match evidence."
+    },
+    "PERIOD_MISMATCH": {
+      "severity": "error",
+      "validator": "UnitPeriodValidator",
+      "description": "Period in answer does not match evidence."
+    },
+    "VALIDATOR_EXCEPTION": {
+      "severity": "critical",
+      "validator": "ResponseValidator (fail-closed)",
+      "description": "Validator raised an exception; result is FAILED (fail-closed)."
+    }
+  }
+}

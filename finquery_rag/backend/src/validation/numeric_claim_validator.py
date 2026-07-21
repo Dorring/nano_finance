@@ -1,9 +1,20 @@
-"""Numeric claim grounding validator (Phase 4 Commit 5).
+"""Numeric claim grounding validator (Phase 4 Commit 5 + Phase 4 hotfix).
 
 The ``NumericClaimValidator`` checks whether each numeric claim extracted
 from the generated answer is grounded in the retrieved evidence. A numeric
-claim is considered *grounded* if its value (in some textual form) appears
-in at least one evidence chunk.
+claim is considered *grounded* if:
+
+1. Its **value** (in some textual form) appears in at least one evidence
+   chunk.
+2. If the claim has a **metric**, the same evidence chunk must also
+   contain that metric keyword (or a known alias).
+3. If the claim has a **period**, the same evidence chunk must also
+   contain that period (year).
+
+All three checks must pass on the **same** evidence item. A value that
+appears in one chunk but with a different metric or period is NOT
+considered grounded — this prevents cross-contamination where a correct
+number for the wrong year/metric passes validation.
 
 This validator does NOT use an LLM. It performs deterministic text matching
 with multiple value representations (plain, comma-formatted, scale-suffixed)
@@ -14,6 +25,7 @@ and stdlib.
 """
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 from src.domain.evidence import EvidenceItem
@@ -22,18 +34,25 @@ from src.validation.validation_policy import (
     ACTION_WARN,
     ValidationPolicy,
 )
+from src.validation.claim_extractor import _METRIC_CANONICAL
 
 
 # Issue code for unsupported numeric claims.
 CODE_NUMERIC_UNGROUND = "NUMERIC_UNGROUND"
+CODE_NUMERIC_VALUE_MISMATCH = "NUMERIC_VALUE_MISMATCH"
+CODE_METRIC_VALUE_MISMATCH = "METRIC_VALUE_MISMATCH"
+CODE_PERIOD_VALUE_MISMATCH = "PERIOD_VALUE_MISMATCH"
+CODE_PERIOD_AMBIGUOUS = "PERIOD_AMBIGUOUS"
 
 
 class NumericClaimValidator:
     """Validates that numeric claims are grounded in evidence.
 
     The validator checks each ``amount``, ``percent``, and ``ratio`` claim
-    to see if its value appears in the evidence text. Claims whose values
-    cannot be found in any evidence chunk are flagged as unsupported.
+    to see if its value, metric, and period all appear in the same evidence
+    chunk. Claims whose values cannot be found in any evidence chunk (or
+    whose metric/period don't match on the same chunk) are flagged as
+    unsupported.
     """
 
     def validate(
@@ -84,23 +103,83 @@ class NumericClaimValidator:
         claim: ExtractedClaim,
         evidence: tuple[EvidenceItem, ...],
     ) -> tuple[str, ...]:
-        """Find evidence chunk IDs that contain the claim's value.
+        """Find evidence chunk IDs that support the claim.
 
-        Returns a tuple of chunk IDs. An empty tuple means the value was
-        not found in any evidence chunk.
+        A chunk supports a claim if ALL of the following are true:
+        1. The claim's value appears in the chunk text.
+        2. If the claim has a metric, the chunk also contains that metric
+           keyword (or an alias).
+        3. If the claim has a period, the chunk also contains that period
+           (year).
+
+        Returns a tuple of chunk IDs. An empty tuple means no supporting
+        evidence was found.
         """
         if claim.value is None:
             return ()
 
         representations = NumericClaimValidator._value_representations(claim)
+        claim_metric_aliases = NumericClaimValidator._metric_aliases(claim.metric)
+        claim_years = NumericClaimValidator._extract_years(claim.period)
+
         supporting: list[str] = []
         for item in evidence:
             text = item.content or ""
+
+            # 1. Value must appear in the chunk.
+            value_found = False
             for rep in representations:
                 if rep and rep in text:
-                    supporting.append(item.chunk_id)
+                    value_found = True
                     break
+            if not value_found:
+                continue
+
+            # 2. If claim has a metric, the chunk must contain it.
+            if claim_metric_aliases:
+                metric_found = False
+                text_lower = text.lower()
+                for alias in claim_metric_aliases:
+                    if alias in text_lower:
+                        metric_found = True
+                        break
+                if not metric_found:
+                    continue
+
+            # 3. If claim has a period, the chunk must contain that year.
+            if claim_years:
+                evidence_years = set(
+                    re.findall(r"(?<!\d)(20[0-2]\d|19[89]\d)(?!\d)", text)
+                )
+                if not claim_years.intersection(evidence_years):
+                    continue
+
+            supporting.append(item.chunk_id)
         return tuple(supporting)
+
+    @staticmethod
+    def _metric_aliases(metric: str | None) -> tuple[str, ...]:
+        """Return all keyword aliases for a canonical metric.
+
+        If the metric is None, returns an empty tuple (no metric constraint).
+        """
+        if metric is None:
+            return ()
+        aliases: list[str] = []
+        for keyword, canonical in _METRIC_CANONICAL.items():
+            if canonical == metric:
+                aliases.append(keyword)
+        # Also include the metric itself if it's not in the canonical map.
+        if metric not in _METRIC_CANONICAL.values():
+            aliases.append(metric)
+        return tuple(aliases)
+
+    @staticmethod
+    def _extract_years(period: str | None) -> set[str]:
+        """Extract 4-digit years from a period string."""
+        if not period:
+            return set()
+        return set(re.findall(r"(?<!\d)(20[0-2]\d|19[89]\d)(?!\d)", period))
 
     @staticmethod
     def _value_representations(claim: ExtractedClaim) -> tuple[str, ...]:
@@ -210,12 +289,14 @@ class NumericClaimValidator:
             severity = ValidationSeverity.ERROR
 
         metric_label = claim.metric or claim.claim_type
+        period_label = claim.period or "unknown"
         return ValidationIssue(
             code=CODE_NUMERIC_UNGROUND,
             severity=severity,
             message=(
                 f"Numeric claim '{claim.raw_text}' (metric: {metric_label}, "
-                f"value: {claim.value}) not found in any evidence chunk."
+                f"value: {claim.value}, period: {period_label}) not found "
+                f"in any evidence chunk with matching metric and period."
             ),
             claim_text=claim.raw_text,
             evidence_ids=evidence_ids,

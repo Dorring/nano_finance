@@ -386,13 +386,15 @@ class TestE2ECalculationBlocked:
         )
         result = _run(orch.answer(QueryRequest(question="gross margin?", user_id=1)))
         orch._llm_gateway.generate.assert_not_called()
-        assert "Unable to compute" in result.answer
-        # When the calculation pipeline returns BLOCKED, the orchestrator
-        # takes the calculation bypass branch (lines 234-258) which skips
-        # the answerability evaluation entirely. answerability/validation/
-        # repair are therefore None (the calculation branch does not run
-        # post-generation validation).
-        # The key invariant: LLM was not invoked and a safe message was returned.
+        # Phase 4 hotfix: calculation BLOCKED now goes through answerability
+        # (CALCULATION_BLOCKED) and ResponseRepair safe fallback.
+        assert result.answerability is not None
+        assert result.answerability["status"] == AnswerabilityStatus.CALCULATION_BLOCKED.value
+        assert result.repair is not None
+        assert result.repair["fallback_used"] is True
+        # The answer is a safe fallback, not the raw calculation error.
+        assert "could not find" not in result.answer
+        assert "OPERAND_MISSING" not in result.answer
 
 
 # ---------------------------------------------------------------------------

@@ -99,11 +99,16 @@ class GroundedValidationPipeline:
         intent: str,
         evidence: tuple[EvidenceItem, ...],
         calculation_result: CalculationResult | None,
+        sources: tuple[dict[str, Any], ...] = (),
     ) -> ValidationResult:
         """Run the post-generation response validation.
 
         Returns a ``ValidationResult``. Never raises — internal errors
         produce ``ValidationStatus.FAILED`` (fail-closed).
+
+        ``sources`` is the tuple of source objects returned to the API
+        consumer. The CitationValidator uses it to verify chunk_id,
+        document_name, and page consistency.
 
         The orchestrator MUST inspect ``status`` and:
         - ``PASSED``         -> return the answer as-is.
@@ -120,6 +125,7 @@ class GroundedValidationPipeline:
             intent=intent,
             evidence=evidence,
             calculation_result=calculation_result,
+            sources=sources,
         )
 
     # -----------------------------------------------------------------

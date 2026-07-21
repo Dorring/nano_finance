@@ -267,6 +267,7 @@ class ClaimExtractor:
                 scale = scale_lower
 
         metric = ClaimExtractor._find_nearby_metric(answer, match.start(), match.end())
+        period = ClaimExtractor._find_nearby_period(answer, match.start(), match.end())
 
         return ExtractedClaim(
             claim_id=f"claim_{claim_num:03d}",
@@ -277,6 +278,7 @@ class ClaimExtractor:
             unit="base",
             scale=scale,
             currency=currency,
+            period=period,
         )
 
     @staticmethod
@@ -299,6 +301,7 @@ class ClaimExtractor:
 
         value = value * _SCALE_MAP[scale_str]
         metric = ClaimExtractor._find_nearby_metric(answer, match.start(), match.end())
+        period = ClaimExtractor._find_nearby_period(answer, match.start(), match.end())
 
         return ExtractedClaim(
             claim_id=f"claim_{claim_num:03d}",
@@ -308,6 +311,7 @@ class ClaimExtractor:
             value=value,
             unit="base",
             scale=scale_str,
+            period=period,
         )
 
     @staticmethod
@@ -324,6 +328,7 @@ class ClaimExtractor:
             return None
 
         metric = ClaimExtractor._find_nearby_metric(answer, match.start(), match.end())
+        period = ClaimExtractor._find_nearby_period(answer, match.start(), match.end())
 
         return ExtractedClaim(
             claim_id=f"claim_{claim_num:03d}",
@@ -332,6 +337,7 @@ class ClaimExtractor:
             metric=metric,
             value=value,
             unit="percent",
+            period=period,
         )
 
     @staticmethod
@@ -349,6 +355,7 @@ class ClaimExtractor:
             return None
 
         metric = ClaimExtractor._find_nearby_metric(answer, match.start(), match.end())
+        period = ClaimExtractor._find_nearby_period(answer, match.start(), match.end())
 
         return ExtractedClaim(
             claim_id=f"claim_{claim_num:03d}",
@@ -357,6 +364,7 @@ class ClaimExtractor:
             metric=metric,
             value=value,
             unit="ratio",
+            period=period,
         )
 
     @staticmethod
@@ -428,6 +436,47 @@ class ClaimExtractor:
         for keyword in sorted(_METRIC_KEYWORDS, key=len, reverse=True):
             if keyword in context:
                 return _METRIC_CANONICAL.get(keyword, keyword)
+        return None
+
+    @staticmethod
+    def _find_nearby_period(
+        answer: str,
+        match_start: int,
+        match_end: int,
+        window: int = 80,
+    ) -> str | None:
+        """Find a period (year/FY/quarter) near the matched numeric value.
+
+        Searches a window of ``window`` characters before and after the
+        match for fiscal years (FY2025), quarters (Q3 2024), or bare
+        years (2024). Returns the period string or ``None``.
+
+        If multiple distinct years are found in the window, returns
+        ``None`` (period is ambiguous — the validator will flag
+        ``PERIOD_AMBIGUOUS``).
+        """
+        start = max(0, match_start - window)
+        end = min(len(answer), match_end + window)
+        context = answer[start:end]
+
+        # Try fiscal year first (most specific).
+        fy_matches = _RE_FISCAL_YEAR.findall(context)
+        if fy_matches:
+            return f"FY{fy_matches[0]}"
+
+        # Try quarter.
+        q_matches = _RE_QUARTER.findall(context)
+        if q_matches:
+            return f"Q{q_matches[0][0]} {q_matches[0][1]}"
+
+        # Try bare years.
+        year_matches = _RE_YEAR.findall(context)
+        if len(year_matches) == 1:
+            return year_matches[0]
+        if len(year_matches) > 1:
+            # Multiple years in window — ambiguous.
+            return None
+
         return None
 
     @staticmethod

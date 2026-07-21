@@ -1,0 +1,73 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_phase4_baseline_characterization.py",
+    "tests/test_phase113_front_matter_title.py",
+    "tests/test_phase12_trace_id.py"
+  ],
+  "parity_checks": {
+    "non_calculation_calls_llm": {
+      "status": "pass",
+      "description": "When validation pipeline is disabled, non-calculation queries still call the LLM as before.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_non_calculation_calls_llm"
+      ]
+    },
+    "calculation_success_bypasses_llm": {
+      "status": "pass",
+      "description": "Calculation EXECUTED still bypasses LLM when validation is disabled.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_calculation_success_bypasses_llm"
+      ]
+    },
+    "calculation_blocked_bypasses_llm": {
+      "status": "pass",
+      "description": "Calculation BLOCKED still bypasses LLM when validation is disabled.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_calculation_blocked_bypasses_llm"
+      ]
+    },
+    "front_matter_title_still_works": {
+      "status": "pass",
+      "description": "Front matter title query still returns deterministic answer without LLM.",
+      "evidence": [
+        "tests/test_phase113_front_matter_title.py: test_query_uses_front_matter_title_without_llm_or_vector_search"
+      ]
+    },
+    "trace_id_propagation": {
+      "status": "pass",
+      "description": "Trace ID is still propagated to the response when validation is enabled.",
+      "evidence": [
+        "tests/test_phase12_trace_id.py: test_query_returns_trace_id_from_logger"
+      ]
+    },
+    "orchestrator_receives_same_args": {
+      "status": "pass",
+      "description": "Orchestrator receives the same arguments regardless of validation pipeline enablement.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_orchestrator_receives_same_args"
+      ]
+    },
+    "default_engine_has_calculation_pipeline": {
+      "status": "pass",
+      "description": "Default RAGEngine has calculation pipeline enabled.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_default_engine_has_calculation_pipeline"
+      ]
+    },
+    "default_engine_has_validation_pipeline": {
+      "status": "pass",
+      "description": "Default RAGEngine has validation pipeline enabled (enable_validation_pipeline=True).",
+      "evidence": [
+        "src/services/rag_engine.py: enable_validation_pipeline=True default"
+      ]
+    },
+    "disable_validation_pipeline": {
+      "status": "pass",
+      "description": "Validation pipeline can be disabled via constructor flag.",
+      "evidence": [
+        "tests/test_phase3_calculation_bypass.py: test_disable_calculation_pipeline"
+      ]
+    }
+  }
+}

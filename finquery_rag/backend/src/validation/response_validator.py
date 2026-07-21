@@ -73,12 +73,17 @@ class ResponseValidator:
         intent: str,
         evidence: tuple[EvidenceItem, ...],
         calculation_result: CalculationResult | None,
+        sources: tuple[dict, ...] = (),
     ) -> ValidationResult:
         """Validate a generated answer against evidence and calculations.
 
         Returns a ``ValidationResult``. Never raises — if an internal
         error occurs, returns ``ValidationStatus.FAILED`` with a single
         sanitized CRITICAL issue (fail-closed).
+
+        ``sources`` is the tuple of source objects returned to the API
+        consumer. The CitationValidator uses it to verify chunk_id,
+        document_name, and page consistency.
         """
         try:
             return self._validate_inner(
@@ -86,6 +91,7 @@ class ResponseValidator:
                 intent=intent,
                 evidence=evidence,
                 calculation_result=calculation_result,
+                sources=sources,
             )
         except Exception:
             return ValidationResult(
@@ -114,6 +120,7 @@ class ResponseValidator:
         intent: str,
         evidence: tuple[EvidenceItem, ...],
         calculation_result: CalculationResult | None,
+        sources: tuple[dict, ...] = (),
     ) -> ValidationResult:
         policy = get_policy_for_intent(intent)
 
@@ -149,8 +156,8 @@ class ResponseValidator:
             claims, evidence, policy
         )
 
-        # Run citation validator.
-        citation_issues = self._citation_validator.validate(claims, evidence, policy)
+        # Run citation validator (with sources for chunk/page validation).
+        citation_issues = self._citation_validator.validate(claims, evidence, policy, sources)
 
         # Run unsupported claim validator.
         unsupported_issues = self._unsupported_validator.validate(

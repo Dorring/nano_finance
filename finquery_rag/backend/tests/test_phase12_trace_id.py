@@ -73,7 +73,8 @@ def test_query_returns_trace_id_from_logger(tmp_path):
 
     assert result["trace_id"] == "trace-abc"
     assert logger.calls[0]["tenant_id"] == 1
-    assert logger.calls[0]["answer"] == "Revenue was $10M."
+    # Phase 4 hotfix: trace redacts answer content (answer=None).
+    assert logger.calls[0]["answer"] is None
 
 
 def test_query_trace_failure_does_not_break_answer(tmp_path):

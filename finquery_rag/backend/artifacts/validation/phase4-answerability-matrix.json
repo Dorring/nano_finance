@@ -1,0 +1,48 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_answerability.py",
+    "tests/validation/test_grounded_response_e2e.py"
+  ],
+  "status": {
+    "ANSWERABLE": {
+      "value": "answerable",
+      "llm_invoked": true,
+      "validation_runs": true,
+      "description": "Evidence is sufficient; generation allowed."
+    },
+    "PARTIALLY_ANSWERABLE": {
+      "value": "partially_answerable",
+      "llm_invoked": true,
+      "validation_runs": true,
+      "prefix_applied": true,
+      "prefix_text": "根据当前检索到的资料，只能确认以下部分：",
+      "suffix_text": "未找到或无法验证：{missing_requirements}",
+      "description": "Some requested documents are missing; limited answer with restricted prefix."
+    },
+    "NOT_ANSWERABLE": {
+      "value": "not_answerable",
+      "llm_invoked": false,
+      "validation_runs": false,
+      "fallback_used": true,
+      "fallback_message": "I cannot answer this question based on the available evidence.",
+      "description": "Evidence missing or irrelevant; LLM must NOT be invoked."
+    },
+    "CALCULATION_BLOCKED": {
+      "value": "calculation_blocked",
+      "llm_invoked": false,
+      "validation_runs": false,
+      "fallback_used": true,
+      "fallback_message": "The requested calculation could not be completed with the available data.",
+      "description": "Calculation pipeline returned BLOCKED or FAILED; LLM must NOT be invoked."
+    }
+  },
+  "reason_codes": [
+    "calculation_blocked",
+    "calculation_failed",
+    "no_evidence",
+    "insufficient_evidence",
+    "missing_documents",
+    "no_retrieval_required"
+  ]
+}

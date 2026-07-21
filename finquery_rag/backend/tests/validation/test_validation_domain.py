@@ -67,9 +67,13 @@ class TestValidationIssue:
             claim_text="125 billion",
         )
         trace = issue.to_trace_dict()
-        assert trace["message"] == "expected million got billion"
+        # Phase 4 hotfix: trace redacts message to message_hash.
+        assert "message_hash" in trace
+        assert "message" not in trace
         assert trace["code"] == "UNIT_MISMATCH"
-        assert trace["claim_text"] == "125 billion"
+        # claim_text is redacted to claim_excerpt (max 80 chars).
+        assert trace["claim_excerpt"] == "125 billion"
+        assert "claim_text" not in trace
 
 
 class TestAnswerabilityResult:

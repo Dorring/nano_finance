@@ -438,7 +438,8 @@ class TestResponseValidatorSerialization:
         trace = result.to_trace_dict()
         assert "issues" in trace
         for issue in trace["issues"]:
-            assert "message" in issue  # internal message included
+            # Phase 4 hotfix: trace redacts message to message_hash.
+            assert "message_hash" in issue  # hashed internal message
             assert "code" in issue
 
     def test_failed_public_dict_sanitized(self):

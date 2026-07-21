@@ -134,16 +134,30 @@ class ValidationIssue:
     def to_trace_dict(self) -> dict[str, Any]:
         """Serialize for trace logging.
 
-        Retains ``code``, ``severity``, ``claim_text`` (the offending
-        snippet — not the full answer), and ``evidence_ids`` for debugging.
-        The full internal ``message`` is included because trace storage is
-        access-controlled and used for incident diagnosis.
+        Phase 4 hotfix: redacts the internal ``message`` and full
+        ``claim_text`` to prevent sensitive content from entering trace
+        storage. Only ``code``, ``severity``, a short ``claim_excerpt``
+        (max 80 chars, control-char cleaned), and ``evidence_ids`` are
+        retained. The full ``message`` is replaced by a hash for debugging
+        correlation without content leakage.
         """
+        import hashlib
+
+        # Sanitize claim_text: max 80 chars, strip control characters.
+        claim_excerpt = None
+        if self.claim_text:
+            import re as _re
+            cleaned = _re.sub(r"[\x00-\x1f\x7f]", "", self.claim_text)
+            claim_excerpt = cleaned[:80] if len(cleaned) > 80 else cleaned
+
+        # Hash the internal message for debugging correlation.
+        message_hash = hashlib.sha256(self.message.encode("utf-8")).hexdigest()[:16]
+
         return {
             "code": self.code,
             "severity": self.severity.value,
-            "message": self.message,
-            "claim_text": self.claim_text,
+            "message_hash": message_hash,
+            "claim_excerpt": claim_excerpt,
             "evidence_ids": list(self.evidence_ids),
         }
 

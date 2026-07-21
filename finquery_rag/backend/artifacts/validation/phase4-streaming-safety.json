@@ -1,0 +1,54 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_validation_http_sse.py",
+    "tests/test_phase41_stream_error_events.py"
+  ],
+  "safety_checks": {
+    "blocked_answer_not_streamed_as_partial_tokens": {
+      "status": "pass",
+      "description": "Blocked answers are emitted as a single token event containing the safe fallback, never as partial LLM tokens.",
+      "evidence": [
+        "src/main.py query_documents_stream: calls engine.query() which runs full orchestrator",
+        "src/application/rag_orchestrator.py: answer is set to fallback before return",
+        "No LLM stream is invoked for calculation BLOCKED/FAILED paths"
+      ]
+    },
+    "error_event_uses_error_code_not_str_exc": {
+      "status": "pass",
+      "description": "Streaming exception handler uses error_code=STREAM_INTERNAL_ERROR and exception_type, never str(exc).",
+      "evidence": [
+        "src/main.py: trace_payload has error_code and exception_type, not str(exc)"
+      ]
+    },
+    "sse_done_event_includes_validation_verdicts": {
+      "status": "pass",
+      "description": "When validation pipeline is enabled, the done event includes answerability, validation, and repair fields.",
+      "evidence": [
+        "src/main.py: done_kwargs includes answerability_data, validation_data, repair_data"
+      ]
+    },
+    "calculation_results_in_sse": {
+      "status": "pass",
+      "description": "Calculation results (EXECUTED/BLOCKED/FAILED) are included in the SSE done event.",
+      "evidence": [
+        "src/main.py: calculations=calculations in done_kwargs"
+      ]
+    },
+    "session_saves_safe_answer_only": {
+      "status": "pass",
+      "description": "Session manager saves the final safe answer (post-validation), not the raw LLM output.",
+      "evidence": [
+        "src/main.py: session_manager.add_message uses result['answer'] which is post-validation"
+      ]
+    },
+    "trace_does_not_leak_blocked_answer": {
+      "status": "pass",
+      "description": "Trace stores answer=None; blocked answer content is never persisted in trace.",
+      "evidence": [
+        "src/application/rag_orchestrator.py: trace_data['answer'] = None",
+        "src/application/rag_orchestrator.py: trace_data['final_context'] = None"
+      ]
+    }
+  }
+}

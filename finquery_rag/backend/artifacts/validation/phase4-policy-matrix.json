@@ -1,0 +1,79 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_validation_policy.py"
+  ],
+  "policies": {
+    "financial_calculation": {
+      "require_evidence": true,
+      "require_citations": true,
+      "validate_numeric_claims": true,
+      "validate_units": true,
+      "validate_periods": true,
+      "strict_numeric_grounding": true,
+      "unsupported_numeric_action": "block",
+      "missing_citation_action": "block"
+    },
+    "document_qa": {
+      "require_evidence": true,
+      "require_citations": true,
+      "validate_numeric_claims": true,
+      "validate_units": true,
+      "validate_periods": true,
+      "strict_numeric_grounding": true,
+      "unsupported_numeric_action": "block",
+      "missing_citation_action": "warn"
+    },
+    "document_summary": {
+      "require_evidence": true,
+      "require_citations": false,
+      "validate_numeric_claims": true,
+      "validate_units": true,
+      "validate_periods": true,
+      "strict_numeric_grounding": true,
+      "unsupported_numeric_action": "block",
+      "missing_citation_action": "warn"
+    },
+    "multi_document_comparison": {
+      "require_evidence": true,
+      "require_citations": true,
+      "validate_numeric_claims": true,
+      "validate_units": true,
+      "validate_periods": true,
+      "strict_numeric_grounding": true,
+      "unsupported_numeric_action": "block",
+      "missing_citation_action": "block"
+    },
+    "front_matter": {
+      "require_evidence": true,
+      "require_citations": true,
+      "validate_numeric_claims": false,
+      "validate_units": false,
+      "validate_periods": false,
+      "strict_numeric_grounding": false,
+      "unsupported_numeric_action": "warn",
+      "missing_citation_action": "warn"
+    },
+    "conversation": {
+      "require_evidence": false,
+      "require_citations": false,
+      "validate_numeric_claims": false,
+      "validate_units": false,
+      "validate_periods": false,
+      "strict_numeric_grounding": false,
+      "unsupported_numeric_action": "warn",
+      "missing_citation_action": "warn"
+    },
+    "unsupported": {
+      "require_evidence": false,
+      "require_citations": false,
+      "validate_numeric_claims": false,
+      "validate_units": false,
+      "validate_periods": false,
+      "strict_numeric_grounding": false,
+      "unsupported_numeric_action": "warn",
+      "missing_citation_action": "warn"
+    }
+  },
+  "default_fallback": "document_qa"
+}

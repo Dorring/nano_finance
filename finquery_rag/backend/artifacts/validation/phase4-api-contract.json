@@ -1,0 +1,56 @@
+{
+  "generated_by": "Phase 4 hotfix manual review",
+  "generated_from_tests": [
+    "tests/validation/test_validation_http_sse.py",
+    "tests/validation/test_grounded_response_e2e.py"
+  ],
+  "endpoints": {
+    "POST /query": {
+      "response_fields": {
+        "answer": "string — final safe answer (possibly repaired or fallback)",
+        "sources": "list[dict] — source objects with chunk_id, filename, page",
+        "calculations": "list[dict] — calculation results (Phase 3)",
+        "answerability": "object | null — status, reason_codes, evidence_count, document_count, missing_requirements",
+        "validation": "object | null — status, checked_claim_count, supported_claim_count, unsupported_claim_count, issues",
+        "repair": "object | null — was_repaired, fallback_used",
+        "trace_id": "string | null — trace identifier"
+      },
+      "excluded_fields": [
+        "validation.issues[].message (internal only)",
+        "validation.issues[].evidence_ids (internal only)",
+        "repair.repair_notes (internal only)",
+        "answerability.best_score (internal only)",
+        "answerability.average_score (internal only)"
+      ]
+    },
+    "POST /query/stream": {
+      "events": {
+        "token": "data: {type: token, content: answer} — single token event with final safe answer",
+        "done": "data: {type: done, sources, confidence, calculations, answerability?, validation?, repair?}",
+        "error": "data: {type: error, detail: {error_code, message}, retryable, trace_id}"
+      },
+      "safety_guarantees": [
+        "Blocked answers are NOT streamed as partial LLM tokens",
+        "Safe fallback is emitted as a single token event",
+        "Error events use error_code, not str(exc)",
+        "SSE done event includes validation verdicts when pipeline enabled"
+      ]
+    },
+    "GET /traces": {
+      "excluded_fields": [
+        "final_context (redacted to None)",
+        "answer (redacted to None)",
+        "error_message (not exposed)"
+      ],
+      "exposed_diagnostics": [
+        "context_available (bool)",
+        "answer_available (bool)",
+        "context_length (int)",
+        "context_sha256 (hex[:16])",
+        "answer_length (int)",
+        "answer_sha256 (hex[:16])",
+        "error_code (string | null)"
+      ]
+    }
+  }
+}
