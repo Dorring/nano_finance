@@ -25,9 +25,16 @@ def test_stream_done_event_can_carry_retrieval_confidence():
 
 
 def test_stream_query_endpoint_computes_and_returns_confidence_static():
+    """Phase 3 hotfix: /query/stream now calls engine.query() uniformly.
+
+    Confidence is computed inside the orchestrator (engine.query →
+    RAGOrchestrator.answer) and returned in the result dict. The stream
+    endpoint reads it from ``result.get("confidence")`` and passes it to
+    ``make_stream_done_event``. This static test verifies the unified path.
+    """
     main_path = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
     content = open(main_path, encoding="utf-8").read()
 
-    assert "confidence = engine._compute_confidence(chunks)" in content
-    assert "context_sufficient=False, confidence=confidence" in content
-    assert "context_sufficient=True, confidence=confidence" in content
+    # The unified stream path must call engine.query() and propagate confidence.
+    assert "confidence = result.get(\"confidence\")" in content
+    assert "confidence=confidence" in content

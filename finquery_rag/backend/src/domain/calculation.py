@@ -62,6 +62,20 @@ class CalculationStatus(str, Enum):
     FAILED = "failed"
 
 
+def _safe_excerpt(text: str, max_chars: int = 240) -> str:
+    """Truncate text to ``max_chars`` with an ellipsis indicator.
+
+    Used by public serialization to avoid leaking full evidence text into
+    API responses while still providing enough context for the user to
+    locate the source.
+    """
+    if not text:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "…"
+
+
 @dataclass(frozen=True)
 class CalculationOperand:
     """A single numeric input bound to retrieved evidence.
@@ -83,13 +97,51 @@ class CalculationOperand:
     page: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to a plain dict for trace / legacy API emission."""
+        """Serialize to a plain dict for internal / trace use.
+
+        Includes the full ``source_text``. This is for internal diagnostics
+        only; public API responses must use ``to_public_dict`` instead.
+        """
         return {
             "name": self.name,
             "value": str(self.value),
             "unit": self.unit,
             "scale": self.scale,
             "source_text": self.source_text,
+            "evidence_chunk_id": self.evidence_chunk_id,
+            "document_name": self.document_name,
+            "page": self.page,
+        }
+
+    def to_public_dict(self) -> dict[str, Any]:
+        """Serialize to a dict safe for public API responses.
+
+        Excludes the full ``source_text``; replaces it with a truncated
+        ``evidence_excerpt`` (max 240 chars) so the user can locate the
+        source without exposing the entire retrieved chunk.
+        """
+        return {
+            "name": self.name,
+            "value": str(self.value),
+            "unit": self.unit,
+            "scale": self.scale,
+            "evidence_chunk_id": self.evidence_chunk_id,
+            "document_name": self.document_name,
+            "page": self.page,
+            "evidence_excerpt": _safe_excerpt(self.source_text),
+        }
+
+    def to_trace_dict(self) -> dict[str, Any]:
+        """Serialize to a compact dict for trace logging.
+
+        Excludes ``source_text`` entirely to minimize PII / content leakage
+        into trace storage. Only structural metadata is retained.
+        """
+        return {
+            "name": self.name,
+            "value": str(self.value),
+            "unit": self.unit,
+            "scale": self.scale,
             "evidence_chunk_id": self.evidence_chunk_id,
             "document_name": self.document_name,
             "page": self.page,
@@ -158,7 +210,12 @@ class CalculationResult:
     error_message: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to a dict suitable for ``AnswerResult.calculations``."""
+        """Serialize to a dict for internal diagnostics.
+
+        Includes the full ``error_message`` and operand ``source_text``.
+        This is for internal use only; public API responses must use
+        ``to_public_dict`` and trace logging must use ``to_trace_dict``.
+        """
         payload: dict[str, Any] = {
             "status": self.status.value,
             "operation": self.operation.value if self.operation else None,
@@ -170,6 +227,49 @@ class CalculationResult:
             "operands": [op.to_dict() for op in self.operands],
             "error_code": self.error_code,
             "error_message": self.error_message,
+        }
+        return payload
+
+    def to_public_dict(self) -> dict[str, Any]:
+        """Serialize to a dict safe for public API responses.
+
+        Key differences from ``to_dict``:
+        - ``error_message`` is NEVER included. The internal exception text
+          (e.g. ``str(exc)``) must not leak to the user. The frontend maps
+          ``error_code`` to a user-visible message.
+        - Operand ``source_text`` is replaced by ``evidence_excerpt``
+          (max 240 chars) via ``CalculationOperand.to_public_dict``.
+        """
+        payload: dict[str, Any] = {
+            "status": self.status.value,
+            "operation": self.operation.value if self.operation else None,
+            "value": str(self.value) if self.value is not None else None,
+            "unit": self.unit,
+            "formula": self.formula,
+            "formula_version": self.formula_version,
+            "target_metric": self.target_metric,
+            "operands": [op.to_public_dict() for op in self.operands],
+            "error_code": self.error_code,
+        }
+        return payload
+
+    def to_trace_dict(self) -> dict[str, Any]:
+        """Serialize to a compact dict for trace logging.
+
+        Excludes ``error_message`` and operand ``source_text`` to minimize
+        content leakage into trace storage. Only structural metadata needed
+        for debugging is retained.
+        """
+        payload: dict[str, Any] = {
+            "status": self.status.value,
+            "operation": self.operation.value if self.operation else None,
+            "value": str(self.value) if self.value is not None else None,
+            "unit": self.unit,
+            "formula_version": self.formula_version,
+            "target_metric": self.target_metric,
+            "operand_count": len(self.operands),
+            "operands": [op.to_trace_dict() for op in self.operands],
+            "error_code": self.error_code,
         }
         return payload
 

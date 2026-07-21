@@ -292,17 +292,7 @@ class RAGOrchestrator:
                         else False
                     ),
                     "calculation": (
-                        {
-                            "status": calculation_result.status.value,
-                            "operation": (
-                                calculation_result.operation.value
-                                if calculation_result.operation
-                                else None
-                            ),
-                            "formula_version": calculation_result.formula_version,
-                            "operand_count": len(calculation_result.operands),
-                            "error_code": calculation_result.error_code,
-                        }
+                        calculation_result.to_trace_dict()
                         if calculation_result is not None
                         and calculation_result.status
                         is not CalculationStatus.NOT_APPLICABLE
@@ -320,12 +310,14 @@ class RAGOrchestrator:
             pass  # tracing must never break the query path
 
         # Build calculations tuple for AnswerResult (additive field).
+        # Use to_public_dict so internal error messages and full source_text
+        # are never exposed in API responses.
         calculations: tuple[dict, ...] = ()
         if (
             calculation_result is not None
             and calculation_result.status is not CalculationStatus.NOT_APPLICABLE
         ):
-            calculations = (calculation_result.to_dict(),)
+            calculations = (calculation_result.to_public_dict(),)
 
         return AnswerResult(
             answer=answer,

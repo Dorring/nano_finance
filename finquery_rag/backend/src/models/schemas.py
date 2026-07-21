@@ -61,6 +61,36 @@ class SourceInfo(BaseModel):
     chunk_id: str | None = None
 
 
+class CalculationOperandResponse(BaseModel):
+    """A single operand used in a deterministic calculation (public API)."""
+    name: str
+    value: str
+    unit: str | None = None
+    scale: str | None = None
+    evidence_chunk_id: str | None = None
+    document_name: str | None = None
+    page: int | None = None
+    evidence_excerpt: str | None = None
+
+
+class CalculationResponse(BaseModel):
+    """Structured calculation result returned alongside an answer (public API).
+
+    The ``error_message`` field is intentionally absent: internal exception
+    text must never leak to the client. The frontend maps ``error_code``
+    to a user-visible message.
+    """
+    status: str
+    operation: str | None = None
+    value: str | None = None
+    unit: str | None = None
+    formula: str | None = None
+    formula_version: str | None = None
+    target_metric: str | None = None
+    operands: list[CalculationOperandResponse] = Field(default_factory=list)
+    error_code: str | None = None
+
+
 class QueryResponse(BaseModel):
     """
     查询响应模型，用于封装查询操作返回的结果数据。
@@ -92,6 +122,10 @@ class QueryResponse(BaseModel):
     # Compact retrieval candidates for HTTP/offline evaluation diagnostics.
     retrieval_debug: dict = Field(default_factory=dict)
     # Retrieval configuration and candidate-count diagnostics.
+
+    calculations: list[CalculationResponse] = Field(default_factory=list)
+    # Phase 3: Structured calculation results. Empty list for non-calculation
+    # queries so old frontends that ignore this field are unaffected.
 
 
 class EvalScoreRequest(BaseModel):
