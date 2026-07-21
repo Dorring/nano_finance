@@ -39,7 +39,7 @@ from src.domain.answer import AnswerPath, AnswerResult
 from src.domain.calculation import CalculationStatus
 from src.domain.evidence import EvidenceItem
 from src.domain.query import QueryRequest
-from src.domain.validation import AnswerabilityStatus, ValidationStatus
+from src.domain.validation import AnswerabilityStatus
 from src.finance.calculation_pipeline import CalculationPipeline
 from src.finance.calculation_renderer import render_calculation_result
 from src.retrieval.query_processor import QueryProcessor

@@ -220,7 +220,7 @@ class NumericClaimValidator:
             claim_text=claim.raw_text,
             evidence_ids=evidence_ids,
             public_message=(
-                f"A numeric value in the answer could not be verified "
-                f"against the source documents."
+                "A numeric value in the answer could not be verified "
+                "against the source documents."
             ),
         )

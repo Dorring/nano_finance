@@ -431,7 +431,7 @@ class TestE2EConversationNotApplicable:
             requires_retrieval=False,
             llm_response="Hello! How can I help you?",
         )
-        result = _run(orch.answer(QueryRequest(question="hello", user_id=1)))
+        _run(orch.answer(QueryRequest(question="hello", user_id=1)))
         # Conversation path returns early; no validation/repair fields.
         # (The no-retrieval branch does not run validation.)
         orch._llm_gateway.generate.assert_not_called()

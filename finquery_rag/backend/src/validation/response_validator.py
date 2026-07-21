@@ -21,8 +21,6 @@ and stdlib.
 """
 from __future__ import annotations
 
-from decimal import Decimal
-
 from src.domain.calculation import CalculationResult, CalculationStatus
 from src.domain.evidence import EvidenceItem
 from src.domain.validation import (
