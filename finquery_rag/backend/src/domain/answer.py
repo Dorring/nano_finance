@@ -11,6 +11,11 @@ Phase 3 Commit 8 adds an optional ``calculations`` field carrying
 structured calculation diagnostics when the deterministic calculation
 pipeline is invoked. ``to_legacy_dict`` emits ``calculations`` only when
 non-empty, so existing API consumers are unaffected.
+
+Phase 4 Commit 9 adds optional ``answerability`` and ``validation`` fields
+carrying the pre-generation answerability verdict and post-generation
+validation verdict (as public-safe dicts). ``to_legacy_dict`` emits them
+only when non-None, so existing API consumers are unaffected.
 """
 
 from dataclasses import dataclass, field
@@ -124,6 +129,9 @@ class AnswerResult:
     path: AnswerPath = AnswerPath.FULL
     had_conversation_history: bool = False
     calculations: tuple[dict[str, Any], ...] = ()
+    answerability: dict[str, Any] | None = None
+    validation: dict[str, Any] | None = None
+    repair: dict[str, Any] | None = None
 
     def to_legacy_dict(self) -> dict[str, Any]:
         """Convert to the legacy API response dict format.
@@ -151,6 +159,12 @@ class AnswerResult:
             result["warnings"] = list(self.warnings)
         if self.calculations:
             result["calculations"] = list(self.calculations)
+        if self.answerability is not None:
+            result["answerability"] = dict(self.answerability)
+        if self.validation is not None:
+            result["validation"] = dict(self.validation)
+        if self.repair is not None:
+            result["repair"] = dict(self.repair)
         return result
 
     def _legacy_value(self, name: str) -> Any:

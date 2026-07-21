@@ -19,6 +19,17 @@ pipeline after context build and before the LLM. If the pipeline returns
 ``EXECUTED`` or ``BLOCKED``, the LLM is bypassed and the rendered
 calculation result is returned directly. When ``calculation_pipeline`` is
 None (the default), the orchestrator behaves exactly as before.
+
+Phase 4 Commit 9 adds an optional ``validation_pipeline`` constructor
+param. When set, the orchestrator:
+1. Runs pre-generation answerability evaluation (before LLM). If the
+   verdict is ``NOT_ANSWERABLE``, the LLM is bypassed and a deterministic
+   refusal is returned.
+2. Runs post-generation response validation (after LLM). If the verdict
+   is ``BLOCKED`` or ``FAILED``, the answer is replaced with a safe
+   fallback. If ``REPAIRABLE``, a single deterministic repair is applied.
+When ``validation_pipeline`` is None (the default), the orchestrator
+behaves exactly as before.
 """
 
 import re
@@ -28,6 +39,7 @@ from src.domain.answer import AnswerPath, AnswerResult
 from src.domain.calculation import CalculationStatus
 from src.domain.evidence import EvidenceItem
 from src.domain.query import QueryRequest
+from src.domain.validation import AnswerabilityStatus, ValidationStatus
 from src.finance.calculation_pipeline import CalculationPipeline
 from src.finance.calculation_renderer import render_calculation_result
 from src.retrieval.query_processor import QueryProcessor
@@ -36,6 +48,8 @@ from src.retrieval.context_builder import ContextBuilder, EvidenceSufficiencyEva
 from src.generation.llm_gateway import LLMGateway
 from src.generation.deterministic_answers import DeterministicAnswerExtractor
 from src.retrieval.candidate_fusion import summarize_retrieved_chunks
+from src.validation.validation_pipeline import GroundedValidationPipeline
+from src.validation.response_repair import ResponseRepair
 
 
 class RAGOrchestrator:
@@ -72,6 +86,7 @@ class RAGOrchestrator:
         numeric_dense_floor: float = 0.08,
         model_name: str = "nanochat",
         calculation_pipeline: CalculationPipeline | None = None,
+        validation_pipeline: GroundedValidationPipeline | None = None,
     ):
         self._query_processor = query_processor
         self._retrieval_pipeline = retrieval_pipeline
@@ -87,6 +102,8 @@ class RAGOrchestrator:
         self._numeric_dense_floor = numeric_dense_floor
         self._model_name = model_name
         self._calculation_pipeline = calculation_pipeline
+        self._validation_pipeline = validation_pipeline
+        self._response_repair = ResponseRepair() if validation_pipeline else None
 
     # ------------------------------------------------------------------
     # Typed boundary (production entry point)
@@ -178,6 +195,10 @@ class RAGOrchestrator:
         low_confidence_numeric_override = False
         calculation_result = None
         calculation_answer = None
+        answerability_result = None
+        validation_result = None
+        repair_result = None
+        evidence_for_validation: tuple[EvidenceItem, ...] = ()
 
         if front_matter_answer:
             chunks = front_matter_answer["chunks"]
@@ -237,32 +258,94 @@ class RAGOrchestrator:
                 }
             else:
                 # 4. Deterministic context answering
-                deterministic_context_answer = self._deterministic_extractor.answer_deterministic_query_from_context(
-                    question,
-                    context,
-                    sources,
+                # Phase 4: Pre-generation answerability evaluation.
+                # Runs before deterministic context answering / LLM.
+                # If NOT_ANSWERABLE, skip LLM and return safe fallback.
+                evidence_for_validation = tuple(
+                    EvidenceItem.from_chunk(c) for c in chunks
                 )
-                if deterministic_context_answer:
-                    answer = deterministic_context_answer["answer"]
-                    is_sufficient = True
-                    deterministic_answer = deterministic_context_answer["diagnostic"]
-                    low_confidence_numeric_override = False
-                else:
-                    low_confidence_numeric_override = (
-                        self._query_processor.should_generate_with_low_confidence(
-                            question,
-                            chunks,
-                            numeric_rrf_floor=self._numeric_rrf_floor,
-                            numeric_dense_floor=self._numeric_dense_floor,
+                answerability_blocked = False
+                if self._validation_pipeline is not None:
+                    answerability_result = (
+                        self._validation_pipeline.evaluate_answerability(
+                            question=question,
+                            intent=intent["intent"],
+                            evidence=evidence_for_validation,
+                            sufficiency_result=sufficiency,
+                            calculation_result=calculation_result,
+                            requested_documents=tuple(doc_names),
                         )
                     )
-                    if low_confidence_numeric_override:
-                        is_sufficient = True
+                    if (
+                        answerability_result.status
+                        is AnswerabilityStatus.NOT_ANSWERABLE
+                    ):
+                        answer = (
+                            "I cannot answer this question based on the "
+                            "available evidence. The retrieved documents "
+                            "do not contain sufficient information to "
+                            "provide a verified response."
+                        )
+                        is_sufficient = False
+                        deterministic_answer = {
+                            "path": "answerability_blocked",
+                            "status": answerability_result.status.value,
+                            "reason_codes": list(
+                                answerability_result.reason_codes
+                            ),
+                        }
+                        answerability_blocked = True
 
-                    if not is_sufficient:
-                        answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+                if not answerability_blocked:
+                    deterministic_context_answer = self._deterministic_extractor.answer_deterministic_query_from_context(
+                        question,
+                        context,
+                        sources,
+                    )
+                    if deterministic_context_answer:
+                        answer = deterministic_context_answer["answer"]
+                        is_sufficient = True
+                        deterministic_answer = deterministic_context_answer["diagnostic"]
+                        low_confidence_numeric_override = False
                     else:
-                        answer = await self._llm_gateway.generate(context, question)
+                        low_confidence_numeric_override = (
+                            self._query_processor.should_generate_with_low_confidence(
+                                question,
+                                chunks,
+                                numeric_rrf_floor=self._numeric_rrf_floor,
+                                numeric_dense_floor=self._numeric_dense_floor,
+                            )
+                        )
+                        if low_confidence_numeric_override:
+                            is_sufficient = True
+
+                        if not is_sufficient:
+                            answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
+                        else:
+                            answer = await self._llm_gateway.generate(context, question)
+
+                # Phase 4: Post-generation response validation.
+                # Validates the generated answer against evidence and
+                # calculation results. If BLOCKED/FAILED, replaces the
+                # answer with a safe fallback. If REPAIRABLE, applies a
+                # single deterministic repair.
+                if (
+                    self._validation_pipeline is not None
+                    and not answerability_blocked
+                ):
+                    validation_result = self._validation_pipeline.validate_response(
+                        answer=answer,
+                        intent=intent["intent"],
+                        evidence=evidence_for_validation,
+                        calculation_result=calculation_result,
+                    )
+                    if self._response_repair is not None:
+                        repair_result = self._response_repair.repair(
+                            answer=answer,
+                            validation=validation_result,
+                            answerability=answerability_result,
+                        )
+                        answer = repair_result.answer
 
         # 5. Log trace
         elapsed_ms = (time.time() - t0) * 1000
@@ -296,6 +379,21 @@ class RAGOrchestrator:
                         if calculation_result is not None
                         and calculation_result.status
                         is not CalculationStatus.NOT_APPLICABLE
+                        else None
+                    ),
+                    "answerability": (
+                        answerability_result.to_trace_dict()
+                        if answerability_result is not None
+                        else None
+                    ),
+                    "validation": (
+                        validation_result.to_trace_dict()
+                        if validation_result is not None
+                        else None
+                    ),
+                    "repair": (
+                        repair_result.to_trace_dict()
+                        if repair_result is not None
                         else None
                     ),
                 },
@@ -335,6 +433,21 @@ class RAGOrchestrator:
             path=AnswerPath.FULL,
             had_conversation_history=had_history,
             calculations=calculations,
+            answerability=(
+                answerability_result.to_public_dict()
+                if answerability_result is not None
+                else None
+            ),
+            validation=(
+                validation_result.to_public_dict()
+                if validation_result is not None
+                else None
+            ),
+            repair=(
+                repair_result.to_public_dict()
+                if repair_result is not None
+                else None
+            ),
         )
 
     # ------------------------------------------------------------------

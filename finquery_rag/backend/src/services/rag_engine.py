@@ -25,6 +25,7 @@ from src.generation.response_renderer import validate_answer
 from src.generation.deterministic_answers import DeterministicAnswerExtractor
 from src.application.rag_orchestrator import RAGOrchestrator
 from src.finance.calculation_pipeline import CalculationPipeline
+from src.validation.validation_pipeline import GroundedValidationPipeline
 from src.services.memory_profile import build_memory_profile_context
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
@@ -67,7 +68,8 @@ class RAGEngine:
                  reranker_name: str | None = None,
                  reranker_model: str | None = None,
                  retrieval_candidate_multiplier: int = 2,
-                 enable_calculation_pipeline: bool = True):
+                 enable_calculation_pipeline: bool = True,
+                 enable_validation_pipeline: bool = True):
         """
         RAGEngine 类的初始化方法。
 
@@ -85,6 +87,10 @@ class RAGEngine:
             enable_calculation_pipeline (bool): Whether to enable the Phase 3 deterministic
                 calculation pipeline. Defaults to True so production callers get calculation
                 support without explicit wiring. Set to False for testing or rollback.
+            enable_validation_pipeline (bool): Whether to enable the Phase 4 grounded
+                validation pipeline (answerability + response validation + repair).
+                Defaults to True so production callers get validation without explicit
+                wiring. Set to False for testing or rollback.
         """
         self.llm_client = llm_client
         self.model_name = model_name
@@ -154,6 +160,15 @@ class RAGEngine:
             if enable_calculation_pipeline
             else None
         )
+        # Phase 4: Grounded validation pipeline. Enabled by default so
+        # production callers get answerability evaluation + response
+        # validation + repair without explicit wiring. Can be disabled
+        # via enable_validation_pipeline=False for testing or rollback.
+        self._validation_pipeline = (
+            GroundedValidationPipeline()
+            if enable_validation_pipeline
+            else None
+        )
         self._orchestrator = RAGOrchestrator(
             query_processor=self._query_processor,
             retrieval_pipeline=self._retrieval_pipeline,
@@ -169,6 +184,7 @@ class RAGEngine:
             numeric_dense_floor=self.numeric_dense_floor,
             model_name=self.model_name,
             calculation_pipeline=self._calculation_pipeline,
+            validation_pipeline=self._validation_pipeline,
         )
 
     def _get_bm25_retriever(self, doc_name=str, user_id: int = None):
