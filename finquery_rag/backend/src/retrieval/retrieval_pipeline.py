@@ -35,6 +35,11 @@ class RetrievalPipeline:
         self._use_hybrid = use_hybrid
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
 
+    @property
+    def last_retrieval_debug(self) -> dict:
+        """Public accessor for the last retrieval debug info."""
+        return self._last_retrieval_debug
+
     def _make_retrieval_debug(self, candidate_count: int, returned_count: int) -> dict:
         return {
             "reranker": self._reranker.name if self._reranker else None,

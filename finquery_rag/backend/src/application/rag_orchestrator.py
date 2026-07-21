@@ -236,7 +236,7 @@ class RAGOrchestrator:
             intent_confidence=intent["confidence"],
             rewritten_question=question if had_history else None,
             retrieved_chunks=tuple(summarize_retrieved_chunks(chunks)),
-            retrieval_debug=dict(self._retrieval_pipeline._last_retrieval_debug),
+            retrieval_debug=dict(self._retrieval_pipeline.last_retrieval_debug),
             trace_id=trace_id,
             path=AnswerPath.FULL,
             had_conversation_history=had_history,
