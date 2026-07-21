@@ -1,6 +1,8 @@
 {
   "baseline_commit": "3d08498",
-  "phase2_commit": "6cf6b89",
+  "implementation_commit": "6cf6b89",
+  "validated_head": "374f7f8",
+  "phase2_branch": "refactor/nf-02-rag-orchestration",
   "query_expansion_equal": true,
   "retrieval_order_equal": true,
   "context_equal": true,
@@ -15,7 +17,7 @@
     "python -m pytest tests/architecture/test_api_contract.py tests/test_phase12_trace_id.py tests/test_phase24_trace_retrieval_params.py tests/test_phase31_trace_diagnostics.py -v --tb=short",
     "python -m compileall -q src",
     "python -m ruff check src/domain src/retrieval src/generation src/application src/services/rag_engine.py",
-    "python check_cycles.py"
+    "python scripts/check_eval_leakage.py"
   ],
   "test_results": {
     "full_suite": {
@@ -23,7 +25,8 @@
       "skipped": 12,
       "failed": 0,
       "errors": 0,
-      "duration_seconds": 4.66
+      "duration_seconds": 4.89,
+      "validated_at": "374f7f8"
     },
     "order_1_refactor_integrity_architecture": {
       "passed": 251,
@@ -46,6 +49,7 @@
     },
     "compileall": "passed",
     "ruff_check": "All checks passed (Phase 2 modified files)",
+    "leakage_scanner": "PASS (0 violations)",
     "circular_dependency_check": "No circular dependencies found"
   },
   "skip_reasons": {
