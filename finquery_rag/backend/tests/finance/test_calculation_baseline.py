@@ -1,18 +1,19 @@
 """Phase 3 baseline: characterize current financial calculation behavior.
 
-These tests pin down the *current* (pre-Phase-3) behavior of the RAG pipeline
-when handling financial calculation questions. Phase 3 will introduce a
-deterministic calculation pipeline that bypasses the LLM for solvable
-calculations; these baseline tests document what happens *before* that
-pipeline exists so that behavior changes are intentional and visible.
+These tests pin down the *current* (pre-orchestrator-integration) behavior of
+the RAG pipeline when handling financial calculation questions. Phase 3 will
+introduce a deterministic calculation pipeline that bypasses the LLM for
+solvable calculations; these baseline tests document the state so that
+behavior changes are intentional and visible.
 
-Locked behaviors (Commit 1):
+Locked behaviors:
 - Intent classification routes calculation keywords to ``financial_calculation``
   and reported-metric lookups to ``document_qa``.
 - ``AnswerResult`` has no ``calculations`` field; ``to_legacy_dict`` does not
   emit a ``calculations`` key.
-- Deterministic financial primitives live at ``src.services.financial_tools``
-  (to be migrated to ``src.finance.primitive_tools`` in Commit 3).
+- Deterministic financial primitives live at ``src.finance.primitive_tools``
+  (migrated from ``src.services.financial_tools`` in Commit 3); the legacy
+  module re-exports them for backward compatibility.
 - ``RAGOrchestrator`` has no ``calculation_pipeline`` dependency yet.
 
 When Phase 3 commits change these behaviors, update the corresponding tests
@@ -149,14 +150,15 @@ class TestAnswerResultBaseline:
 
 
 class TestFinancialPrimitivesLocationBaseline:
-    """Lock current location of deterministic financial primitives.
+    """Lock the post-migration location of deterministic financial primitives.
 
-    Phase 3 Commit 3 will migrate these to ``src.finance.primitive_tools``
-    and add ``difference`` / ``average_values`` / ``gross_margin`` /
-    ``net_margin`` / ``debt_ratio``. Update these tests in that commit.
+    Commit 3 migrated primitives from ``src.services.financial_tools`` to
+    ``src.finance.primitive_tools`` and added 5 new functions. The legacy
+    module re-exports everything for backward compatibility.
     """
 
-    def test_financial_tools_module_exists_in_services(self):
+    def test_financial_tools_shim_still_accessible_in_services(self):
+        """``src.services.financial_tools`` must remain importable (shim)."""
         mod = importlib.import_module("src.services.financial_tools")
         for fn_name in (
             "growth_rate",
@@ -169,13 +171,17 @@ class TestFinancialPrimitivesLocationBaseline:
         ):
             assert hasattr(mod, fn_name), f"missing {fn_name}"
 
-    def test_finance_package_does_not_exist_yet(self):
-        """``src.finance`` is created in Commit 3 — lock its absence now."""
-        try:
-            importlib.import_module("src.finance")
-        except ImportError:
-            return
-        pytest.fail("src.finance should not exist before Phase 3 Commit 3")
+    def test_finance_package_exists_with_new_primitives(self):
+        """``src.finance.primitive_tools`` is the canonical home post-migration."""
+        mod = importlib.import_module("src.finance.primitive_tools")
+        for fn_name in (
+            "difference",
+            "average_values",
+            "gross_margin",
+            "net_margin",
+            "debt_ratio",
+        ):
+            assert hasattr(mod, fn_name), f"missing new primitive {fn_name}"
 
 
 # ---------------------------------------------------------------------------
