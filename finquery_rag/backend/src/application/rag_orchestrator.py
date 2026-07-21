@@ -381,26 +381,30 @@ class RAGOrchestrator:
                         is not CalculationStatus.NOT_APPLICABLE
                         else None
                     ),
-                    "answerability": (
-                        answerability_result.to_trace_dict()
-                        if answerability_result is not None
-                        else None
-                    ),
-                    "validation": (
-                        validation_result.to_trace_dict()
-                        if validation_result is not None
-                        else None
-                    ),
-                    "repair": (
-                        repair_result.to_trace_dict()
-                        if repair_result is not None
-                        else None
-                    ),
                 },
                 "model_name": self._model_name,
                 "latency_ms": elapsed_ms,
             }
         )
+        # Phase 4: Add validation diagnostics to trace only when the
+        # validation pipeline actually ran (non-None results). This
+        # preserves the trace shape when validation is disabled.
+        if self._validation_pipeline is not None:
+            trace_data["diagnostics"]["answerability"] = (
+                answerability_result.to_trace_dict()
+                if answerability_result is not None
+                else None
+            )
+            trace_data["diagnostics"]["validation"] = (
+                validation_result.to_trace_dict()
+                if validation_result is not None
+                else None
+            )
+            trace_data["diagnostics"]["repair"] = (
+                repair_result.to_trace_dict()
+                if repair_result is not None
+                else None
+            )
         trace_id = None
         try:
             trace_id = self._trace_logger.log(**trace_data)
