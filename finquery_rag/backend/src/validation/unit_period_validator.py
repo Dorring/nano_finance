@@ -180,8 +180,13 @@ class UnitPeriodValidator:
 
     @staticmethod
     def _extract_years_from_text(text: str) -> set[str]:
-        """Extract 4-digit years from text."""
-        return set(re.findall(r"\b(20[0-2]\d|19[89]\d)\b", text))
+        """Extract 4-digit years from text.
+
+        Uses digit-boundary checks (not ``\\b``) so that years embedded
+        in prefixed strings like ``FY2025`` or ``Q3 2024`` are still
+        captured.
+        """
+        return set(re.findall(r"(?<!\d)(20[0-2]\d|19[89]\d)(?!\d)", text))
 
     @staticmethod
     def _extract_years_from_evidence(
