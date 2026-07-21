@@ -2,3 +2,10 @@
 from src.domain.query import QueryRequest as QueryRequest
 from src.domain.evidence import EvidenceItem as EvidenceItem
 from src.domain.answer import RetrievalResult as RetrievalResult, AnswerResult as AnswerResult
+from src.domain.calculation import (
+    CalculationOperation as CalculationOperation,
+    CalculationStatus as CalculationStatus,
+    CalculationOperand as CalculationOperand,
+    CalculationPlan as CalculationPlan,
+    CalculationResult as CalculationResult,
+)
