@@ -1,14 +1,20 @@
-"""Phase 2 tests: Retrieval quality - context builder and tracing."""
+"""Phase 2 tests: Retrieval quality - context builder and tracing.
+
+Heavy dependencies (chromadb, tiktoken, openai, jose, sqlalchemy, etc.) are
+mocked by ``tests/refactor/conftest.py`` via ``pytest_configure``. This file
+must NOT mutate ``sys.modules`` at import time so that test execution order
+does not affect other test directories.
+"""
 import os
 import sys
 import time
 import tempfile
 import gc
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from services.rag_engine import RAGEngine
-from services.trace import TraceLogger
+from src.services.rag_engine import RAGEngine
+from src.services.trace import TraceLogger
 
 
 class MockLLMClient:
@@ -34,6 +40,9 @@ def make_engine(**kwargs):
         bm25_db_path=tmp.name,
         **kwargs,
     )
+    # Mocked tiktoken returns invalid tokenizer; use None for char-based estimation
+    engine.tokenizer = None
+    engine._context_builder._tokenizer = None
     return engine, tmp.name
 
 

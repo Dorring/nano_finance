@@ -105,13 +105,14 @@ def test_query_uses_front_matter_title_without_llm_or_vector_search(monkeypatch,
             raise AssertionError("LLM should not be called for deterministic title answers")
 
     engine = RAGEngine(FailingLLM(), use_hybrid=False, bm25_db_path=str(tmp_path / "b.db"))
-    monkeypatch.setattr(engine, "retrieve_front_matter_chunks", lambda doc_names, query, user_id: [{
+    # Mock at orchestrator dependency level (query delegates to orchestrator)
+    monkeypatch.setattr(engine._orchestrator, "_retrieve_front_matter_chunks", lambda doc_names, query, user_id: [{
         "doc_id": "paper::front_matter_title",
         "content": "Title: Deterministic Title",
         "metadata": {"type": "front_matter", "subtype": "title", "page": 1, "doc_name": "paper.pdf"},
         "score": 1.0,
     }])
-    monkeypatch.setattr(engine, "retrieve_single_document", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("vector retrieval should not be used")))
+    monkeypatch.setattr(engine._retrieval_pipeline, "retrieve_single", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("vector retrieval should not be used")))
 
     result = __import__("asyncio").run(engine.query("What is the title of this paper?", doc_names=["paper.pdf"], user_id=1))
 

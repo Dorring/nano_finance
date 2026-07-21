@@ -1,14 +1,30 @@
 from .trace import TraceLogger
-import time
 import os
 import re
 
-import asyncio
-from .vector_store import query_collection, list_all_documents, get_front_matter_chunks, get_page_chunks
-from .retrieval import SqliteBM25Retriever, rrf
+from .vector_store import query_collection, list_all_documents, get_front_matter_chunks
+from .retrieval import SqliteBM25Retriever
 from .reranker import build_reranker
 from .intent import classify_query_intent
-from .memory_profile import build_memory_profile_context
+from src.domain.query import QueryRequest
+from src.retrieval.query_processor import QueryProcessor
+from src.retrieval.retrieval_pipeline import RetrievalPipeline
+from src.retrieval.candidate_fusion import (
+    normalize_scores as _normalize_scores,
+    dedupe_chunks as _dedupe_chunks,
+    chunk_doc_name as _chunk_doc_name,
+    ensure_multi_doc_coverage as _ensure_multi_doc_coverage,
+    boost_front_matter_chunks as _boost_front_matter_chunks,
+    summarize_retrieved_chunks as _summarize_retrieved_chunks,
+    source_from_chunk as _source_from_chunk,
+)
+from src.retrieval.context_builder import ContextBuilder, EvidenceSufficiencyEvaluator
+from src.generation.prompt_builder import get_system_prompt
+from src.generation.llm_gateway import LLMGateway
+from src.generation.response_renderer import validate_answer
+from src.generation.deterministic_answers import DeterministicAnswerExtractor
+from src.application.rag_orchestrator import RAGOrchestrator
+from src.services.memory_profile import build_memory_profile_context
 
 # 尝试导入 tiktoken，如果未安装则降级为字符估算
 try:
@@ -88,6 +104,7 @@ class RAGEngine:
         self.reranker = build_reranker(reranker_name, model_name_or_path=reranker_model)
         self.retrieval_candidate_multiplier = max(1, int(retrieval_candidate_multiplier or 1))
         self._last_retrieval_debug = self._make_retrieval_debug(0, 0)
+        self._query_processor = QueryProcessor(memory_profile_context_fn=build_memory_profile_context)
 
         # 初始化 Token 计算器
         if TOKENIZER_AVAILABLE:
@@ -98,6 +115,47 @@ class RAGEngine:
         else:
             self.tokenizer = None
 
+        self._retrieval_pipeline = RetrievalPipeline(
+            dense_query_fn=query_collection,
+            bm25_retriever=self.bm25_retriever,
+            reranker=self.reranker,
+            query_processor=self._query_processor,
+            candidate_multiplier=self.retrieval_candidate_multiplier,
+            use_hybrid=self.use_hybrid,
+        )
+        self._context_builder = ContextBuilder(
+            max_context_tokens=self.max_context_tokens,
+            min_score_threshold=self.min_score_threshold,
+            tokenizer=self.tokenizer,
+        )
+        self._sufficiency_evaluator = EvidenceSufficiencyEvaluator(
+            rrf_sufficiency_threshold=self.rrf_sufficiency_threshold,
+            dense_sufficiency_threshold=self.dense_sufficiency_threshold,
+        )
+        self._llm_gateway = LLMGateway(
+            llm_client=self.llm_client,
+            model_name=self.model_name,
+            max_new_tokens=self.max_new_tokens,
+        )
+        self._deterministic_extractor = DeterministicAnswerExtractor(
+            query_processor=self._query_processor,
+        )
+        self._orchestrator = RAGOrchestrator(
+            query_processor=self._query_processor,
+            retrieval_pipeline=self._retrieval_pipeline,
+            context_builder=self._context_builder,
+            sufficiency_evaluator=self._sufficiency_evaluator,
+            llm_gateway=self._llm_gateway,
+            deterministic_extractor=self._deterministic_extractor,
+            trace_logger=self.trace_logger,
+            intent_classifier=classify_query_intent,
+            list_all_documents_fn=list_all_documents,
+            get_front_matter_chunks_fn=get_front_matter_chunks,
+            numeric_rrf_floor=self.numeric_rrf_floor,
+            numeric_dense_floor=self.numeric_dense_floor,
+            model_name=self.model_name,
+        )
+
     def _get_bm25_retriever(self, doc_name=str, user_id: int = None):
         """获取 SQLite FTS5 稀疏检索器。如果未启用混合检索则返回 None。"""
         if not self.use_hybrid:
@@ -105,16 +163,9 @@ class RAGEngine:
         return self.bm25_retriever
 
     def _normalize_scores(self, chunks: list) -> list:
-        """统一分数字段，将 RRF 融合后的 fused_score 统一写入 score 字段。"""
-        for chunk in chunks:
-            if "fused_score" in chunk:
-                chunk["score"] = chunk["fused_score"]
-            elif "score" not in chunk:
-                chunk["score"] = 0
-        return chunks
+        return _normalize_scores(chunks)
 
     def _make_retrieval_debug(self, candidate_count: int, returned_count: int) -> dict:
-        """Small metadata payload used by eval/replay to audit retrieval changes."""
         return {
             "reranker": self.reranker.name if self.reranker else None,
             "reranker_enabled": self.reranker is not None,
@@ -124,7 +175,6 @@ class RAGEngine:
         }
 
     def _apply_reranker(self, query: str, chunks: list, top_k: int) -> list:
-        """Apply optional reranker while preserving default retrieval behavior."""
         candidate_count = len(chunks)
         if not self.reranker:
             selected = chunks[:top_k]
@@ -136,330 +186,80 @@ class RAGEngine:
         )
         return selected
 
+    @staticmethod
     def _dedupe_chunks(chunks: list) -> list:
-        deduped = []
-        seen = set()
-        for chunk in chunks or []:
-            doc_id = chunk.get("doc_id")
-            key = doc_id or ((chunk.get("metadata") or {}).get("doc_name"), (chunk.get("metadata") or {}).get("page"), (chunk.get("content") or "")[:80])
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(chunk)
-        return deduped
+        return _dedupe_chunks(chunks)
 
     @staticmethod
     def _chunk_doc_name(chunk: dict) -> str | None:
-        metadata = chunk.get("metadata") or {}
-        doc_name = metadata.get("doc_name")
-        if doc_name:
-            return doc_name
-        doc_id = chunk.get("doc_id") or ""
-        if "::" not in doc_id:
-            return None
-        prefix = doc_id.split("::", 1)[0]
-        if prefix.startswith("user_"):
-            return "_".join(prefix.split("_")[2:])
-        return prefix or None
+        return _chunk_doc_name(chunk)
 
     def _ensure_multi_doc_coverage(self, candidates: list, selected: list, doc_names: list[str], top_k: int | None) -> list:
-        """Keep at least one candidate per requested document for multi-document questions."""
-        if top_k is None or top_k <= 0 or len(doc_names or []) <= 1:
-            return selected
-        selected = list(selected or [])
-        selected_ids = {chunk.get("doc_id") for chunk in selected}
-        selected_docs = {self._chunk_doc_name(chunk) for chunk in selected}
-        wanted_docs = [doc for doc in doc_names if doc not in selected_docs]
-        if not wanted_docs:
-            return selected[:top_k]
-
-        for doc_name in wanted_docs:
-            doc_candidates = [chunk for chunk in candidates if self._chunk_doc_name(chunk) == doc_name]
-            best = max(
-                doc_candidates,
-                key=lambda chunk: (
-float(chunk.get("score", 0) or 0),
-                ),
-                default=None,
-            )
-            if not best or best.get("doc_id") in selected_ids:
-                continue
-            if len(selected) < top_k:
-                selected.append(best)
-            else:
-                replace_index = len(selected) - 1
-                selected[replace_index] = best
-            selected_ids.add(best.get("doc_id"))
-            selected_docs.add(doc_name)
-        return selected[:top_k]
+        return _ensure_multi_doc_coverage(candidates, selected, doc_names, top_k)
 
     def _has_cjk(self, text: str) -> bool:
-        return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+        return self._query_processor._has_cjk(text)
 
     def _is_document_front_matter_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        markers = (
-            "title", "author", "abstract", "paper name", "paper title",
-            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d", "\u4f5c\u8005", "\u6458\u8981", "\u8fd9\u7bc7\u8bba\u6587",
-        )
-        return any(marker in normalized for marker in markers)
-    def _expand_retrieval_query(self, query: str) -> str:
-        """Add lightweight retrieval terms for common finance PDF questions.
+        return self._query_processor.is_front_matter_query(query)
 
-        Only generic financial terminology expansions remain. Works for unknown documents.
-        """
-        if not query:
-            return query
-        expansions = []
-        lowered = query.lower()
-        if self._has_cjk(query):
-            if any(term in query for term in ("标题", "题目", "论文名")):
-                expansions.append("paper title title of this paper")
-            if "作者" in query:
-                expansions.append("paper authors author affiliation")
-            if "摘要" in query:
-                expansions.append("abstract summary")
-            if any(term in query for term in ("主要", "贡献", "研究", "解决")):
-                expansions.append("main contribution problem method approach")
-            if any(term in query for term in ("页", "几页", "多少页")):
-                expansions.append("number of pages page count")
-        if "title" in lowered and "paper title" not in lowered:
-            expansions.append("paper title")
-        if "reporting period" in lowered:
-            expansions.append("year ended reporting period fiscal year")
-        if "total revenue" in lowered:
-            expansions.append("total revenue revenue")
-        if "net assets" in lowered:
-            expansions.append("net assets statement of financial position")
-        if "cash and cash equivalents" in lowered or "cash equivalents" in lowered:
-            expansions.append("cash and cash equivalents current assets")
-        if "credit facilities" in lowered:
-            expansions.append("credit facilities revolving credit facility term loan")
-        if "gross margin" in lowered:
-            expansions.append("gross margin gross profit revenue")
-        if "operating activities" in lowered or "operating cash flow" in lowered:
-            expansions.append("net cash operating activities cash flows")
-        if not expansions:
-            return query
-        return f"{query}\n" + "\n".join(dict.fromkeys(expansions))
+    def _expand_retrieval_query(self, query: str) -> str:
+        return self._query_processor.expand(query)
 
     def _boost_front_matter_chunks(self, query: str, chunks: list) -> list:
-        """Prefer page-1 evidence for title/author/abstract style questions."""
-        if not chunks or not self._is_document_front_matter_query(query):
-            return chunks
-        boosted = []
-        for chunk in chunks:
-            item = dict(chunk)
-            metadata = dict(item.get("metadata") or {})
-            item["metadata"] = metadata
-            score = float(item.get("score", 0) or 0)
-            if metadata.get("page") == 1:
-                item["score"] = score + 0.02
-                item["front_matter_boost"] = 0.02
-            boosted.append(item)
-        boosted.sort(key=lambda item: item.get("score", 0), reverse=True)
-        return boosted
+        return _boost_front_matter_chunks(
+            query, chunks,
+            is_front_matter_query_fn=self._query_processor.is_front_matter_query,
+        )
 
     @staticmethod
     def _summarize_retrieved_chunks(chunks: list) -> list:
-        """Return eval-safe retrieval metadata without copying chunk content."""
-        summary = []
-        for chunk in chunks:
-            meta = chunk.get("metadata", {}) or {}
-            item = {
-                "doc_id": chunk.get("doc_id", ""),
-                "filename": meta.get("doc_name"),
-                "page": meta.get("page"),
-                "type": meta.get("type"),
-                "score": chunk.get("score", 0),
-                "rerank_score": chunk.get("rerank_score"),
-                "reranker": chunk.get("reranker"),
-            }
-            for key in ("parent_id", "section_path", "context_expanded_from"):
-                value = meta.get(key)
-                if value is not None:
-                    item[key] = value
-            summary.append(item)
-        return summary
+        return _summarize_retrieved_chunks(chunks)
 
     @staticmethod
     def _source_from_chunk(chunk: dict) -> dict:
-        meta = chunk.get("metadata", {}) or {}
-        doc_id = chunk.get("doc_id", "")
-        filename = meta.get("doc_name")
-        if not filename:
-            filename = doc_id.split("::", 1)[0] if "::" in doc_id else doc_id
-            if filename.startswith("user_"):
-                filename = "_".join(filename.split("_")[2:])
-        return {
-            "filename": filename,
-            "page": meta.get("page"),
-            "type": meta.get("type"),
-            "score": chunk.get("score", 0),
-            "chunk_id": doc_id,
-            "parent_id": meta.get("parent_id"),
-            "section_path": meta.get("section_path"),
-            "child_hit_count": meta.get("child_hit_count"),
-        }
+        return _source_from_chunk(chunk)
 
     def retrieve_single_document(self, doc_name: str, query: str, user_id: int = None, n_results: int = 3) -> list:
-        """使用混合搜索从单个文档中检索相关文本块。默认 top-k=3 适配短上下文。"""
-        retrieval_query = self._expand_retrieval_query(query)
-        if not self.use_hybrid:
-            results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=n_results, user_id=user_id)
-            results = self._normalize_scores(results)
-            results = self._boost_front_matter_chunks(query, results)
-            selected = self._apply_reranker(query, results, n_results)
-            return selected[:n_results] if n_results else selected
-
-        # Hybrid search
-        candidate_k = n_results * self.retrieval_candidate_multiplier
-        dense_results = query_collection(query_text=retrieval_query, doc_name=doc_name, n_results=candidate_k, user_id=user_id)
-
-        bm25_retriever = self._get_bm25_retriever(doc_name, user_id)
-        if bm25_retriever:
-            print(f"✓ BM25 retrieved for '{doc_name}'")
-            sparse_results = bm25_retriever.search(retrieval_query, k=candidate_k, doc_name=doc_name, user_id=user_id)
-            fused = rrf([dense_results, sparse_results])
-            results = self._normalize_scores(fused)
-            results = self._boost_front_matter_chunks(query, results)
-            selected = self._apply_reranker(query, results, n_results)
-            return selected[:n_results] if n_results else selected
-
-        results = self._normalize_scores(dense_results)
-        results = self._boost_front_matter_chunks(query, results)
-        selected = self._apply_reranker(query, results, n_results)
-        return selected[:n_results] if n_results else selected
+        result = self._retrieval_pipeline.retrieve_single(
+            document_name=doc_name, query=query, user_id=user_id, top_k=n_results,
+        )
+        self._last_retrieval_debug = self._retrieval_pipeline._last_retrieval_debug
+        return result
 
     async def retrieve_multiple_documents(self, doc_names: list[str], query: str, user_id: int = None, n_results: int = 3) -> list:
-        """异步并发地从多个文档中检索相关文本块，并按相关性得分降序返回前 N 个结果。"""
-        loop = asyncio.get_event_loop()
-
-        tasks = [
-            loop.run_in_executor(
-                None,
-                self.retrieve_single_document,
-                doc_name, query, user_id, n_results
-            )
-            for doc_name in doc_names
-        ]
-
-        results_list = await asyncio.gather(*tasks)
-
-        all_results = []
-        for results in results_list:
-            all_results.extend(results)
-
-        all_results.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-        selected = self._apply_reranker(query, all_results, n_results)
-        return self._ensure_multi_doc_coverage(all_results, selected, doc_names, n_results)
+        result = await self._retrieval_pipeline.retrieve_multiple(
+            document_names=doc_names, query=query, user_id=user_id, top_k=n_results,
+        )
+        self._last_retrieval_debug = self._retrieval_pipeline._last_retrieval_debug
+        return result
 
     def _is_title_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        return any(marker in normalized for marker in (
-            "title", "paper title", "name of this paper",
-            "\u6807\u9898", "\u9898\u76ee", "\u8bba\u6587\u540d",
-        ))
+        return self._query_processor.is_title_query(query)
 
     def _is_numeric_financial_query(self, query: str) -> bool:
-        normalized = (query or "").lower()
-        if "which documents mention" in normalized:
-            return False
-        numeric_markers = (
-            "how much", "how many", "amount",
-            "revenue", "cash", "equivalents", "margin", "growth", "rate",
-            "percent", "percentage", "assets", "liabilities", "income",
-            "expense", "profit", "loss", "budget", "net assets", "year-over-year",
-            "credit facilities", "revolving credit facility", "term loan", "yoy", "$", "%",
-        )
-        cjk_markers = (
-            "\u591a\u5c11", "\u91d1\u989d", "\u6536\u5165", "\u8425\u6536", "\u73b0\u91d1",
-            "\u5229\u6da6", "\u589e\u957f", "\u6bd4\u7387", "\u767e\u5206\u6bd4",
-        )
-        return any(marker in normalized for marker in numeric_markers) or any(marker in query for marker in cjk_markers)
+        return self._query_processor.is_numeric_query(query)
 
     def _should_try_deterministic_numeric_answer(self, query: str, chunks: list) -> bool:
-        if not chunks or not self._is_numeric_financial_query(query):
-            return False
-        normalized = (query or "").lower()
-        strong_markers = (
-            "record", "how much", "percentage", "percent", "cash and cash equivalents",
-            "gross margin", "platform revenue", "volume-based revenue", "credit facilities",
-            "operating activities", "net assets", "budget", "actual 2020", "reserve and surplus",
-            "practice question", "compare", "amount", "year-over-year", "growth rate",
-            "total revenue", "pct system", "madrid system",
-        )
-        return any(marker in normalized for marker in strong_markers)
+        return self._query_processor.should_try_deterministic_numeric_answer(query, chunks)
 
     def _should_generate_with_low_confidence(self, query: str, chunks: list) -> bool:
-        """Allow numeric finance QA to proceed when evidence exists but scores are under-calibrated.
-
-        Real annual reports often retrieve the right page/table with low RRF scores.
-        Refusing before the LLM sees that evidence produces false no-answers for
-        factual numeric questions. Keep the override narrow to numeric finance
-        questions and require a minimal non-zero retrieval score.
-        """
-        if not chunks or not self._is_numeric_financial_query(query):
-            return False
-        scores = [float(chunk.get("score", 0) or 0) for chunk in chunks]
-        best_score = max(scores) if scores else 0.0
-        if best_score <= 0:
-            return False
-        if best_score < 0.05:
-            return best_score >= self.numeric_rrf_floor
-        return best_score >= self.numeric_dense_floor
+        return self._query_processor.should_generate_with_low_confidence(
+            query, chunks,
+            numeric_rrf_floor=self.numeric_rrf_floor,
+            numeric_dense_floor=self.numeric_dense_floor,
+        )
 
     def answer_front_matter_query(self, query: str, chunks: list) -> dict | None:
-        """Answer deterministic front-matter questions from structured chunks."""
-        if not self._is_title_query(query):
-            return None
-        normalized_query = (query or "").lower()
-        title_chunks = [
-            chunk for chunk in (chunks or [])
-            if (chunk.get("metadata") or {}).get("type") == "front_matter"
-            and (chunk.get("metadata") or {}).get("subtype") == "title"
-            and (chunk.get("content") or "").strip()
-        ]
-        if not title_chunks:
-            return None
-        title_chunks.sort(key=lambda chunk: (chunk.get("metadata") or {}).get("page", 999))
-        title_chunk = dict(title_chunks[0])
-        title = re.sub(r"\s+", " ", title_chunk.get("content", "")).strip()
-        title = re.sub(r"^title\s*:\s*", "", title, flags=re.IGNORECASE).strip()
-        title = self._clean_deterministic_title(title)
-        if not self._is_valid_deterministic_title(title):
-            return None
-        if "reporting period" in normalized_query and not re.search(r"\b(19|20)\d{2}\b|year to|year ended", title, re.IGNORECASE):
-            return None
-        title_chunk["score"] = max(float(title_chunk.get("score", 0) or 0), 1.0)
-        title_chunk["deterministic_answer"] = "front_matter_title"
-        return {
-            "answer": f'The title of the paper is "{title}".',
-            "chunks": [title_chunk],
-            "diagnostic": "front_matter_title",
-        }
+        return self._deterministic_extractor.answer_front_matter_query(query, chunks)
 
     @staticmethod
     def _clean_deterministic_title(title: str) -> str:
-        cleaned = re.sub(r"\s+", " ", title or "").strip(" -")
-        cleaned = re.sub(r"\b(annual)\s+(annual report)\b", r"\1 report", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"\b(report)\s+(annual report)\b", r"\2", cleaned, flags=re.IGNORECASE)
-        return cleaned.strip(" -")
+        return DeterministicAnswerExtractor._clean_deterministic_title(title)
 
     @staticmethod
     def _is_valid_deterministic_title(title: str) -> bool:
-        cleaned = re.sub(r"[^a-z0-9]+", " ", title or "", flags=re.IGNORECASE).strip().lower()
-        if len(cleaned) < 12:
-            return False
-        generic_titles = {
-            "annual",
-            "report",
-            "annual report",
-            "financial statements",
-            "annual financial report",
-        }
-        return cleaned not in generic_titles
+        return DeterministicAnswerExtractor._is_valid_deterministic_title(title)
 
     def retrieve_front_matter_chunks(self, doc_names: list[str], query: str, user_id: int | None = None) -> list:
         """Direct metadata lookup for deterministic front-matter questions."""
@@ -477,310 +277,43 @@ float(chunk.get("score", 0) or 0),
 
     @staticmethod
     def _parent_context_key(chunk: dict) -> str | None:
-        metadata = chunk.get("metadata") or {}
-        parent_id = metadata.get("parent_id")
-        parent_excerpt = metadata.get("parent_excerpt")
-        if not isinstance(parent_id, str) or not parent_id.strip():
-            return None
-        if not isinstance(parent_excerpt, str) or not parent_excerpt.strip():
-            return None
-        return parent_id.strip()
+        return ContextBuilder._parent_context_key(chunk)
 
     def _merge_parent_context_chunks(self, chunks: list) -> list:
-        """Expand child hits to their parent section/page excerpt and merge siblings.
-
-        Retrieval still ranks small child chunks. The generation context sees a
-        bounded parent excerpt so answers have enough local section context.
-        """
-        merged = []
-        by_parent: dict[str, dict] = {}
-
-        for chunk in chunks:
-            parent_key = self._parent_context_key(chunk)
-            if not parent_key:
-                merged.append(chunk)
-                continue
-
-            metadata = dict(chunk.get("metadata") or {})
-            parent_excerpt = metadata.get("parent_excerpt")
-            existing = by_parent.get(parent_key)
-            if existing is None:
-                expanded = dict(chunk)
-                expanded_metadata = dict(metadata)
-                expanded_metadata["context_expanded_from"] = "parent_excerpt"
-                expanded_metadata["child_hit_count"] = 1
-                expanded_metadata["child_chunk_ids"] = [chunk.get("doc_id")]
-                expanded_metadata["matched_child_snippets"] = [
-                    self._compact_child_snippet(chunk.get("content", ""))
-                ]
-                expanded["metadata"] = expanded_metadata
-                expanded["content"] = self._compose_parent_context(
-                    parent_excerpt,
-                    expanded_metadata["matched_child_snippets"],
-                )
-                expanded["child_hit_count"] = 1
-                by_parent[parent_key] = expanded
-                merged.append(expanded)
-                continue
-
-            existing_score = float(existing.get("score", 0) or 0)
-            current_score = float(chunk.get("score", 0) or 0)
-            existing["score"] = max(existing_score, current_score)
-            existing["child_hit_count"] = int(existing.get("child_hit_count", 1)) + 1
-            existing_meta = existing.get("metadata") or {}
-            child_ids = list(existing_meta.get("child_chunk_ids") or [])
-            child_id = chunk.get("doc_id")
-            if child_id and child_id not in child_ids:
-                child_ids.append(child_id)
-            existing_meta["child_chunk_ids"] = child_ids
-            existing_meta["child_hit_count"] = existing["child_hit_count"]
-            snippets = list(existing_meta.get("matched_child_snippets") or [])
-            snippet = self._compact_child_snippet(chunk.get("content", ""))
-            if snippet and snippet not in snippets:
-                snippets.append(snippet)
-            existing_meta["matched_child_snippets"] = snippets
-            existing["content"] = self._compose_parent_context(
-                existing_meta.get("parent_excerpt", existing.get("content", "")),
-                snippets,
-            )
-
-        return merged
+        return self._context_builder._merge_parent_context_chunks(chunks)
 
     @staticmethod
     def _compact_child_snippet(content: str, *, max_chars: int = 500) -> str:
-        text = re.sub(r"\s+", " ", content or "").strip()
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars].rstrip() + " [...]"
+        return ContextBuilder._compact_child_snippet(content, max_chars=max_chars)
 
     @staticmethod
     def _compose_parent_context(parent_excerpt: str, child_snippets: list[str]) -> str:
-        snippets = [item for item in child_snippets if item]
-        if not snippets:
-            return parent_excerpt
-        evidence = "\n".join(f"- {item}" for item in snippets)
-        return f"{parent_excerpt}\n\nMatched child evidence:\n{evidence}"
+        return ContextBuilder._compose_parent_context(parent_excerpt, child_snippets)
 
     def build_context(self, chunks: list) -> tuple:
-        """Build context from retrieved chunks with dedup, score threshold, and token budget."""
-        if not chunks:
-            return "", []
-
-        # Phase 2: deduplicate chunks by content
-        seen_content = set()
-        deduped = []
-        for chunk in chunks:
-            content_key = chunk["content"][:100]  # first 100 chars as dedup key
-            if content_key not in seen_content:
-                seen_content.add(content_key)
-                deduped.append(chunk)
-        chunks = deduped
-
-        # Phase 2: filter by minimum score threshold
-        if self.min_score_threshold > 0:
-            chunks = [c for c in chunks if c.get("score", 0) >= self.min_score_threshold]
-
-        if not chunks:
-            return "", []
-
-        chunks = self._merge_parent_context_chunks(chunks)
-
-        context_parts = []
-        sources = []
-        current_tokens = 0
-        safe_limit = self.max_context_tokens - 200
-
-        for i, chunk in enumerate(chunks, 1):
-            doc_id = chunk["doc_id"]
-            content = chunk["content"]
-            chunk_type = chunk["metadata"].get("type")
-            page = chunk["metadata"].get("page")
-            parent_id = chunk["metadata"].get("parent_id")
-            section_path = chunk["metadata"].get("section_path")
-            child_hit_count = chunk["metadata"].get("child_hit_count")
-
-            # Parse filename from scoped chunk ID
-            if "::" in doc_id:
-                parts = doc_id.split("::")[0]
-                # Remove user_N_ prefix if present
-                if parts.startswith("user_"):
-                    parts = "_".join(parts.split("_")[2:])
-                filename = parts
-            else:
-                filename = doc_id
-
-            if chunk_type == "table":
-                table_num = chunk["metadata"].get("table_num", "")
-                source_ref = "%s, p%s(T%s)" % (filename, page, table_num)
-            else:
-                source_ref = "%s, p%s" % (filename, page)
-
-            chunk_text = "[%s]\n%s" % (source_ref, content)
-
-            if self.tokenizer:
-                chunk_tokens = len(self.tokenizer.encode(chunk_text))
-            else:
-                chunk_tokens = len(chunk_text) / 3
-
-            if current_tokens + chunk_tokens > safe_limit:
-                remaining_tokens = safe_limit - current_tokens
-                if remaining_tokens > 80:
-                    if self.tokenizer:
-                        truncated_tokens = self.tokenizer.encode(content)[:remaining_tokens-20]
-                        truncated_content = self.tokenizer.decode(truncated_tokens) + "\n[...]"
-                    else:
-                        truncated_content = content[:int(remaining_tokens * 3)] + "\n[...]"
-                    chunk_text = "[%s]\n%s" % (source_ref, truncated_content)
-                    context_parts.append(chunk_text)
-                    sources.append({
-                        "filename": filename, "page": page,
-                        "type": chunk_type, "score": chunk.get("score", 0),
-                        "chunk_id": doc_id,
-                        "parent_id": parent_id,
-                        "section_path": section_path,
-                        "child_hit_count": child_hit_count,
-                    })
-                break
-
-            context_parts.append(chunk_text)
-            current_tokens += chunk_tokens
-            sources.append({
-                "filename": filename, "page": page,
-                "type": chunk_type, "score": chunk.get("score", 0),
-                "chunk_id": doc_id,
-                "parent_id": parent_id,
-                "section_path": section_path,
-                "child_hit_count": child_hit_count,
-            })
-
-        context_str = "\n\n---\n\n".join(context_parts)
-        return context_str, sources
+        # Sync threshold and token budget in case they were changed after init
+        self._context_builder._min_score_threshold = self.min_score_threshold
+        self._context_builder._max_context_tokens = self.max_context_tokens
+        return self._context_builder.build(chunks)
 
     def _get_system_prompt(self) -> str:
-        """
-        精简版 System Prompt，适配 2B 模型 + 2048 上下文。
-        原版约 230 token，精简至约 120 token，为核心检索内容腾出空间。
-        """
-        return """You are FinQuery, a financial document assistant. Rules:
-1. Answer based ONLY on the provided context
-2. Cite sources: "Source: <filename>, page <number>"
-3. Preserve exact numbers, currencies, dates from tables
-4. For numeric questions, extract the exact value and unit from the most relevant sentence/table row
-5. If context contains relevant numbers, answer with those numbers instead of refusing
-6. If no relevant info found, say so clearly
-7. Answer in prose, never use markdown table syntax
-8. Be concise and precise."""
+        return get_system_prompt()
 
     def _validate_answer(self, answer: str, sources: list) -> str:
-        """
-        Phase 3: Post-generation answer validation and cleanup.
-        - Strips whitespace and model artifacts
-        - Returns refusal message if answer is empty or near-empty
-        - Truncates overly long answers to max_new_tokens * 4 chars
-        """
-        if not answer:
-            return "I couldn't generate a valid answer. Please try rephrasing your question."
-
-        # Strip model artifacts and excessive whitespace
-        answer = answer.strip()
-        for artifact in ["<|end|>", "</s>", "[END]", "[/INST]"]:
-            answer = answer.replace(artifact, "")
-        answer = answer.strip()
-
-        # Near-empty after cleanup
-        if len(answer) < 10:
-            return "I couldn't generate a meaningful answer. Please try rephrasing your question."
-
-        # Truncate overly long answers (safety cap)
-        max_chars = self.max_new_tokens * 4
-        if len(answer) > max_chars:
-            answer = answer[:max_chars].rsplit(" ", 1)[0] + "..."
-
-        return answer
+        return validate_answer(answer, sources, max_new_tokens=self.max_new_tokens)
 
     def _check_context_sufficiency(self, chunks: list) -> tuple:
-        """
-        Phase 3: Check if retrieved context is sufficient for a reliable answer.
-        Returns (is_sufficient: bool, best_score: float, avg_score: float).
-
-        Scores are mode-dependent:
-        - Dense-only (cosine): 0-1 range, threshold 0.15
-        - Hybrid/RRF fused_score: ~0.01-0.05 range, threshold from RAG_RRF_SUFFICIENCY_THRESHOLD
-        """
-        if not chunks:
-            return False, 0.0, 0.0
-
-        scores = [c.get("score", 0) for c in chunks]
-        best_score = max(scores)
-        avg_score = sum(scores) / len(scores)
-
-        # Detect score scale: RRF fused_scores are typically < 0.05
-        # Dense cosine scores are typically 0-1
-        max_possible_rrf = 0.05
-        if best_score < max_possible_rrf:
-            # RRF mode - require enough fused evidence to avoid low-confidence hallucination.
-            SUFFICIENCY_THRESHOLD = self.rrf_sufficiency_threshold
-        else:
-            # Dense mode - use cosine threshold.
-            SUFFICIENCY_THRESHOLD = self.dense_sufficiency_threshold
-
-        is_sufficient = best_score >= SUFFICIENCY_THRESHOLD
-        return is_sufficient, best_score, avg_score
+        result = self._sufficiency_evaluator.evaluate(chunks)
+        return result.is_sufficient, result.best_score, result.average_score
 
     def _compute_confidence(self, chunks: list) -> float:
-        """
-        Phase 3: Compute answer confidence based on retrieval quality.
-        Returns a float between 0.0 and 1.0.
-        """
-        if not chunks:
-            return 0.0
-
-        scores = [c.get("score", 0) for c in chunks]
-        best = max(scores)
-        avg = sum(scores) / len(scores)
-
-        # Confidence = weighted blend of best and average score
-        confidence = 0.7 * best + 0.3 * avg
-        return min(1.0, max(0.0, confidence))
+        return self._sufficiency_evaluator.confidence(chunks)
 
     def _looks_like_followup_question(self, question: str) -> bool:
-        """Return True only for questions that likely need conversation context."""
-        normalized = (question or "").strip().lower()
-        if not normalized:
-            return False
-
-        followup_markers = (
-            "it", "its", "they", "them", "that", "this", "those", "these",
-            "above", "previous", "same", "there", "what about", "how about",
-            "继续", "这个", "那个", "上述", "前面", "上一", "它", "他们", "这些", "那些",
-        )
-        standalone_markers = (
-            "title", "paper", "document", "pdf", "论文", "文档", "标题", "作者", "页", "多少",
-        )
-
-        has_followup = any(marker in normalized for marker in followup_markers)
-        has_standalone = any(marker in normalized for marker in standalone_markers)
-        return has_followup and not has_standalone
+        return self._query_processor.looks_like_followup_question(question)
 
     def _is_valid_rewritten_query(self, original: str, rewritten: str) -> bool:
-        """Reject LLM rewrite artifacts that would poison retrieval."""
-        if not rewritten:
-            return False
-        candidate = rewritten.strip()
-        if len(candidate) < 5 or len(candidate) > max(200, len(original) * 4):
-            return False
-        if "\n" in candidate:
-            return False
-        artifact_patterns = (
-            r"\bUser\s*:",
-            r"\bAssistant\s*:",
-            r"\[[^\]]+\.pdf\s*,\s*p\d+\]",
-            r"Context\s*:",
-            r"Answer\s*:",
-        )
-        if any(re.search(pattern, candidate, flags=re.IGNORECASE) for pattern in artifact_patterns):
-            return False
-        return True
+        return self._query_processor.is_valid_rewritten_query(original, rewritten)
 
     async def _rewrite_query_with_context(
         self,
@@ -788,528 +321,93 @@ float(chunk.get("score", 0) or 0),
         conversation_history: list,
         memory_profile: dict | None = None,
     ) -> str:
-        """
-        Rewrite only true follow-up questions. Bad rewrites are more harmful than
-        no rewrite because retrieval uses the rewritten text directly.
-        """
-        if not conversation_history or len(conversation_history) < 2:
-            return question
-        if not self._looks_like_followup_question(question):
-            return question
-
-        recent = conversation_history[-4:]
-        history_parts = []
-        for msg in recent:
-            role = "User" if msg["role"] == "user" else "Assistant"
-            content = (msg.get("content") or "")[:160]
-            history_parts.append(f"{role}: {content}")
-        history_text = "\n".join(history_parts)
-        memory_text = build_memory_profile_context(memory_profile)
-        memory_block = (
-            "User preference memory for query planning only; do not treat as document facts:\n"
-            f"{memory_text}\n\n"
-            if memory_text
-            else ""
+        return await self._query_processor.rewrite(
+            question, conversation_history, memory_profile,
+            llm_client=self.llm_client, model_name=self.model_name,
         )
-
-        rewrite_prompt = (
-            "Rewrite the current follow-up question into one standalone search query.\n"
-            "Use the conversation only to resolve pronouns or omitted subjects.\n"
-            "Use preference memory only to resolve language, company, period, unit, or metric ambiguity.\n"
-            "Do not include role labels, citations, page markers, or prior answers.\n\n"
-            f"{memory_block}"
-            f"Conversation:\n{history_text}\n\n"
-            f"Current question: {question}\n"
-            "Standalone search query:"
-        )
-
-        try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.llm_client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": rewrite_prompt}],
-                    temperature=0,
-                    max_tokens=100,
-                )
-            )
-            rewritten = response.choices[0].message.content
-            if self._is_valid_rewritten_query(question, rewritten):
-                return rewritten.strip()
-            return question
-        except Exception:
-            return question
 
     async def generate_answer(self, context: str, query: str) -> str:
-        """使用大语言模型生成回答（非流式输出，异步不阻塞）。"""
-        if not context:
-            return "I couldn't find relevant information in the documents to answer your question."
-
-        system_prompt = self._get_system_prompt()
-        user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-
-        loop = asyncio.get_event_loop()
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.llm_client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0,
-                    max_tokens=self.max_new_tokens
-                )
-            )
-            raw_answer = response.choices[0].message.content
-            return self._validate_answer(raw_answer, [])
-        except Exception as e:
-            return f"Error generating answer: {str(e)}"
+        return await self._llm_gateway.generate(context, query)
 
     def answer_numeric_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Return a deterministic numeric answer when relevant evidence lines are present.
-
-        The goal is not to calculate new metrics. It extracts source text lines that
-        already contain both query terms and numeric values, which is more stable
-        than asking a small local model to copy table values.
-        """
-        if not context or not self._should_try_deterministic_numeric_answer(query, [{"score": 1.0}]):
-            return None
-
-        evidence = self._rank_context_evidence(
-            query,
-            context,
-            require_number=True,
-            window_radius=1,
-        )
-
-        selected = self._select_distinct_evidence(evidence, limit=3)
-        direct_values = self._summarize_numeric_values(query, selected, context=context)
-        if not selected and not direct_values:
-            return None
-
-        answer_lines = []
-        if direct_values:
-            answer_lines.append(f"Answer: {direct_values}.")
-        if selected:
-            answer_lines.append("Evidence:")
-        for item in selected:
-            if item["source"]:
-                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
-            else:
-                answer_lines.append(f"- {item['text']}")
-        return {
-            "answer": "\n".join(answer_lines),
-            "diagnostic": "deterministic_numeric_evidence",
-        }
+        return self._deterministic_extractor.answer_numeric_query_from_context(query, context, sources)
 
     def answer_factual_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Return deterministic evidence for factual front-matter/definition/list questions."""
-        if not context or self._is_numeric_financial_query(query):
-            return None
-        if not self._should_try_deterministic_factual_answer(query):
-            return None
-
-        normalized = (query or "").lower()
-        direct_answer = self._summarize_factual_evidence(query, [], context=context)
-        evidence = self._rank_context_evidence(
-            query,
-            context,
-            require_number=False,
-            window_radius=1,
-        )
-        if not evidence and not direct_answer:
-            return None
-
-        selected = self._select_distinct_evidence(evidence, limit=3)
-        if not selected and not direct_answer:
-            return None
-
-        if "list" in normalized or "criteria" in normalized:
-            prefix = "The relevant criteria from the document are:"
-        elif "definition" in normalized or "meaning" in normalized or "what are financial statements" in normalized:
-            prefix = "The document states:"
-        else:
-            prefix = "The relevant document evidence is:"
-
-        answer_lines = []
-        if direct_answer:
-            answer_lines.append(f"Answer: {direct_answer}")
-        if selected:
-            answer_lines.append(prefix)
-        for item in selected:
-            if item["source"]:
-                answer_lines.append(f"- {item['text']} (Source: {item['source']})")
-            else:
-                answer_lines.append(f"- {item['text']}")
-        return {
-            "answer": "\n".join(answer_lines),
-            "diagnostic": "deterministic_factual_evidence",
-        }
+        return self._deterministic_extractor.answer_factual_query_from_context(query, context, sources)
 
     def answer_deterministic_query_from_context(self, query: str, context: str, sources: list) -> dict | None:
-        """Try deterministic non-LLM answering from retrieved context."""
-        factual = self.answer_factual_query_from_context(query, context, sources)
-        if factual:
-            return factual
-        return self.answer_numeric_query_from_context(query, context, sources)
+        return self._deterministic_extractor.answer_deterministic_query_from_context(query, context, sources)
 
 
     @staticmethod
     def _parse_context_lines(context: str) -> list[dict]:
-        parsed = []
-        current_source = None
-        for raw_line in (context or "").splitlines():
-            line = re.sub(r"\s+", " ", raw_line or "").strip()
-            if not line or line == "---":
-                continue
-            source_match = re.match(r"^\[(?P<source>[^\]]+)\]$", line)
-            if source_match:
-                current_source = source_match.group("source")
-                continue
-            parsed.append({"source": current_source, "text": line})
-        return parsed
+        return DeterministicAnswerExtractor._parse_context_lines(context)
 
-    def _rank_context_evidence(
-        self,
-        query: str,
-        context: str,
-        *,
-        require_number: bool,
-        window_radius: int = 1,
-    ) -> list[dict]:
-        query_terms = self._important_query_terms(query)
-        parsed = self._parse_context_lines(context)
-        evidence = []
-        for index, item in enumerate(parsed):
-            line = item["text"]
-            if require_number and not re.search(r"\d", line):
-                continue
-            score = (
-                self._numeric_evidence_score(line, query_terms)
-                if require_number
-                else self._factual_evidence_score(line, query_terms)
-            )
-            if score <= 0:
-                continue
-            window = self._evidence_window(
-                parsed,
-                index,
-                radius=window_radius,
-                require_number=require_number,
-                query_terms=query_terms,
-            )
-            evidence.append({
-                "score": score,
-                "source": item["source"],
-                "text": window,
-            })
-        evidence.sort(key=lambda item: (-item["score"], len(item["text"])))
-        return evidence
+    def _rank_context_evidence(self, query: str, context: str, *, require_number: bool, window_radius: int = 1) -> list[dict]:
+        return self._deterministic_extractor._rank_context_evidence(query, context, require_number=require_number, window_radius=window_radius)
 
     @staticmethod
-    def _evidence_window(
-        parsed: list[dict],
-        index: int,
-        *,
-        radius: int,
-        require_number: bool,
-        query_terms: set[str],
-    ) -> str:
-        start = max(0, index - radius)
-        end = min(len(parsed), index + radius + 1)
-        source = parsed[index].get("source")
-        lines = []
-        for item in parsed[start:end]:
-            if item.get("source") != source:
-                continue
-            text = item.get("text") or ""
-            if not text or text in lines:
-                continue
-            if require_number and item is not parsed[index] and re.search(r"\d", text):
-                lowered = text.lower()
-                is_numeric_value_line = bool(re.fullmatch(r"[-+]?\$?\(?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|per cent|million|thousand|francs)?", text, flags=re.IGNORECASE))
-                if not is_numeric_value_line and not any(term in lowered for term in query_terms):
-                    continue
-            lines.append(text)
-        if require_number and not any(re.search(r"\d", line) for line in lines):
-            return parsed[index].get("text") or ""
-        joined = " ".join(lines)
-        if len(joined) > 700:
-            joined = joined[:700].rsplit(" ", 1)[0] + " [...]"
-        return joined
+    def _evidence_window(parsed: list[dict], index: int, *, radius: int, require_number: bool, query_terms: set[str]) -> str:
+        return DeterministicAnswerExtractor._evidence_window(parsed, index, radius=radius, require_number=require_number, query_terms=query_terms)
 
     @staticmethod
     def _select_distinct_evidence(evidence: list[dict], *, limit: int) -> list[dict]:
-        selected = []
-        seen_lines = set()
-        for item in evidence:
-            key = re.sub(r"\W+", " ", item.get("text", "").lower()).strip()[:180]
-            if not key or key in seen_lines:
-                continue
-            seen_lines.add(key)
-            selected.append(item)
-            if len(selected) >= limit:
-                break
-        return selected
+        return DeterministicAnswerExtractor._select_distinct_evidence(evidence, limit=limit)
 
     @staticmethod
     def _normalize_numeric_phrase(value: str, query: str, evidence_text: str) -> str:
-        value = re.sub(r"\s+", " ", value or "").strip(" ,.;:")
-        value = re.sub(r"\$(\d[\d,]*)\.0\s+million\b", r"$\1 million", value, flags=re.IGNORECASE)
-        if value.endswith("%") and any(marker in (query or "").lower() for marker in ("year-over-year", "growth rate", "grow year over year")):
-            if "year-over-year" in evidence_text.lower() or "compared to" in evidence_text.lower():
-                value = f"{value} year-over-year"
-        return value
+        return DeterministicAnswerExtractor._normalize_numeric_phrase(value, query, evidence_text)
 
     @classmethod
     def _extract_numeric_phrases(cls, query: str, text: str) -> list[str]:
-        pattern = re.compile(
-            r"(?:\$|rs\.?\s*)?\d[\d,]*(?:\.\d+)?\s*"
-            r"(?:%|per cent|million|thousand(?:s)?(?: of Swiss francs)?|Swiss francs|francs)?",
-            re.IGNORECASE,
-        )
-        values = []
-        seen = set()
-        for match in pattern.finditer(text or ""):
-            value = cls._normalize_numeric_phrase(match.group(0), query, text)
-            if not value:
-                continue
-            key = value.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            values.append(value)
-            if len(values) >= 6:
-                break
-        return values
+        return DeterministicAnswerExtractor._extract_numeric_phrases(query, text)
 
     @classmethod
     def _summarize_numeric_values(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        targeted = cls._targeted_numeric_summary(query, selected, context=context)
-        if targeted:
-            return targeted
-        values = []
-        seen = set()
-        for item in selected:
-            for value in cls._extract_numeric_phrases(query, item.get("text", "")):
-                key = value.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                values.append(value)
-                if len(values) >= 5:
-                    return ", ".join(values)
-        return ", ".join(values) if values else None
+        return DeterministicAnswerExtractor._summarize_numeric_values(query, selected, context=context)
+
     @classmethod
     def _targeted_numeric_summary(cls, query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Only generic regex-based extraction from context."""
-        normalized = (query or "").lower()
-        text = " ".join(item.get("text", "") for item in selected)
-        if context:
-            text = f"{text} {context}"
-        compact = re.sub(r"\s+", " ", text).strip()
-        if "platform revenue" in normalized:
-            match = re.search(r"platform revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "volume-based revenue" in normalized:
-            match = re.search(r"volume-based revenue was\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(?:or\s+)?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "gross margin" in normalized:
-            match = re.search(r"gross margin.*?\bwas\s+(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return match.group(1)
-        if "cash and cash equivalents" in normalized:
-            match = re.search(r"cash and cash equivalents.*?(\$?\d[\d,]*(?:\.\d+)?\s+(?:million|thousand|billion))", compact, re.IGNORECASE)
-            if match:
-                return cls._normalize_numeric_phrase(match.group(1), query, compact)
-        if "operating activities" in normalized or "operating cash" in normalized:
-            match = re.search(r"Operating activities\s+\$?\s*(\d[\d,]*)", compact, re.IGNORECASE)
-            if match:
-                raw_value = match.group(1)
-                amount = cls._parse_comma_number(raw_value)
-                if amount:
-                    return f"${amount / 1000:.1f} million, {raw_value}"
-        if "record revenue" in normalized:
-            match = re.search(r"record revenues? of\s+(\$?\d[\d,]*(?:\.\d+)?\s+million).*?(\d+(?:\.\d+)?%)", compact, re.IGNORECASE)
-            if match:
-                return f"{cls._normalize_numeric_phrase(match.group(1), query, compact)}, {match.group(2)} year-over-year"
-        if "total revenue" in normalized:
-            match = re.search(r"total revenue of\s+(\d+(?:\.\d+)?\s+million(?:\s+Swiss)?\s+francs)", compact, re.IGNORECASE)
-            if match:
-                return match.group(1)
-        if "credit facilities" in normalized:
-            revolver = re.search(r"(Revolving Credit Facility).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
-            term = re.search(r"(Term Loan).*?(\$?\d[\d,]*(?:\.\d+)?\s+million)", compact, re.IGNORECASE)
-            if revolver and term:
-                return f"{revolver.group(1)}, {cls._normalize_numeric_phrase(revolver.group(2), query, compact)}; {term.group(1)}, {cls._normalize_numeric_phrase(term.group(2), query, compact)}"
-        return None
+        return DeterministicAnswerExtractor._targeted_numeric_summary(query, selected, context=context)
 
     @staticmethod
     def _parse_comma_number(value: str) -> int:
-        try:
-            return int(re.sub(r"[^\d]", "", value or ""))
-        except ValueError:
-            return 0
+        return DeterministicAnswerExtractor._parse_comma_number(value)
+
     @staticmethod
     def _summarize_factual_evidence(query: str, selected: list[dict], *, context: str | None = None) -> str | None:
-        """Only generic evidence extraction from context."""
-        normalized = (query or "").lower()
-        text = " ".join(item.get("text", "") for item in selected)
-        if context:
-            text = f"{text} {context}"
-        compact = re.sub(r"\s+", " ", text).strip(" -")
-        if not compact:
-            return None
-        if "which organization" in normalized or ("prepared" in normalized and "organization" in normalized):
-            org_match = re.search(
-                r"(?:prepared by|organization)\s+([A-Z][a-zA-Z\s]+(?:Organization|Corporation|Company|Ltd|Inc))",
-                compact, re.IGNORECASE,
-            )
-            if org_match:
-                return org_match.group(1).strip()
-        if "reporting period" in normalized:
-            period_match = re.search(
-                r"(?:year (?:to|ended)\s+)(?:December\s+31,?\s*)?20\d{2}",
-                compact, re.IGNORECASE,
-            )
-            if period_match:
-                return period_match.group(0).strip()
-        if "criteria" in normalized and "current" in normalized:
-            terms = ("operating cycle", "within twelve months", "held primarily for trading", "cash and cash equivalent")
-            hits = [term for term in terms if term in compact.lower()]
-            if hits:
-                return "; ".join(hits) + "."
-        return RAGEngine._first_evidence_sentence(compact)
+        return DeterministicAnswerExtractor._summarize_factual_evidence(query, selected, context=context)
 
     @staticmethod
     def _best_sentence_with_terms(text: str, terms: tuple[str, ...]) -> str | None:
-        sentences = re.split(r"(?<=[.!?])\s+", text or "")
-        best = None
-        best_hits = 0
-        for sentence in sentences:
-            lowered = sentence.lower()
-            hits = sum(1 for term in terms if term in lowered)
-            if hits > best_hits:
-                best = sentence
-                best_hits = hits
-        return best.strip(" -") if best else None
+        return DeterministicAnswerExtractor._best_sentence_with_terms(text, terms)
 
     @staticmethod
     def _first_evidence_sentence(text: str) -> str | None:
-        compact = re.sub(r"\s+", " ", text or "").strip(" -")
-        if not compact:
-            return None
-        sentences = re.split(r"(?<=[.!?])\s+", compact)
-        for sentence in sentences:
-            sentence = sentence.strip(" -")
-            if 25 <= len(sentence) <= 260:
-                return sentence
-        return compact[:260].rstrip() + ("..." if len(compact) > 260 else "")
+        return DeterministicAnswerExtractor._first_evidence_sentence(text)
 
     @staticmethod
     def _should_try_deterministic_factual_answer(query: str) -> bool:
-        normalized = (query or "").lower()
-        factual_markers = (
-            "what is the title", "title and reporting period",
-            "which organization", "prepared",
-            "according to",
-            "list two criteria", "criteria that make an item current",
-        )
-        return any(marker in normalized for marker in factual_markers)
+        return QueryProcessor().should_try_deterministic_factual_answer(query)
 
     @staticmethod
     def _important_query_terms(query: str) -> set[str]:
-        stopwords = {
-            "what", "was", "were", "the", "and", "for", "did", "does", "have",
-            "how", "much", "many", "as", "of", "in", "on", "by", "to", "from",
-            "with", "which", "documents", "document", "report", "reports",
-            "according", "given", "shown", "amount", "year", "year-over-year",
-            "topic", "cover", "prepared", "organization", "basis", "preparation",
-            "list", "two", "criteria", "make", "item", "current", "mention",
-        }
-        terms = {
-            term
-            for term in re.findall(r"[a-zA-Z][a-zA-Z0-9&.-]{2,}", (query or "").lower())
-            if term not in stopwords
-        }
-        aliases = {
-            "revenue": {"revenue", "revenues"},
-            "cash": {"cash", "equivalents"},
-            "equivalents": {"cash", "equivalents"},
-            "margin": {"margin", "gross"},
-            "growth": {"growth", "year-over-year", "increase"},
-            "pct": {"pct", "system"},
-            "madrid": {"madrid", "system"},
-            "reserve": {"reserve", "surplus"},
-            "surplus": {"reserve", "surplus"},
-            "operating": {"operating", "activities"},
-            "facilities": {"facility", "facilities", "loan", "credit"},
-            "organization": {"organization", "prepared"},
-            "prepared": {"prepared", "organization"},
-            "statements": {"statements", "financial"},
-            "current": {"current", "operating", "cycle", "twelve", "months", "trading", "cash"},
-        }
-        expanded = set(terms)
-        for term in list(terms):
-            expanded.update(aliases.get(term, set()))
-        return expanded
+        return DeterministicAnswerExtractor._important_query_terms(query)
 
     @staticmethod
     def _numeric_evidence_score(line: str, query_terms: set[str]) -> float:
-        lowered = line.lower()
-        term_hits = sum(1 for term in query_terms if term in lowered)
-        if term_hits == 0:
-            return 0.0
-        number_hits = len(re.findall(r"[-+]?\$?\(?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|per cent|million|thousand|francs)?", line, flags=re.IGNORECASE))
-        if number_hits == 0:
-            return 0.0
-        return term_hits * 2.0 + min(number_hits, 4)
+        return DeterministicAnswerExtractor._numeric_evidence_score(line, query_terms)
 
     @staticmethod
     def _factual_evidence_score(line: str, query_terms: set[str]) -> float:
-        lowered = line.lower()
-        term_hits = sum(1 for term in query_terms if term in lowered)
-        if term_hits == 0:
-            return 0.0
-        if len(line) < 20:
-            return 0.0
-        return term_hits * 2.0
+        return DeterministicAnswerExtractor._factual_evidence_score(line, query_terms)
+
+    @staticmethod
+    def _is_numeric_financial_query(query: str) -> bool:
+        return QueryProcessor().is_numeric_query(query)
 
     def generate_answer_stream(self, context: str, query: str):
-        """
-        使用大语言模型生成回答（流式输出）。
-        通过 openai SDK 对接 nanochat OpenAI 兼容适配层。
-        """
-        if not context:
-            yield "I couldn't find relevant information in the documents to answer your question."
-            return
-
-        system_prompt = self._get_system_prompt()
-        user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-
-        try:
-            response = self.llm_client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0,
-                max_tokens=self.max_new_tokens,
-                stream=True
-            )
-
-            for chunk in response:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-
-        except Exception as e:
-            yield f"Error generating answer: {str(e)}"
+        return self._llm_gateway.generate_stream(context, query)
 
     async def query(
         self,
@@ -1320,209 +418,23 @@ float(chunk.get("score", 0) or 0),
         conversation_history: list = None,
         memory_profile: dict | None = None,
     ) -> dict:
-        """查询一个或多个文档的统一入口方法（全异步）。默认 top-k=3 适配短上下文。"""
-        t0 = time.time()
-        trace_data = {
-            "tenant_id": user_id,
-            "query_original": question,
-        }
+        """Facade entry point: build a ``QueryRequest``, delegate to the
+        orchestrator, and unwrap the legacy dict for API compatibility.
 
-        # Phase 4: Rewrite follow-up question using conversation context
-        original_question = question
-        if conversation_history:
-            question = await self._rewrite_query_with_context(question, conversation_history, memory_profile)
-            trace_data["query_rewritten"] = question
-            if build_memory_profile_context(memory_profile):
-                trace_data["memory_profile_used"] = True
-
-        intent = classify_query_intent(question)
-        trace_data["intent"] = intent["intent"]
-
-        conversational_response = self._handle_conversational_query(question)
-        if conversational_response:
-            result = {
-                "answer": conversational_response,
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": "conversation",
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        if not intent["requires_retrieval"]:
-            result = {
-                "answer": "This question appears to be outside the uploaded financial documents. Please ask about your uploaded reports or financial data.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True,
-                "intent": intent["intent"],
-                "intent_confidence": intent["confidence"],
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        if doc_names is None:
-            all_docs = list_all_documents(user_id)
-            doc_names = [doc["name"] for doc in all_docs]
-
-        if not doc_names:
-            result = {
-                "answer": "No documents found in database. Please upload documents first.",
-                "sources": [],
-                "context": None,
-                "searched_docs": [],
-                "context_sufficient": True
-            }
-            if conversation_history:
-                result["rewritten_question"] = question
-            return result
-
-        # 1. Retrieve relevant chunks. Front-matter facts use direct metadata lookup first.
-        chunks = self.retrieve_front_matter_chunks(doc_names, question, user_id)
-        if not chunks:
-            if len(doc_names) == 1:
-                chunks = self.retrieve_single_document(doc_names[0], question, user_id, n_results)
-            else:
-                chunks = await self.retrieve_multiple_documents(doc_names, question, user_id, n_results)
-
-        front_matter_answer = self.answer_front_matter_query(question, chunks)
-        deterministic_answer = None
-        if front_matter_answer:
-            chunks = front_matter_answer["chunks"]
-            context, sources = self.build_context(chunks)
-            answer = front_matter_answer["answer"]
-            is_sufficient = True
-            best_score = 1.0
-            avg_score = 1.0
-            confidence = 1.0
-            deterministic_answer = front_matter_answer["diagnostic"]
-        else:
-            # Phase 3: Check context sufficiency
-            is_sufficient, best_score, avg_score = self._check_context_sufficiency(chunks)
-            confidence = self._compute_confidence(chunks)
-
-            # 2. Build context (with dedup and score threshold)
-            context, sources = self.build_context(chunks)
-            # 3. Generate answer (skip LLM if context is insufficient)
-            deterministic_context_answer = self.answer_deterministic_query_from_context(question, context, sources)
-            if deterministic_context_answer:
-                answer = deterministic_context_answer["answer"]
-                is_sufficient = True
-                deterministic_answer = deterministic_context_answer["diagnostic"]
-                low_confidence_numeric_override = False
-            else:
-                low_confidence_numeric_override = self._should_generate_with_low_confidence(question, chunks)
-                if low_confidence_numeric_override:
-                    is_sufficient = True
-
-                if not is_sufficient:
-                    answer = "I couldn't find sufficiently relevant information in the documents to answer this question reliably."
-                else:
-                    answer = await self.generate_answer(context, question)
-
-        # 4. Log trace
-        elapsed_ms = (time.time() - t0) * 1000
-        trace_data.update({
-            "filter_conditions": {"doc_names": doc_names, "n_results": n_results},
-            "candidates": [
-                {
-                    "doc_id": c.get("doc_id", ""),
-                    "score": c.get("score", 0),
-                    "rerank_score": c.get("rerank_score"),
-                    "reranker": c.get("reranker"),
-                }
-                for c in chunks
-            ],
-            "final_context": context,
-            "answer": answer,
-            "sources": sources,
-            "diagnostics": {
-                "confidence": confidence,
-                "context_sufficient": is_sufficient,
-                "intent_confidence": intent["confidence"],
-                "deterministic_answer": deterministic_answer,
-                "low_confidence_numeric_override": (
-                    low_confidence_numeric_override if not front_matter_answer else False
-                ),
-            },
-            "model_name": self.model_name,
-            "latency_ms": elapsed_ms,
-        })
-        trace_id = None
-        try:
-            trace_id = self.trace_logger.log(**trace_data)
-        except Exception:
-            pass  # tracing must never break the query path
-
-        return {
-            "answer": answer,
-            "sources": sources,
-            "context": context,
-            "searched_docs": doc_names,
-            "confidence": confidence,
-            "context_sufficient": is_sufficient,
-            "intent": intent["intent"],
-            "intent_confidence": intent["confidence"],
-            "rewritten_question": question if conversation_history else None,
-            "retrieved_chunks": self._summarize_retrieved_chunks(chunks),
-            "retrieval_debug": dict(self._last_retrieval_debug),
-            "trace_id": trace_id,
-        }
+        Dependencies are injected once at construction time. This method
+        must NOT reassign ``self._orchestrator._*`` fields to keep the
+        facade in sync with test mocks; tests should mock the orchestrator
+        boundary (``engine._orchestrator.answer``) instead.
+        """
+        request = QueryRequest(
+            question=question,
+            document_names=tuple(doc_names or ()),
+            user_id=user_id,
+            conversation_history=tuple(conversation_history or ()),
+            memory_profile=memory_profile,
+        )
+        result = await self._orchestrator.answer(request, n_results=n_results)
+        return result.to_legacy_dict()
 
     def _handle_conversational_query(self, query: str) -> str | None:
-        """
-        处理对话性/元问题（无需 RAG 检索）。
-        增加财务关键词前置保护，防止合法查询被误判为闲聊。
-        """
-        query_lower = query.lower().strip()
-
-        # 财务强相关关键词，出现这些词绝不能被判定为闲聊
-        financial_indicators = [
-            "revenue", "expense", "profit", "loss", "income", "cash",
-            "balance", "debt", "equity", "margin", "growth", "quarter",
-            "fiscal", "earnings", "dividend", "asset", "liability",
-            "$", "%", "million", "billion", "q1", "q2", "q3", "q4",
-            "fy", "yoy", "table", "page", "report", "statement", "cost",
-            # 中文金融关键词
-            "营收", "利润", "亏损", "收入", "现金", "负债", "资产", "权益",
-            "增长", "季度", "财报", "股息", "报表", "成本", "费用", "净利"
-        ]
-        if any(ind in query_lower for ind in financial_indicators):
-            return None  # 强制走 RAG 路径
-
-        # Greetings
-        greetings = ["hi", "hello", "hi there", "hey", "good morning", "good afternoon", "good evening"]
-        if any(query_lower.startswith(g) for g in greetings) and len(query_lower.split()) <= 3:
-            return "Hello! I'm FinQuery, your financial document assistant. I can help you find information in your uploaded documents. What would you like to know?"
-
-        # Identity questions
-        identity_keywords = [
-            "what are you", "who are you", "what is finquery",
-            "tell me about yourself", "what do you do", "what can you do",
-            "how do you work", "what's your purpose"
-        ]
-        if any(keyword in query_lower for keyword in identity_keywords):
-            return "I'm FinQuery, an AI assistant that helps you analyze financial documents. Upload PDFs of reports, statements, or other financial documents, and I'll answer questions about them using the exact information from those documents."
-
-        # Capability questions
-        capability_keywords = ["how does this work", "how to use", "help me", "what can i ask", "how do i use this"]
-        if any(keyword in query_lower for keyword in capability_keywords):
-            return "Here's how to use FinQuery:\n1. Upload financial documents (PDFs)\n2. Ask questions about the content\n3. I'll provide answers with page citations\n\nTry: 'What was the revenue in Q3?' or 'Summarize key financial metrics'"
-
-        # Thanks/gratitude
-        thanks_keywords = ["thank you", "thanks", "thx", "appreciate"]
-        if any(keyword in query_lower for keyword in thanks_keywords) and len(query_lower.split()) <= 5:
-            return "You're welcome! Let me know if you have any other questions about your documents."
-
-        # Goodbyes
-        goodbye_keywords = ["bye", "goodbye", "see you", "exit", "quit"]
-        if any(keyword in query_lower for keyword in goodbye_keywords) and len(query_lower.split()) <= 3:
-            return "Goodbye! Feel free to come back anytime you need to analyze financial documents."
-
-        return None
+        return RAGOrchestrator._handle_conversational_query(query)

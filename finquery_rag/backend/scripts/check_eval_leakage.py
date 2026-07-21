@@ -112,12 +112,30 @@ def _scan_imports(filepath: Path) -> set[str]:
     return imports
 
 
+def _matches_forbidden(imp: str, forbidden: str) -> bool:
+    """Check if import matches forbidden module using boundary matching.
+
+    Uses module-boundary matching so 'eval.' does not match 'retrieval.'.
+    A match requires the forbidden string to be a complete module path
+    prefix, not an arbitrary substring.
+    """
+    if not forbidden:
+        return False
+    # Exact match
+    if imp == forbidden:
+        return True
+    # Module path prefix: 'eval' matches 'eval.foo' but not 'retrieval'
+    # Strip trailing '.' from forbidden for clean prefix matching
+    prefix = forbidden.rstrip(".")
+    return imp == prefix or imp.startswith(prefix + ".")
+
+
 def check_forbidden_imports() -> list[str]:
     violations = []
     for fp in production_python_files():
         for imp in _scan_imports(fp):
             for forbidden in FORBIDDEN_IMPORTS:
-                if forbidden in imp:
+                if _matches_forbidden(imp, forbidden):
                     violations.append(f"{fp.relative_to(SRC_DIR)}: imports '{imp}'")
     return violations
 

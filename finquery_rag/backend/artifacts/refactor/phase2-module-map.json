@@ -1,0 +1,92 @@
+{
+  "baseline_commit": "3d08498",
+  "phase2_branch": "refactor/nf-02-rag-orchestration",
+  "module_map": {
+    "src/domain/query.py": {
+      "new_module": "src.domain.query.QueryRequest",
+      "migrated_from": "src/services/rag_engine.py (query method signature)",
+      "responsibility": "Immutable query input boundary"
+    },
+    "src/domain/evidence.py": {
+      "new_module": "src.domain.evidence.EvidenceItem",
+      "migrated_from": "src/services/rag_engine.py (chunk→source conversion)",
+      "responsibility": "Evidence item with nested-metadata support"
+    },
+    "src/domain/answer.py": {
+      "new_module": "src.domain.answer.AnswerResult, AnswerPath, RetrievalResult",
+      "migrated_from": "src/services/rag_engine.py (query return dict)",
+      "responsibility": "Typed answer output boundary with legacy dict conversion"
+    },
+    "src/retrieval/query_processor.py": {
+      "new_module": "src.retrieval.query_processor.QueryProcessor",
+      "migrated_from": "src/services/rag_engine.py (expand, rewrite_query_with_context, should_generate_with_low_confidence, is_numeric_query, is_title_query, should_try_deterministic_factual_answer)",
+      "responsibility": "Query expansion, rewriting, classification"
+    },
+    "src/retrieval/retrieval_pipeline.py": {
+      "new_module": "src.retrieval.retrieval_pipeline.RetrievalPipeline",
+      "migrated_from": "src/services/rag_engine.py (retrieve_single_document, retrieve_multiple_documents, retrieve_front_matter_chunks)",
+      "responsibility": "Single/multi-doc retrieval orchestration"
+    },
+    "src/retrieval/candidate_fusion.py": {
+      "new_module": "src.retrieval.candidate_fusion (rrf, normalize_scores, dedupe_chunks, chunk_doc_name, ensure_multi_doc_coverage, boost_front_matter_chunks, summarize_retrieved_chunks, source_from_chunk)",
+      "migrated_from": "src/services/rag_engine.py (rrf, _normalize_scores, _dedupe_chunks, _summarize_retrieved_chunks, _source_from_chunk); src/services/retrieval.py (rrf)",
+      "responsibility": "Score fusion, deduplication, source extraction"
+    },
+    "src/retrieval/context_builder.py": {
+      "new_module": "src.retrieval.context_builder.ContextBuilder, EvidenceSufficiencyEvaluator, SufficiencyResult",
+      "migrated_from": "src/services/rag_engine.py (build_context, _check_context_sufficiency, _compute_confidence)",
+      "responsibility": "Context assembly and sufficiency evaluation"
+    },
+    "src/generation/prompt_builder.py": {
+      "new_module": "src.generation.prompt_builder (get_system_prompt, SYSTEM_PROMPT)",
+      "migrated_from": "src/services/rag_engine.py (system prompt construction)",
+      "responsibility": "System prompt templates"
+    },
+    "src/generation/llm_gateway.py": {
+      "new_module": "src.generation.llm_gateway.LLMGateway",
+      "migrated_from": "src/services/rag_engine.py (generate_answer, _rewrite_query_with_context LLM call)",
+      "responsibility": "LLM generation and query rewriting"
+    },
+    "src/generation/deterministic_answers.py": {
+      "new_module": "src.generation.deterministic_answers.DeterministicAnswerExtractor",
+      "migrated_from": "src/services/rag_engine.py (answer_front_matter_query, answer_deterministic_query_from_context)",
+      "responsibility": "Front-matter and context-based deterministic answering"
+    },
+    "src/generation/response_renderer.py": {
+      "new_module": "src.generation.response_renderer.validate_answer",
+      "migrated_from": "src/services/rag_engine.py (answer validation logic)",
+      "responsibility": "Answer validation"
+    },
+    "src/application/rag_orchestrator.py": {
+      "new_module": "src.application.rag_orchestrator.RAGOrchestrator",
+      "migrated_from": "src/services/rag_engine.py (query method orchestration)",
+      "responsibility": "Full RAG pipeline coordination"
+    },
+    "src/services/rag_engine.py": {
+      "new_module": "src.services.rag_engine.RAGEngine (Facade, 440 lines)",
+      "migrated_from": "src/services/rag_engine.py (original ~1000 lines)",
+      "responsibility": "Compatibility facade: QueryRequest construction, orchestrator delegation, legacy dict conversion"
+    }
+  },
+  "files_renamed": {
+    "tests/test_phase2.py": "tests/refactor/test_phase2_rag_engine.py"
+  },
+  "files_created": [
+    "src/domain/__init__.py",
+    "src/domain/query.py",
+    "src/domain/evidence.py",
+    "src/domain/answer.py",
+    "src/retrieval/__init__.py",
+    "src/retrieval/query_processor.py",
+    "src/retrieval/retrieval_pipeline.py",
+    "src/retrieval/candidate_fusion.py",
+    "src/retrieval/context_builder.py",
+    "src/generation/__init__.py",
+    "src/generation/prompt_builder.py",
+    "src/generation/llm_gateway.py",
+    "src/generation/deterministic_answers.py",
+    "src/generation/response_renderer.py",
+    "src/application/__init__.py",
+    "src/application/rag_orchestrator.py"
+  ]
+}

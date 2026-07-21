@@ -46,13 +46,15 @@ def _engine(tmp_path, trace_logger):
         trace_db_path=str(tmp_path / "trace.db"),
     )
     engine.trace_logger = trace_logger
-    engine.retrieve_single_document = MagicMock(return_value=[{
+    # Mock at orchestrator dependency level (query delegates to orchestrator)
+    engine._orchestrator._trace_logger = trace_logger
+    engine._retrieval_pipeline.retrieve_single = MagicMock(return_value=[{
         "doc_id": "user_1_report.pdf::1",
         "content": "Revenue was $10M.",
         "metadata": {"doc_name": "report.pdf", "page": 1, "type": "text"},
         "score": 0.9,
     }])
-    engine.generate_answer = AsyncMock(return_value="Revenue was $10M.")
+    engine._llm_gateway.generate = AsyncMock(return_value="Revenue was $10M.")
     return engine
 
 

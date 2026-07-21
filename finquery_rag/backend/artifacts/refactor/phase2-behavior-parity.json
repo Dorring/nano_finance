@@ -1,0 +1,65 @@
+{
+  "baseline_commit": "3d08498",
+  "implementation_commit": "6cf6b89",
+  "validated_head": "374f7f8",
+  "phase2_branch": "refactor/nf-02-rag-orchestration",
+  "query_expansion_equal": true,
+  "retrieval_order_equal": true,
+  "context_equal": true,
+  "prompt_equal": true,
+  "response_schema_equal": true,
+  "trace_schema_equal": true,
+  "thresholds_equal": true,
+  "test_commands": [
+    "python -m pytest tests/ -q --tb=line",
+    "python -m pytest tests/refactor tests/integrity tests/architecture -q --tb=line",
+    "python -m pytest tests/architecture tests/integrity tests/refactor -q --tb=line",
+    "python -m pytest tests/architecture/test_api_contract.py tests/test_phase12_trace_id.py tests/test_phase24_trace_retrieval_params.py tests/test_phase31_trace_diagnostics.py -v --tb=short",
+    "python -m compileall -q src",
+    "python -m ruff check src/domain src/retrieval src/generation src/application src/services/rag_engine.py",
+    "python scripts/check_eval_leakage.py"
+  ],
+  "test_results": {
+    "full_suite": {
+      "passed": 778,
+      "skipped": 12,
+      "failed": 0,
+      "errors": 0,
+      "duration_seconds": 4.89,
+      "validated_at": "374f7f8"
+    },
+    "order_1_refactor_integrity_architecture": {
+      "passed": 251,
+      "skipped": 12,
+      "failed": 0,
+      "errors": 0
+    },
+    "order_2_architecture_integrity_refactor": {
+      "passed": 251,
+      "skipped": 12,
+      "failed": 0,
+      "errors": 0
+    },
+    "api_contract_and_trace": {
+      "passed": 13,
+      "skipped": 11,
+      "failed": 0,
+      "errors": 0,
+      "skip_reason": "jose not available in CI environment; TestAPIContract class skips via _have_api_deps() guard"
+    },
+    "compileall": "passed",
+    "ruff_check": "All checks passed (Phase 2 modified files)",
+    "leakage_scanner": "PASS (0 violations)",
+    "circular_dependency_check": "No circular dependencies found"
+  },
+  "skip_reasons": {
+    "tests/architecture/test_api_contract.py::TestAPIContract (11 tests)": "jose not installed; _have_api_deps() returns False; @pytest.mark.skipif guard",
+    "tests/architecture/test_imports.py::test_full_stack_modules_import (1 test)": "jose not installed; pytest.skip('Full-stack deps (jose) not available in this environment')"
+  },
+  "parity_verification": {
+    "response_shape": "Verified by tests/test_phase4.py::TestQueryReturnsRewrittenQuestion and tests/refactor/test_response_characterization.py",
+    "trace_shape": "Verified by tests/test_phase12_trace_id.py, tests/test_phase24_trace_retrieval_params.py, tests/test_phase31_trace_diagnostics.py",
+    "rewritten_question_field": "Verified: FULL branch always includes (None if no history); other branches include iff had_conversation_history=True",
+    "legacy_dict_conversion": "AnswerResult.to_legacy_dict() reproduces exact pre-refactor dict shape per AnswerPath branch"
+  }
+}
