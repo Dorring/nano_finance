@@ -91,6 +91,51 @@ class CalculationResponse(BaseModel):
     error_code: str | None = None
 
 
+class ValidationIssueResponse(BaseModel):
+    """A single validation issue (public API).
+
+    The internal ``message`` and ``evidence_ids`` are intentionally absent:
+    only ``code``, ``severity``, and ``public_message`` are exposed.
+    """
+    code: str
+    severity: str
+    public_message: str | None = None
+
+
+class AnswerabilityResponse(BaseModel):
+    """Pre-generation answerability verdict (public API).
+
+    Scores (``best_score``, ``average_score``) are intentionally absent
+    to avoid implying calibrated probabilities.
+    """
+    status: str
+    reason_codes: list[str] = Field(default_factory=list)
+    evidence_count: int = 0
+    document_count: int = 0
+    missing_requirements: list[str] = Field(default_factory=list)
+
+
+class ValidationResponse(BaseModel):
+    """Post-generation validation verdict (public API).
+
+    Internal issue messages and full evidence are intentionally absent.
+    """
+    status: str
+    checked_claim_count: int = 0
+    supported_claim_count: int = 0
+    unsupported_claim_count: int = 0
+    issues: list[ValidationIssueResponse] = Field(default_factory=list)
+
+
+class RepairResponse(BaseModel):
+    """Repair outcome (public API).
+
+    Internal ``repair_notes`` are intentionally absent.
+    """
+    was_repaired: bool = False
+    fallback_used: bool = False
+
+
 class QueryResponse(BaseModel):
     """
     查询响应模型，用于封装查询操作返回的结果数据。
@@ -126,6 +171,16 @@ class QueryResponse(BaseModel):
     calculations: list[CalculationResponse] = Field(default_factory=list)
     # Phase 3: Structured calculation results. Empty list for non-calculation
     # queries so old frontends that ignore this field are unaffected.
+
+    answerability: AnswerabilityResponse | None = None
+    # Phase 4: Pre-generation answerability verdict. None when the validation
+    # pipeline is disabled (preserves the legacy payload shape).
+    validation: ValidationResponse | None = None
+    # Phase 4: Post-generation validation verdict. None when the validation
+    # pipeline is disabled.
+    repair: RepairResponse | None = None
+    # Phase 4: Repair outcome. None when the validation pipeline is disabled
+    # or no repair was attempted.
 
 
 class EvalScoreRequest(BaseModel):

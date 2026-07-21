@@ -851,7 +851,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise api_error(500, "processing_error", "Processing error: %s" % str(e))
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query", response_model=QueryResponse, response_model_exclude_none=True)
 async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
     对一个或多个文档进行提问。
@@ -912,6 +912,18 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             retrieved_chunks=result.get("retrieved_chunks", []),
             retrieval_debug=result.get("retrieval_debug", {}),
             calculations=result.get("calculations", []),
+            answerability=(
+                AnswerabilityResponse(**result["answerability"])
+                if result.get("answerability") else None
+            ),
+            validation=(
+                ValidationResponse(**result["validation"])
+                if result.get("validation") else None
+            ),
+            repair=(
+                RepairResponse(**result["repair"])
+                if result.get("repair") else None
+            ),
         )
 
     except HTTPException:
@@ -974,6 +986,12 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             intent_confidence = result.get("intent_confidence")
             trace_id = result.get("trace_id")
             calculations = result.get("calculations", [])
+            # Phase 4: forward validation verdicts to the SSE done event.
+            # Only included when the validation pipeline produced them, so
+            # the legacy event shape is preserved when validation is disabled.
+            answerability_data = result.get("answerability")
+            validation_data = result.get("validation")
+            repair_data = result.get("repair")
 
             # Save session messages (compatible with /query behavior).
             if session_id:
@@ -1002,7 +1020,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
 
             # Emit the done event with all fields including calculations.
-            yield make_stream_done_event(
+            done_kwargs = dict(
                 sources=sources,
                 confidence=confidence,
                 context_sufficient=context_sufficient,
@@ -1011,6 +1029,13 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 trace_id=trace_id,
                 calculations=calculations,
             )
+            if answerability_data is not None:
+                done_kwargs["answerability"] = answerability_data
+            if validation_data is not None:
+                done_kwargs["validation"] = validation_data
+            if repair_data is not None:
+                done_kwargs["repair"] = repair_data
+            yield make_stream_done_event(**done_kwargs)
 
         except Exception as exc:
             error_message = "Streaming query failed. Please retry."
