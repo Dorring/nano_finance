@@ -1,0 +1,422 @@
+[
+  {
+    "id": 1,
+    "criterion": "Phase 2 official PR merged to master",
+    "status": "pass",
+    "evidence": [
+      "merge commit 739949b"
+    ]
+  },
+  {
+    "id": 2,
+    "criterion": "Phase 3 branch created from latest master",
+    "status": "pass",
+    "evidence": [
+      "base commit 739949b"
+    ]
+  },
+  {
+    "id": 3,
+    "criterion": "Non-calculation behavior unchanged (backward compatible)",
+    "status": "pass",
+    "evidence": [
+      "test_phase3_non_calculation_parity.py",
+      "artifact phase3-non-calculation-parity.json"
+    ]
+  },
+  {
+    "id": 4,
+    "criterion": "AnswerResult API contract compatible",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_api_contract.py"
+    ]
+  },
+  {
+    "id": 5,
+    "criterion": "Trace structure compatible (existing fields preserved)",
+    "status": "pass",
+    "evidence": [
+      "test_phase3_non_calculation_parity.py trace_existing_fields_equal"
+    ]
+  },
+  {
+    "id": 6,
+    "criterion": "Submitted via official numbered PR",
+    "status": "pass",
+    "evidence": [
+      "PR #145"
+    ]
+  },
+  {
+    "id": 7,
+    "criterion": "No Phase 4 features integrated",
+    "status": "not_applicable",
+    "evidence": []
+  },
+  {
+    "id": 8,
+    "criterion": "No Sealed Test constructed",
+    "status": "not_applicable",
+    "evidence": []
+  },
+  {
+    "id": 9,
+    "criterion": "No Phase 4 work started",
+    "status": "not_applicable",
+    "evidence": []
+  },
+  {
+    "id": 10,
+    "criterion": "Domain objects defined: CalculationOperation (9 ops), CalculationStatus, CalculationOperand, CalculationPlan (source_scale/target_scale), CalculationResult",
+    "status": "pass",
+    "evidence": [
+      "domain/calculation_operation.py",
+      "domain/calculation_status.py",
+      "domain/calculation_operand.py",
+      "domain/calculation_plan.py",
+      "domain/calculation_result.py"
+    ]
+  },
+  {
+    "id": 11,
+    "criterion": "Finance package modules present: primitive_tools, unit_normalizer, evidence_extractor, operation_router, metric_lexicon, calculation_registry, calculation_executor, calculation_renderer, calculation_pipeline",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "finance/unit_normalizer.py",
+      "finance/evidence_extractor.py",
+      "finance/operation_router.py",
+      "finance/metric_lexicon.py",
+      "finance/calculation_registry.py",
+      "finance/calculation_executor.py",
+      "finance/calculation_renderer.py",
+      "finance/calculation_pipeline.py"
+    ]
+  },
+  {
+    "id": 12,
+    "criterion": "Orchestrator integration: calculation_pipeline parameter and LLM bypass for EXECUTED/BLOCKED/FAILED states",
+    "status": "pass",
+    "evidence": [
+      "services/orchestrator.py",
+      "test_orchestrator_calculation_integration.py"
+    ]
+  },
+  {
+    "id": 13,
+    "criterion": "SCALE_CONVERSION fully implemented: source_scale, target_scale, convert_scale, UNIT_AMBIGUOUS, CURRENCY_NOT_SUPPORTED",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "finance/unit_normalizer.py",
+      "test_scale_conversion_operation.py"
+    ]
+  },
+  {
+    "id": 14,
+    "criterion": "FAILED state does NOT fall back to LLM (returns safe failure)",
+    "status": "pass",
+    "evidence": [
+      "test_phase3_failed_state.py"
+    ]
+  },
+  {
+    "id": 15,
+    "criterion": "No eval/exec/compile usage in calculation code",
+    "status": "pass",
+    "evidence": [
+      "check_eval_leakage.py PASS"
+    ]
+  },
+  {
+    "id": 16,
+    "criterion": "All calculations use Decimal (no float arithmetic)",
+    "status": "pass",
+    "evidence": [
+      "finance/calculation_executor.py",
+      "finance/primitive_tools.py"
+    ]
+  },
+  {
+    "id": 17,
+    "criterion": "LLM bypass on EXECUTED state",
+    "status": "pass",
+    "evidence": [
+      "services/orchestrator.py",
+      "test_orchestrator_llm_bypass.py"
+    ]
+  },
+  {
+    "id": 18,
+    "criterion": "LLM bypass on BLOCKED state",
+    "status": "pass",
+    "evidence": [
+      "services/orchestrator.py",
+      "test_orchestrator_llm_bypass.py"
+    ]
+  },
+  {
+    "id": 19,
+    "criterion": "LLM bypass on FAILED state",
+    "status": "pass",
+    "evidence": [
+      "services/orchestrator.py",
+      "test_phase3_failed_state.py"
+    ]
+  },
+  {
+    "id": 20,
+    "criterion": "NOT_APPLICABLE continues normal RAG flow",
+    "status": "pass",
+    "evidence": [
+      "services/orchestrator.py",
+      "test_orchestrator_not_applicable_flow.py"
+    ]
+  },
+  {
+    "id": 21,
+    "criterion": "Evidence binding: operands cite source_text and evidence_chunk_id",
+    "status": "pass",
+    "evidence": [
+      "finance/evidence_extractor.py",
+      "test_evidence_extractor.py"
+    ]
+  },
+  {
+    "id": 22,
+    "criterion": "Layer dependency: domain to finance to application to services",
+    "status": "pass",
+    "evidence": [
+      "domain/",
+      "finance/",
+      "application/",
+      "services/"
+    ]
+  },
+  {
+    "id": 23,
+    "criterion": "SSE done event carries calculations payload",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_streaming_contract.py"
+    ]
+  },
+  {
+    "id": 24,
+    "criterion": "Operation matrix documented",
+    "status": "pass",
+    "evidence": [
+      "phase3-operation-matrix.json"
+    ]
+  },
+  {
+    "id": 25,
+    "criterion": "Formula registry documented",
+    "status": "pass",
+    "evidence": [
+      "phase3-formula-registry.md"
+    ]
+  },
+  {
+    "id": 26,
+    "criterion": "Known limitations documented",
+    "status": "pass",
+    "evidence": [
+      "phase3-known-limitations.md"
+    ]
+  },
+  {
+    "id": 27,
+    "criterion": "difference operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_difference_operation.py"
+    ]
+  },
+  {
+    "id": 28,
+    "criterion": "growth_rate operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_growth_rate_operation.py"
+    ]
+  },
+  {
+    "id": 29,
+    "criterion": "percentage_share operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_percentage_share_operation.py"
+    ]
+  },
+  {
+    "id": 30,
+    "criterion": "sum operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_sum_operation.py"
+    ]
+  },
+  {
+    "id": 31,
+    "criterion": "average operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_average_operation.py"
+    ]
+  },
+  {
+    "id": 32,
+    "criterion": "gross_margin operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_gross_margin_operation.py"
+    ]
+  },
+  {
+    "id": 33,
+    "criterion": "net_margin operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_net_margin_operation.py"
+    ]
+  },
+  {
+    "id": 34,
+    "criterion": "debt_ratio operation implemented and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "test_debt_ratio_operation.py"
+    ]
+  },
+  {
+    "id": 35,
+    "criterion": "scale_conversion operation fully implemented (Option A) and tested",
+    "status": "pass",
+    "evidence": [
+      "finance/primitive_tools.py",
+      "finance/unit_normalizer.py",
+      "test_scale_conversion_operation.py"
+    ]
+  },
+  {
+    "id": 36,
+    "criterion": "Unit normalization handles scale conversion between units",
+    "status": "pass",
+    "evidence": [
+      "finance/unit_normalizer.py",
+      "test_unit_normalizer.py"
+    ]
+  },
+  {
+    "id": 37,
+    "criterion": "Router 3-gate logic (operation, unit, evidence gates)",
+    "status": "pass",
+    "evidence": [
+      "finance/operation_router.py",
+      "test_operation_router.py"
+    ]
+  },
+  {
+    "id": 38,
+    "criterion": "Evidence extraction binds operands to source chunks",
+    "status": "pass",
+    "evidence": [
+      "finance/evidence_extractor.py",
+      "test_evidence_extractor.py"
+    ]
+  },
+  {
+    "id": 39,
+    "criterion": "Calculation plan building assembles operations with source_scale/target_scale",
+    "status": "pass",
+    "evidence": [
+      "domain/calculation_plan.py",
+      "test_calculation_plan_builder.py"
+    ]
+  },
+  {
+    "id": 40,
+    "criterion": "Executor validation checks operands, units, and operation validity",
+    "status": "pass",
+    "evidence": [
+      "finance/calculation_executor.py",
+      "test_calculation_executor_validation.py"
+    ]
+  },
+  {
+    "id": 41,
+    "criterion": "Renderer formatting produces human-readable calculation output",
+    "status": "pass",
+    "evidence": [
+      "finance/calculation_renderer.py",
+      "test_calculation_renderer.py"
+    ]
+  },
+  {
+    "id": 42,
+    "criterion": "Trace diagnostics include calculation plan and execution details",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_trace_diagnostics.py"
+    ]
+  },
+  {
+    "id": 43,
+    "criterion": "Confidence assignment reflects evidence quality and calculation completeness",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_confidence.py"
+    ]
+  },
+  {
+    "id": 44,
+    "criterion": "API field types conform to contract (string, number, array, object)",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_api_contract.py"
+    ]
+  },
+  {
+    "id": 45,
+    "criterion": "Legacy field compatibility maintained for existing consumers",
+    "status": "pass",
+    "evidence": [
+      "test_phase3_non_calculation_parity.py"
+    ]
+  },
+  {
+    "id": 46,
+    "criterion": "calculations field is optional in API response",
+    "status": "pass",
+    "evidence": [
+      "test_calculation_api_contract.py"
+    ]
+  },
+  {
+    "id": 47,
+    "criterion": "Static analysis checks pass (Ruff lint and compileall)",
+    "status": "pass",
+    "evidence": [
+      "ruff check . PASS",
+      "python -m compileall . PASS"
+    ]
+  },
+  {
+    "id": 48,
+    "criterion": "Test suite passes with documented skip reasons",
+    "status": "pass",
+    "evidence": [
+      "1091+ passed, 12 skipped (11 jose unavailable, 1 full stack dependency)"
+    ]
+  }
+]

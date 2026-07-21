@@ -11,7 +11,8 @@ decision and extracted operands) and produces a ``CalculationResult``:
   - Success -> ``EXECUTED`` with the computed value.
   - Primitive returns ``ok=False`` -> ``BLOCKED`` (deterministic refusal;
     e.g. division by zero, insufficient operands from adapter).
-  - Unexpected exception -> ``FAILED`` (fall back to LLM).
+  - Unexpected exception -> ``FAILED`` (bypass LLM, return safe failure;
+    never fall back to LLM to avoid reintroducing numeric hallucinations).
 
 The executor NEVER calls the LLM and NEVER accesses retrieval. It is
 purely deterministic and side-effect-free.
@@ -24,15 +25,97 @@ module imports from ``src.domain.calculation`` and
 from __future__ import annotations
 
 import logging
+import re
 
 from src.domain.calculation import (
+    CalculationOperation,
     CalculationPlan,
     CalculationResult,
     CalculationStatus,
 )
 from src.finance.calculation_registry import get_operation_entry
+from src.finance.primitive_tools import convert_scale
 
 logger = logging.getLogger(__name__)
+
+
+def _execute_scale_conversion(plan: CalculationPlan) -> CalculationResult:
+    """Execute a SCALE_CONVERSION plan using convert_scale primitive."""
+
+    if not plan.source_scale or not plan.target_scale:
+        return CalculationResult(
+            status=CalculationStatus.BLOCKED,
+            operation=CalculationOperation.SCALE_CONVERSION,
+            formula_version=plan.formula_version,
+            target_metric=plan.target_metric,
+            operands=plan.operands,
+            error_code="UNIT_AMBIGUOUS",
+            error_message="source or target scale is missing",
+        )
+
+    if plan.target_scale == "__CURRENCY__":
+        return CalculationResult(
+            status=CalculationStatus.BLOCKED,
+            operation=CalculationOperation.SCALE_CONVERSION,
+            formula_version=plan.formula_version,
+            target_metric=plan.target_metric,
+            operands=plan.operands,
+            error_code="CURRENCY_NOT_SUPPORTED",
+            error_message="currency conversion is not supported",
+        )
+
+    if not plan.operands:
+        return CalculationResult(
+            status=CalculationStatus.BLOCKED,
+            operation=CalculationOperation.SCALE_CONVERSION,
+            formula_version=plan.formula_version,
+            target_metric=plan.target_metric,
+            operands=(),
+            error_code="INSUFFICIENT_OPERANDS",
+            error_message="no numeric operand provided",
+        )
+
+    operand = plan.operands[0]
+    try:
+        tool_result = convert_scale(
+            operand.value,
+            plan.source_scale,
+            plan.target_scale,
+            precision=plan.precision,
+        )
+    except Exception as exc:
+        return CalculationResult(
+            status=CalculationStatus.FAILED,
+            operation=CalculationOperation.SCALE_CONVERSION,
+            formula_version=plan.formula_version,
+            target_metric=plan.target_metric,
+            operands=plan.operands,
+            error_code="PRIMITIVE_EXCEPTION",
+            error_message=str(exc),
+        )
+
+    if not tool_result.ok or tool_result.value is None:
+        return CalculationResult(
+            status=CalculationStatus.BLOCKED,
+            operation=CalculationOperation.SCALE_CONVERSION,
+            formula_version=plan.formula_version,
+            target_metric=plan.target_metric,
+            operands=plan.operands,
+            error_code="PRIMITIVE_DECLINED",
+            error_message=tool_result.error or "scale conversion failed",
+        )
+
+    formula = "value * from_factor / to_factor"
+    return CalculationResult(
+        status=CalculationStatus.EXECUTED,
+        operation=CalculationOperation.SCALE_CONVERSION,
+        value=tool_result.value,
+        unit=plan.target_scale,
+        formula=formula,
+        formula_version=plan.formula_version,
+        target_metric=plan.target_metric,
+        operands=plan.operands,
+    )
 
 
 def execute_plan(plan: CalculationPlan) -> CalculationResult:
@@ -51,14 +134,24 @@ def execute_plan(plan: CalculationPlan) -> CalculationResult:
         return CalculationResult(status=CalculationStatus.NOT_APPLICABLE)
 
     if plan.status is CalculationStatus.BLOCKED:
+        reason = plan.block_reason or "plan was blocked before execution"
+        # Extract error code from block_reason if it matches ERROR_CODE: format.
+        # Only all-caps identifiers before ":" are treated as error codes.
+        m = re.match(r"^([A-Z][A-Z_]+):\s*(.*)", reason)
+        if m:
+            error_code = m.group(1)
+            error_message = m.group(2) or reason
+        else:
+            error_code = "PLAN_BLOCKED"
+            error_message = reason
         return CalculationResult(
             status=CalculationStatus.BLOCKED,
             operation=plan.operation,
             formula_version=plan.formula_version,
             target_metric=plan.target_metric,
             operands=plan.operands,
-            error_code="PLAN_BLOCKED",
-            error_message=plan.block_reason or "plan was blocked before execution",
+            error_code=error_code,
+            error_message=error_message,
         )
 
     if plan.status is not CalculationStatus.READY:
@@ -70,6 +163,10 @@ def execute_plan(plan: CalculationPlan) -> CalculationResult:
             target_metric=plan.target_metric,
             operands=plan.operands,
         )
+
+    # SCALE_CONVERSION is handled specially via convert_scale primitive.
+    if plan.operation is CalculationOperation.SCALE_CONVERSION:
+        return _execute_scale_conversion(plan)
 
     # READY plan: look up the registry entry.
     entry = get_operation_entry(plan.operation)

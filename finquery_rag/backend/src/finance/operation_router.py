@@ -68,6 +68,7 @@ class RoutingDecision:
     operand_roles: tuple[str, ...] = ()
     formula_template: str | None = None
     unit: str | None = None
+    target_scale: str | None = None
     reason: str = ""
 
     @classmethod
@@ -88,7 +89,9 @@ class RoutingDecision:
         )
 
     @classmethod
-    def from_generic(cls, entry: GenericOperationEntry) -> "RoutingDecision":
+    def from_generic(
+        cls, entry: GenericOperationEntry, target_scale: str | None = None
+    ) -> "RoutingDecision":
         return cls(
             status=CalculationStatus.READY,
             operation=entry.operation,
@@ -97,6 +100,7 @@ class RoutingDecision:
             operand_roles=(),
             formula_template=entry.formula_template,
             unit=entry.unit,
+            target_scale=target_scale,
             reason="generic_operation_matched",
         )
 
@@ -108,6 +112,71 @@ def _has_explicit_calculation_pattern(text: str) -> bool:
         pattern in lowered or pattern in text
         for pattern in EXPLICIT_CALCULATION_PATTERNS
     )
+
+
+_TARGET_SCALE_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("\u4ebf\u5143", "\u4ebf\u5143"),
+    ("\u767e\u4e07\u5143", "\u767e\u4e07\u5143"),
+    ("\u5343\u4e07\u5143", "\u5343\u4e07\u5143"),
+    ("\u4e07\u5143", "\u4e07\u5143"),
+    ("\u4ebf", "\u4ebf"),
+    ("\u767e\u4e07", "\u767e\u4e07"),
+    ("\u5343\u4e07", "\u5343\u4e07"),
+    ("\u4e07", "\u4e07"),
+    ("billion", "billion"),
+    ("million", "million"),
+    ("thousand", "thousand"),
+)
+
+_CURRENCY_KEYWORDS: tuple[str, ...] = (
+    "\u7f8e\u5143",
+    "\u4eba\u6c11\u5e01",
+    "\u6b27\u5143",
+    "\u65e5\u5143",
+    "\u82f1\u9551",
+    "\u6e2f\u5e01",
+    "\u6fb3\u5143",
+    "usd",
+    "cny",
+    "rmb",
+    "eur",
+    "jpy",
+    "gbp",
+    "hkd",
+    "aud",
+)
+
+
+def _extract_target_scale(question: str) -> str | None:
+    """Extract the target scale from a scale-conversion question.
+
+    Returns the canonical scale name, or None if not found.
+    Returns "__CURRENCY__" if a currency keyword is detected.
+    """
+    lowered = question.lower()
+
+    for kw in _CURRENCY_KEYWORDS:
+        if kw in lowered or kw in question:
+            return "__CURRENCY__"
+
+    has_conversion_verb = any(
+        marker in question or marker in lowered
+        for marker in (
+            "\u6362\u7b97",
+            "\u8f6c\u6362",
+            "convert",
+            "in terms of",
+            "expressed in",
+        )
+    )
+    if not has_conversion_verb:
+        return None
+
+    for pattern, canonical in _TARGET_SCALE_PATTERNS:
+        if pattern in question or pattern in lowered:
+            return canonical
+
+    return None
 
 
 def route_calculation(question: str, intent: dict[str, Any]) -> RoutingDecision:
@@ -136,7 +205,10 @@ def route_calculation(question: str, intent: dict[str, Any]) -> RoutingDecision:
     # Gate 3b: check for a generic operation keyword (sum, difference, etc.).
     generic_entry = find_generic_operation(question)
     if generic_entry is not None:
-        return RoutingDecision.from_generic(generic_entry)
+        target_scale = None
+        if generic_entry.operation is CalculationOperation.SCALE_CONVERSION:
+            target_scale = _extract_target_scale(question)
+        return RoutingDecision.from_generic(generic_entry, target_scale=target_scale)
 
     # No metric or operation keyword matched — let the LLM handle it.
     return RoutingDecision.not_applicable("no_metric_or_operation_matched")

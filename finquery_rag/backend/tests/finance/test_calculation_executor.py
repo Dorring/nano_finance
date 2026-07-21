@@ -398,16 +398,16 @@ class TestExecutorPrimitiveDecline:
         assert result.status is CalculationStatus.BLOCKED
         assert result.error_code == "PRIMITIVE_DECLINED"
 
-    def test_scale_conversion_always_blocks_in_v1(self):
-        """Scale conversion requires from/to scale params not in the plan."""
+    def test_scale_conversion_without_scales_blocks_unit_ambiguous(self):
+        """Scale conversion without source/target scale blocks with UNIT_AMBIGUOUS."""
         plan = _ready_plan(
             CalculationOperation.SCALE_CONVERSION,
             (_operand("value", "100"),),
         )
         result = execute_plan(plan)
         assert result.status is CalculationStatus.BLOCKED
-        assert result.error_code == "PRIMITIVE_DECLINED"
-        assert "from/to scale" in result.error_message
+        assert result.error_code == "UNIT_AMBIGUOUS"
+        assert "scale is missing" in result.error_message
 
 
 # ---------------------------------------------------------------------------

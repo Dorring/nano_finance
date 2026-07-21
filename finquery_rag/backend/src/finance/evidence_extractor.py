@@ -32,7 +32,8 @@ from decimal import Decimal
 from src.domain.calculation import CalculationOperand
 from src.domain.evidence import EvidenceItem
 from src.finance.operation_router import RoutingDecision
-from src.finance.primitive_tools import parse_financial_number
+from src.domain.calculation import CalculationOperation
+from src.finance.primitive_tools import _infer_scale, parse_financial_number
 
 
 # Keyword mapping for each operand role. Keywords are checked in order;
@@ -108,6 +109,7 @@ class ExtractionResult:
     missing_roles: tuple[str, ...]
     warnings: tuple[str, ...]
     expected_roles: tuple[str, ...]
+    source_scale: str | None = None
 
     @property
     def all_found(self) -> bool:
@@ -247,6 +249,47 @@ def _extract_operand_for_role(
     return operand, warnings
 
 
+def _extract_scale_conversion_operands(
+    evidence: tuple[EvidenceItem, ...],
+) -> ExtractionResult:
+    """Extract a single numeric operand and its source scale for SCALE_CONVERSION."""
+
+    for item in evidence:
+        sentences = _split_sentences(item.content)
+        for sentence in sentences:
+            numbers = _extract_numbers_from_sentence(sentence)
+            if not numbers:
+                continue
+            value, raw = numbers[0]
+            source_scale = _infer_scale(sentence) or ""
+            operand = CalculationOperand(
+                name="value",
+                value=value,
+                scale=source_scale or None,
+                source_text=raw,
+                evidence_chunk_id=item.chunk_id,
+                document_name=item.document_name,
+                page=item.page,
+            )
+            return ExtractionResult(
+                operands=(operand,),
+                found_roles=("value",),
+                missing_roles=(),
+                warnings=(),
+                expected_roles=("value",),
+                source_scale=source_scale,
+            )
+
+    return ExtractionResult(
+        operands=(),
+        found_roles=(),
+        missing_roles=("value",),
+        warnings=("no numeric operand found in evidence",),
+        expected_roles=("value",),
+        source_scale=None,
+    )
+
+
 def extract_operands(
     evidence: tuple[EvidenceItem, ...],
     routing_decision: RoutingDecision,
@@ -263,6 +306,13 @@ def extract_operands(
         any ambiguity warnings.
     """
     expected_roles = routing_decision.operand_roles
+
+    if (
+        routing_decision.operation is CalculationOperation.SCALE_CONVERSION
+        and not expected_roles
+    ):
+        return _extract_scale_conversion_operands(evidence)
+
     if not expected_roles:
         # Generic operations (sum, difference, average) have no fixed roles.
         # Return an empty result; the plan builder will handle this.

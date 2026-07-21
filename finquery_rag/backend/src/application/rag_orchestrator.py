@@ -213,12 +213,15 @@ class RAGOrchestrator:
             if calculation_result is not None and calculation_result.status in (
                 CalculationStatus.EXECUTED,
                 CalculationStatus.BLOCKED,
+                CalculationStatus.FAILED,
             ):
                 answer = calculation_answer
                 is_sufficient = True
                 confidence = (
                     1.0
                     if calculation_result.status is CalculationStatus.EXECUTED
+                    else 0.0
+                    if calculation_result.status is CalculationStatus.FAILED
                     else confidence
                 )
                 deterministic_answer = {

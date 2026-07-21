@@ -67,7 +67,8 @@ class CalculationPipeline:
             - ``EXECUTED``  -> bypass LLM, render the result as the answer.
             - ``BLOCKED``   -> bypass LLM, render a deterministic refusal.
             - ``NOT_APPLICABLE`` -> continue the normal RAG flow.
-            - ``FAILED``    -> continue the normal RAG flow (LLM fallback).
+            - ``FAILED``    -> bypass LLM, return safe failure message
+              (never fall back to LLM for numeric hallucination safety).
         """
         # 1. Route the question through the conservative 3-gate router.
         routing = route_calculation(question, intent)
@@ -98,6 +99,12 @@ class CalculationPipeline:
         formula_version = routing.formula_version or "unknown.v1"
         target_metric = routing.metric or operation.value
 
+        # SCALE_CONVERSION needs special handling for source/target scale.
+        if operation is CalculationOperation.SCALE_CONVERSION:
+            return CalculationPipeline._build_scale_conversion_plan(
+                routing, extraction, formula_version, target_metric
+            )
+
         # If the routing expected specific roles but some are missing,
         # block the plan immediately.
         if extraction.expected_roles and extraction.missing_roles:
@@ -127,10 +134,75 @@ class CalculationPipeline:
                     f"'{operation.value}' (requires at least {min_needed})"
                 ),
             )
+        return CalculationPlan(
+            operation=operation,
+            operands=extraction.operands,
+            formula_version=formula_version,
+            target_metric=target_metric,
+        )
+
+    @staticmethod
+    def _build_scale_conversion_plan(
+        routing: RoutingDecision,
+        extraction: Any,
+        formula_version: str,
+        target_metric: str,
+    ) -> CalculationPlan:
+        """Build a plan for SCALE_CONVERSION with source/target scale."""
+        from src.domain.calculation import CalculationOperation
+
+        operation = CalculationOperation.SCALE_CONVERSION
+        target_scale = routing.target_scale
+
+        if target_scale == "__CURRENCY__":
+            return CalculationPlan(
+                operation=operation,
+                operands=extraction.operands,
+                formula_version=formula_version,
+                target_metric=target_metric,
+                target_scale=target_scale,
+                status=CalculationStatus.BLOCKED,
+                block_reason="CURRENCY_NOT_SUPPORTED: currency conversion is not supported",
+            )
+
+        if not target_scale:
+            return CalculationPlan(
+                operation=operation,
+                operands=extraction.operands,
+                formula_version=formula_version,
+                target_metric=target_metric,
+                status=CalculationStatus.BLOCKED,
+                block_reason="UNIT_AMBIGUOUS: target scale not specified in question",
+            )
+
+        if not extraction.source_scale:
+            return CalculationPlan(
+                operation=operation,
+                operands=extraction.operands,
+                formula_version=formula_version,
+                target_metric=target_metric,
+                target_scale=target_scale,
+                status=CalculationStatus.BLOCKED,
+                block_reason="UNIT_AMBIGUOUS: source scale could not be inferred from evidence",
+            )
+
+        if not extraction.operands:
+            return CalculationPlan(
+                operation=operation,
+                operands=(),
+                formula_version=formula_version,
+                target_metric=target_metric,
+                target_scale=target_scale,
+                source_scale=extraction.source_scale,
+                status=CalculationStatus.BLOCKED,
+                block_reason="INSUFFICIENT_OPERANDS: no numeric value found in evidence",
+            )
 
         return CalculationPlan(
             operation=operation,
             operands=extraction.operands,
             formula_version=formula_version,
             target_metric=target_metric,
+            source_scale=extraction.source_scale,
+            target_scale=target_scale,
         )

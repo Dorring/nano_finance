@@ -16,7 +16,8 @@ Key invariants enforced by these types:
 - ``CalculationStatus`` drives the orchestrator's LLM-bypass decision:
   - ``EXECUTED``  -> skip LLM, return deterministic answer.
   - ``BLOCKED``   -> skip LLM, return deterministic refusal.
-  - ``FAILED``    -> fall back to LLM.
+  - ``FAILED``    -> skip LLM, return safe failure (never fall back to
+    LLM to avoid reintroducing numeric hallucinations).
   - ``NOT_APPLICABLE`` -> continue normal RAG flow (no calculation attempted).
   - ``READY``     -> transient state between plan builder and executor.
 """
@@ -110,6 +111,8 @@ class CalculationPlan:
     target_metric: str
     precision: int = 4
     label: str | None = None
+    source_scale: str | None = None
+    target_scale: str | None = None
     status: CalculationStatus = CalculationStatus.READY
     block_reason: str | None = None
 
@@ -121,6 +124,8 @@ class CalculationPlan:
             "target_metric": self.target_metric,
             "precision": self.precision,
             "label": self.label,
+            "source_scale": self.source_scale,
+            "target_scale": self.target_scale,
             "status": self.status.value,
             "block_reason": self.block_reason,
         }
@@ -130,14 +135,15 @@ class CalculationPlan:
 class CalculationResult:
     """The outcome of executing (or attempting) a ``CalculationPlan``.
 
-    - ``EXECUTED``  -> ``value`` is populated; orchestrator bypasses LLM.
-    - ``BLOCKED``   -> plan could not be built or operands are insufficient;
-      orchestrator bypasses LLM and returns a deterministic refusal.
-    - ``FAILED``    -> plan was built but execution raised an error;
-      orchestrator falls back to the LLM.
-    - ``NOT_APPLICABLE`` -> question was not a calculation; orchestrator
-      continues the normal RAG flow.
-    - ``READY``     -> transient; only used between plan builder and executor.
+       - ``EXECUTED``  -> ``value`` is populated; orchestrator bypasses LLM.
+       - ``BLOCKED``   -> plan could not be built or operands are insufficient;
+         orchestrator bypasses LLM and returns a deterministic refusal.
+       - ``FAILED``    -> plan was built but execution raised an error;
+         orchestrator bypasses the LLM and returns a safe failure message.
+    The internal error/stack is never exposed to the user.
+       - ``NOT_APPLICABLE`` -> question was not a calculation; orchestrator
+         continues the normal RAG flow.
+       - ``READY``     -> transient; only used between plan builder and executor.
     """
 
     status: CalculationStatus

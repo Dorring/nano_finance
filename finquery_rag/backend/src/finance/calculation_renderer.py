@@ -10,8 +10,8 @@ Rendering rules:
   value, formula, and per-operand evidence citations.
 - ``BLOCKED``   -> a single-line deterministic refusal explaining why the
   calculation could not be performed.
-- ``NOT_APPLICABLE`` / ``FAILED`` -> empty string (the orchestrator
-  continues to the LLM for these statuses).
+- ``FAILED``    -> a safe failure message (no internal stack exposed).
+- ``NOT_APPLICABLE`` -> empty string (orchestrator continues to LLM).
 
 Value formatting:
 - ``ratio`` unit -> percentage with 2 decimal places (0.4 -> "40.00%").
@@ -44,7 +44,9 @@ def render_calculation_result(result: CalculationResult) -> str:
         return _render_executed(result)
     if result.status is CalculationStatus.BLOCKED:
         return _render_blocked(result)
-    # NOT_APPLICABLE and FAILED: the LLM handles these.
+    if result.status is CalculationStatus.FAILED:
+        return _render_failed(result)
+    # NOT_APPLICABLE: the LLM handles this.
     return ""
 
 
@@ -73,6 +75,19 @@ def _render_blocked(result: CalculationResult) -> str:
     metric_label = _metric_label(result.target_metric)
     reason = result.error_message or "calculation could not be completed"
     return f"Unable to compute {metric_label}: {reason}"
+
+
+def _render_failed(result: CalculationResult) -> str:
+    """Render a FAILED result as a safe failure message.
+
+    The internal error/stack is never exposed to the user.
+    """
+    metric_label = _metric_label(result.target_metric)
+    return (
+        f"Unable to compute {metric_label} due to an internal calculation "
+        f"error. Please try rephrasing the question or consult the source "
+        f"documents directly."
+    )
 
 
 # ---------------------------------------------------------------------------

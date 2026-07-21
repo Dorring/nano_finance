@@ -69,13 +69,16 @@ class TestRendererStatusDispatch:
         result = CalculationResult(status=CalculationStatus.NOT_APPLICABLE)
         assert render_calculation_result(result) == ""
 
-    def test_failed_returns_empty(self):
+    def test_failed_returns_safe_message(self):
         result = CalculationResult(
             status=CalculationStatus.FAILED,
             error_code="PRIMITIVE_EXCEPTION",
             error_message="boom",
         )
-        assert render_calculation_result(result) == ""
+        rendered = render_calculation_result(result)
+        assert rendered != ""
+        assert "Unable to compute" in rendered
+        assert "boom" not in rendered
 
     def test_executed_returns_nonempty(self):
         result = _executed_result()
