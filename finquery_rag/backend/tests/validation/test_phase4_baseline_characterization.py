@@ -30,7 +30,7 @@ import asyncio
 import json
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Mock heavy/unavailable imports before importing app modules (mirrors
 # tests/refactor/conftest.py pattern).
@@ -266,13 +266,13 @@ class TestSufficiencyAndSourcesBaseline:
 
     def test_sources_match_context_builder_output(self):
         orch = _make_orchestrator()
-        expected_sources = (
-            [{"doc_id": "chunk_001", "page": 12, "filename": "annual_report.pdf",
-              "type": "text", "score": 0.95}]
-        )
-        orch._context_builder.build.return_value = ("context text", list(expected_sources))
+        expected_sources = [
+            {"doc_id": "chunk_001", "page": 12, "filename": "annual_report.pdf",
+             "type": "text", "score": 0.95},
+        ]
+        orch._context_builder.build.return_value = ("context text", expected_sources)
         result = _run(orch.answer(QueryRequest(question="revenue", user_id=1)))
-        assert result.sources == tuple(expected_sources[0])
+        assert result.sources == tuple(expected_sources)
 
 
 # ---------------------------------------------------------------------------
@@ -331,9 +331,9 @@ class TestHTTPAndSSEBaseline:
         try:
             mock_engine = MagicMock()
             mock_engine.query = AsyncMock(return_value=self._mock_engine_result())
-            with __import__("unittest.mock").patch("src.main.get_rag_engine", return_value=mock_engine), \
-                 __import__("unittest.mock").patch("src.main._resolve_query_document_names_for_user", return_value=["annual_report.pdf"]), \
-                 __import__("unittest.mock").patch("src.main.memory_store"):
+            with patch("src.main.get_rag_engine", return_value=mock_engine), \
+                 patch("src.main._resolve_query_document_names_for_user", return_value=["annual_report.pdf"]), \
+                 patch("src.main.memory_store"):
                 client = TestClient(app)
                 resp = client.post("/query", json={"question": "what is revenue", "document_names": ["annual_report.pdf"]})
                 assert resp.status_code == 200
@@ -363,9 +363,9 @@ class TestHTTPAndSSEBaseline:
         try:
             mock_engine = MagicMock()
             mock_engine.query = AsyncMock(return_value=self._mock_engine_result(answer="stream answer"))
-            with __import__("unittest.mock").patch("src.main.get_rag_engine", return_value=mock_engine), \
-                 __import__("unittest.mock").patch("src.main._resolve_query_document_names_for_user", return_value=["annual_report.pdf"]), \
-                 __import__("unittest.mock").patch("src.main.memory_store"):
+            with patch("src.main.get_rag_engine", return_value=mock_engine), \
+                 patch("src.main._resolve_query_document_names_for_user", return_value=["annual_report.pdf"]), \
+                 patch("src.main.memory_store"):
                 client = TestClient(app)
                 with client.stream("POST", "/query/stream",
                                    json={"question": "what is revenue", "document_names": ["annual_report.pdf"]}) as stream:
