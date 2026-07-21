@@ -301,6 +301,7 @@ class TestValidationSSEEndpoint:
             patch("src.main._resolve_query_document_names_for_user",
                   return_value=["annual_report.pdf"]),
             patch("src.main.memory_store"),
+            mock_engine,
         )
 
     def _stream_query(self, json_body):
