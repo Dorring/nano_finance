@@ -214,6 +214,11 @@ pytest-cache-files-*/
 *.db-shm
 *.db-wal
 
+# Phase 5 sealed evaluation labels — must NEVER be committed to git.
+# Only questions.jsonl and manifest.public.json are committed for the
+# sealed partition; the real labels.jsonl lives here locally.
+.sealed/
+
 # Backend generated/local runtime files
 rag_bm25.db
 trace_log.db

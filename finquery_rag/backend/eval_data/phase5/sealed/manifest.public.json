@@ -1,0 +1,8 @@
+{
+  "partition": "sealed",
+  "case_count": 5,
+  "questions_sha256": "placeholder",
+  "labels_sha256": null,
+  "created_at": "2026-07-23T00:00:00Z",
+  "slices": ["document_qa", "financial_calculation", "expected_no_answer"]
+}

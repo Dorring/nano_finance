@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://finquery/eval/phase5/evaluation-label.schema.json",
+  "title": "EvaluationLabel",
+  "description": "What the sealed scorer sees. Carries all expected_* fields; never passed to the blind runner.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Unique identifier matching the corresponding EvaluationQuery.case_id.",
+      "minLength": 1
+    },
+    "expected_sources": {
+      "type": "array",
+      "description": "Citation/retrieval targets expected for this case.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filename": {"type": ["string", "null"]},
+          "page": {"type": ["integer", "string", "null"]},
+          "chunk_id": {"type": ["string", "null"]}
+        }
+      },
+      "default": []
+    },
+    "expected_numbers": {
+      "type": "array",
+      "description": "Numeric values that must appear in the answer.",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "expected_calculations": {
+      "type": "array",
+      "description": "Deterministic financial calculations expected for this case.",
+      "items": {
+        "type": "object",
+        "required": ["id", "operation", "expected_value"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "operation": {"type": "string", "minLength": 1},
+          "args": {"type": "object", "default": {}},
+          "expected_value": {"type": "string"},
+          "tolerance": {"type": "string", "default": "0"},
+          "unit": {"type": ["string", "null"]}
+        }
+      },
+      "default": []
+    },
+    "expected_intent": {
+      "type": ["string", "null"],
+      "description": "Expected classified intent (e.g. document_qa, financial_calculation)."
+    },
+    "expected_answerability": {
+      "type": ["string", "null"],
+      "description": "Expected answerability status (answerable, partially_answerable, not_answerable, calculation_blocked)."
+    },
+    "expected_validation_status": {
+      "type": ["string", "null"],
+      "description": "Expected validation status (e.g. passed, blocked, failed)."
+    },
+    "expected_no_answer": {
+      "type": "boolean",
+      "description": "True when the case expects a refusal / no-answer response.",
+      "default": false
+    },
+    "required_answer_terms": {
+      "type": "array",
+      "description": "Terms that must appear in the answer.",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "forbidden_answer_terms": {
+      "type": "array",
+      "description": "Terms that must NOT appear in the answer.",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "slice_tags": {
+      "type": "array",
+      "description": "Slice tags mirroring the question tags for per-slice scoring.",
+      "items": {"type": "string"},
+      "default": []
+    }
+  }
+}
