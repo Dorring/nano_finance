@@ -59,7 +59,24 @@ _INTENT_NAMES = (
     "conversation",
 )
 
-_IMPLEMENTATION_COMMIT = "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f"
+
+def _get_git_commit() -> str:
+    """Return current git HEAD SHA."""
+    import subprocess
+
+    root = os.path.join(os.path.dirname(__file__), "..", "..")
+    try:
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=root,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+    except Exception:
+        return ""
 
 
 def _load_artifact(name: str) -> dict:
@@ -166,11 +183,12 @@ def test_acceptance_not_all_true_blindly() -> None:
 
 
 def test_generated_commit_matches_implementation() -> None:
-    """9. generated_commit must equal the implementation commit SHA."""
+    """9. generated_commit must equal the current git HEAD SHA."""
     data = _load_artifact("phase4-acceptance.json")
-    assert data["generated_commit"] == _IMPLEMENTATION_COMMIT, (
-        f"generated_commit {data['generated_commit']} != "
-        f"implementation commit {_IMPLEMENTATION_COMMIT}"
+    head = _get_git_commit()
+    assert head, "cannot determine git HEAD SHA"
+    assert data["generated_commit"] == head, (
+        f"generated_commit {data['generated_commit']} != git HEAD {head}"
     )
 
 
