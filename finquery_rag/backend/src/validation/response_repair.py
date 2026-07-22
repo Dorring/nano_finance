@@ -21,6 +21,7 @@ Repair strategy (deterministic):
 Layer dependency: ``domain <- validation``. Imports only from ``src.domain``
 and stdlib.
 """
+
 from __future__ import annotations
 
 import re
@@ -71,6 +72,7 @@ _FALLBACK_CALCULATION_BLOCKED = (
 # Repair result
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class RepairResult:
     """Outcome of a repair attempt.
@@ -118,6 +120,7 @@ class RepairResult:
 # Response repair
 # ---------------------------------------------------------------------------
 
+
 class ResponseRepair:
     """Deterministic repair and safe fallback for validated answers.
 
@@ -132,9 +135,6 @@ class ResponseRepair:
     The repair NEVER calls the LLM and NEVER performs retrieval.
     """
 
-    # Sentence-splitting pattern: splits on sentence boundaries while
-    # keeping the trailing punctuation. Handles ".", "!", "?" and
-    # newlines.
     _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
     def repair(
@@ -148,8 +148,6 @@ class ResponseRepair:
 
         Returns a ``RepairResult``. Never raises.
         """
-        # If answerability says NOT_ANSWERABLE or CALCULATION_BLOCKED,
-        # use the appropriate fallback immediately.
         if answerability is not None:
             if answerability.status is AnswerabilityStatus.NOT_ANSWERABLE:
                 return RepairResult(
@@ -168,7 +166,6 @@ class ResponseRepair:
 
         status = validation.status
 
-        # PASSED / NOT_APPLICABLE -> no repair needed.
         if status in (ValidationStatus.PASSED, ValidationStatus.NOT_APPLICABLE):
             return RepairResult(
                 answer=answer,
@@ -177,7 +174,6 @@ class ResponseRepair:
                 repair_notes=(),
             )
 
-        # BLOCKED / FAILED -> safe fallback immediately.
         if status is ValidationStatus.BLOCKED:
             return RepairResult(
                 answer=_FALLBACK_BLOCKED,
@@ -193,13 +189,11 @@ class ResponseRepair:
                 repair_notes=("validation:failed",),
             )
 
-        # REPAIRABLE -> attempt deterministic repair.
         repaired, was_actually_repaired, notes = self._attempt_repair(
             answer, validation
         )
 
         if repaired is None or not repaired.strip():
-            # Repair produced an empty answer -> fallback.
             return RepairResult(
                 answer=_FALLBACK_BLOCKED,
                 was_repaired=False,
@@ -214,27 +208,67 @@ class ResponseRepair:
             repair_notes=notes,
         )
 
-    # -----------------------------------------------------------------
-    # Internal repair strategies
-    # -----------------------------------------------------------------
+    def safe_fallback(
+        self,
+        *,
+        validation: ValidationResult | None,
+        answerability: AnswerabilityResult | None,
+    ) -> RepairResult:
+        """Return a safe fallback message without analyzing the answer.
+
+        This method does NOT count as a repair attempt. It only selects
+        a fixed safe message based on the answerability/validation status.
+
+        Constraints:
+        - Does NOT analyze the original answer.
+        - Does NOT strip sentences.
+        - Does NOT execute any repair rules.
+        - Sets ``fallback_used=True``, ``was_repaired=False``.
+        """
+        if answerability is not None:
+            if answerability.status is AnswerabilityStatus.NOT_ANSWERABLE:
+                return RepairResult(
+                    answer=_FALLBACK_NOT_ANSWERABLE,
+                    was_repaired=False,
+                    fallback_used=True,
+                    repair_notes=("safe_fallback:not_answerable",),
+                )
+            if answerability.status is AnswerabilityStatus.CALCULATION_BLOCKED:
+                return RepairResult(
+                    answer=_FALLBACK_CALCULATION_BLOCKED,
+                    was_repaired=False,
+                    fallback_used=True,
+                    repair_notes=("safe_fallback:calculation_blocked",),
+                )
+        if validation is not None:
+            if validation.status is ValidationStatus.BLOCKED:
+                return RepairResult(
+                    answer=_FALLBACK_BLOCKED,
+                    was_repaired=False,
+                    fallback_used=True,
+                    repair_notes=("safe_fallback:blocked",),
+                )
+            if validation.status is ValidationStatus.FAILED:
+                return RepairResult(
+                    answer=_FALLBACK_FAILED,
+                    was_repaired=False,
+                    fallback_used=True,
+                    repair_notes=("safe_fallback:failed",),
+                )
+        # Default fallback for any other non-passing state.
+        return RepairResult(
+            answer=_FALLBACK_BLOCKED,
+            was_repaired=False,
+            fallback_used=True,
+            repair_notes=("safe_fallback:default",),
+        )
 
     def _attempt_repair(
         self,
         answer: str,
         validation: ValidationResult,
     ) -> tuple[str | None, bool, tuple[str, ...]]:
-        """Attempt a single deterministic repair.
-
-        Current strategy: strip sentences containing ungrounded numeric
-        claims. If the answer has no ungrounded claims (only citation
-        issues), the answer is returned as-is (non-blocking).
-
-        Returns ``(repaired_answer, was_actually_repaired, notes)``.
-        If the repair fails, returns ``(None, False, notes)``.
-        """
         notes: list[str] = []
-
-        # Collect claim texts for issues that can be repaired by stripping.
         strip_claims: set[str] = set()
         has_blocking = False
 
@@ -242,12 +276,9 @@ class ResponseRepair:
             if issue.code == CODE_NUMERIC_UNGROUND and issue.claim_text:
                 strip_claims.add(issue.claim_text)
             elif issue.severity.value in ("critical", "error"):
-                # If there are non-repairable blocking issues, repair
-                # cannot help.
                 has_blocking = True
 
         if has_blocking and not strip_claims:
-            # Blocking issues that we cannot repair by stripping.
             notes.append("repair:unrepairable_blocking_issues")
             return None, False, tuple(notes)
 
@@ -259,20 +290,16 @@ class ResponseRepair:
                 return None, False, tuple(notes)
             return repaired, True, tuple(notes)
 
-        # No strip-able claims; try citation repair.
         citation_issues = [
-            i for i in validation.issues
+            i
+            for i in validation.issues
             if i.code in (CODE_CITATION_MISSING, CODE_CITATION_UNRESOLVED)
             and i.severity.value != "critical"
         ]
         if citation_issues:
-            # Citation repair: for WARNING-level citation issues, the
-            # answer is still usable — return as-is (no actual repair
-            # applied, but no fallback needed).
             notes.append("repair:citation_issues_non_blocking")
             return answer, False, tuple(notes)
 
-        # No repairable issues found.
         notes.append("repair:no_repairable_issues")
         return answer, False, tuple(notes)
 
@@ -282,18 +309,10 @@ class ResponseRepair:
         answer: str,
         claims_to_strip: set[str],
     ) -> str | None:
-        """Remove sentences containing the specified claim texts.
-
-        Splits the answer into sentences and removes any sentence that
-        contains one of the claim texts. If all sentences are removed,
-        returns None.
-        """
         if not answer.strip():
             return None
-
         sentences = cls._split_sentences(answer)
         kept: list[str] = []
-
         for sentence in sentences:
             should_strip = False
             for claim_text in claims_to_strip:
@@ -302,17 +321,11 @@ class ResponseRepair:
                     break
             if not should_strip:
                 kept.append(sentence)
-
         if not kept:
             return None
-
         return " ".join(kept)
 
     @classmethod
     def _split_sentences(cls, answer: str) -> list[str]:
-        """Split an answer into sentences.
-
-        Handles common sentence boundaries (.!?) and newlines.
-        """
         parts = cls._SENTENCE_SPLIT.split(answer)
         return [p.strip() for p in parts if p.strip()]

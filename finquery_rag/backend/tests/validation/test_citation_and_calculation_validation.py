@@ -3,6 +3,7 @@
 Verifies citation presence/resolvability checks and calculation result
 consistency validation.
 """
+
 from __future__ import annotations
 
 import sys
@@ -20,6 +21,7 @@ from src.domain.evidence import EvidenceItem
 from src.domain.validation import ValidationSeverity
 from src.validation.calculation_validator import (
     CODE_CALCULATION_MISMATCH,
+    CODE_CALCULATION_VALUE_MISMATCH,
     CalculationValidator,
 )
 from src.validation.citation_validator import (
@@ -38,6 +40,7 @@ from src.validation.validation_policy import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _evidence(
     content: str,
@@ -99,6 +102,7 @@ def _no_citation_policy() -> ValidationPolicy:
 # ---------------------------------------------------------------------------
 # CitationValidator tests
 # ---------------------------------------------------------------------------
+
 
 class TestCitationValidator:
     def test_citation_present_no_issue(self):
@@ -210,6 +214,7 @@ class TestCitationValidator:
 # CalculationValidator tests
 # ---------------------------------------------------------------------------
 
+
 class TestCalculationValidator:
     def test_no_calculation_result(self):
         """When calculation_result is None, no issues."""
@@ -261,7 +266,10 @@ class TestCalculationValidator:
         )
         issues = validator.validate(claims, calc)
         assert len(issues) == 1
-        assert issues[0].code == CODE_CALCULATION_MISMATCH
+        assert issues[0].code in (
+            CODE_CALCULATION_MISMATCH,
+            CODE_CALCULATION_VALUE_MISMATCH,
+        )
         assert issues[0].severity == ValidationSeverity.CRITICAL
 
     def test_answer_does_not_mention_metric(self):
@@ -278,7 +286,12 @@ class TestCalculationValidator:
             target_metric="gross_margin",
         )
         issues = validator.validate(claims, calc)
-        assert len(issues) == 0
+        # Phase 4 hotfix: answer must mention the calculated value;
+        # missing metric claim -> CALCULATION_VALUE_MISSING
+        from src.validation.calculation_validator import CODE_CALCULATION_VALUE_MISSING
+
+        assert len(issues) == 1
+        assert issues[0].code == CODE_CALCULATION_VALUE_MISSING
 
     def test_ratio_vs_percentage_match(self):
         """0.4 ratio should match 40% percentage."""

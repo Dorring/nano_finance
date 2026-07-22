@@ -1,9 +1,16 @@
-"""Phase 4 production regression tests for calculation validation wiring.
+"""Phase 4 architecture checks for calculation validation wiring.
 
 Statically verify that the RAG orchestrator routes every calculation
 path (EXECUTED, BLOCKED, FAILED) through the Phase 4 answerability and
 validation pipeline, and that BLOCKED/FAILED never reaches LLM generation.
+
+These are *architecture* (source-structure) checks, not runtime behaviour
+tests.  Runtime behaviour is covered by
+``test_calculation_validation_runtime.py``,
+``test_calculation_validation_http_runtime.py`` and
+``test_calculation_validation_sse_runtime.py``.
 """
+
 from __future__ import annotations
 
 import os

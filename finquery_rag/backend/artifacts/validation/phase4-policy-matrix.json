@@ -1,79 +1,82 @@
 {
-  "generated_by": "Phase 4 hotfix manual review",
-  "generated_from_tests": [
-    "tests/validation/test_validation_policy.py"
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "9f9d9fc35a57515837e2248732de6af592f199a1",
+  "generated_at": "2026-07-22T00:13:55.176992+00:00",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/validation/test_validation_policy.py",
+    "tests/validation/test_response_validation_pipeline.py"
   ],
-  "policies": {
+  "intents": {
     "financial_calculation": {
-      "require_evidence": true,
-      "require_citations": true,
       "validate_numeric_claims": true,
-      "validate_units": true,
-      "validate_periods": true,
+      "validate_citations": true,
+      "validate_units_periods": true,
+      "validate_calculations": true,
       "strict_numeric_grounding": true,
       "unsupported_numeric_action": "block",
+      "unsupported_action_action": "block",
+      "missing_citation_action": "block"
+    },
+    "multi_document_comparison": {
+      "validate_numeric_claims": true,
+      "validate_citations": true,
+      "validate_units_periods": true,
+      "validate_calculations": true,
+      "strict_numeric_grounding": true,
+      "unsupported_numeric_action": "block",
+      "unsupported_action_action": "warn",
       "missing_citation_action": "block"
     },
     "document_qa": {
-      "require_evidence": true,
-      "require_citations": true,
       "validate_numeric_claims": true,
-      "validate_units": true,
-      "validate_periods": true,
+      "validate_citations": true,
+      "validate_units_periods": true,
+      "validate_calculations": false,
       "strict_numeric_grounding": true,
-      "unsupported_numeric_action": "block",
-      "missing_citation_action": "warn"
-    },
-    "document_summary": {
-      "require_evidence": true,
-      "require_citations": false,
-      "validate_numeric_claims": true,
-      "validate_units": true,
-      "validate_periods": true,
-      "strict_numeric_grounding": true,
-      "unsupported_numeric_action": "block",
-      "missing_citation_action": "warn"
-    },
-    "multi_document_comparison": {
-      "require_evidence": true,
-      "require_citations": true,
-      "validate_numeric_claims": true,
-      "validate_units": true,
-      "validate_periods": true,
-      "strict_numeric_grounding": true,
-      "unsupported_numeric_action": "block",
+      "unsupported_numeric_action": "warn",
+      "unsupported_action_action": "warn",
       "missing_citation_action": "block"
     },
-    "front_matter": {
-      "require_evidence": true,
-      "require_citations": true,
-      "validate_numeric_claims": false,
-      "validate_units": false,
-      "validate_periods": false,
-      "strict_numeric_grounding": false,
-      "unsupported_numeric_action": "warn",
-      "missing_citation_action": "warn"
-    },
     "conversation": {
-      "require_evidence": false,
-      "require_citations": false,
       "validate_numeric_claims": false,
-      "validate_units": false,
-      "validate_periods": false,
+      "validate_citations": false,
+      "validate_units_periods": false,
+      "validate_calculations": false,
       "strict_numeric_grounding": false,
-      "unsupported_numeric_action": "warn",
-      "missing_citation_action": "warn"
+      "unsupported_numeric_action": "skip",
+      "unsupported_action_action": "allow",
+      "missing_citation_action": "skip"
+    },
+    "front_matter": {
+      "validate_numeric_claims": false,
+      "validate_citations": false,
+      "validate_units_periods": false,
+      "validate_calculations": false,
+      "strict_numeric_grounding": false,
+      "unsupported_numeric_action": "allow",
+      "unsupported_action_action": "allow",
+      "missing_citation_action": "allow"
     },
     "unsupported": {
-      "require_evidence": false,
-      "require_citations": false,
       "validate_numeric_claims": false,
-      "validate_units": false,
-      "validate_periods": false,
+      "validate_citations": false,
+      "validate_units_periods": false,
+      "validate_calculations": false,
+      "strict_numeric_grounding": false,
+      "unsupported_numeric_action": "block",
+      "unsupported_action_action": "block",
+      "missing_citation_action": "block"
+    },
+    "default": {
+      "validate_numeric_claims": true,
+      "validate_citations": true,
+      "validate_units_periods": false,
+      "validate_calculations": false,
       "strict_numeric_grounding": false,
       "unsupported_numeric_action": "warn",
+      "unsupported_action_action": "warn",
       "missing_citation_action": "warn"
     }
-  },
-  "default_fallback": "document_qa"
+  }
 }

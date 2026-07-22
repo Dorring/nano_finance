@@ -1,73 +1,71 @@
 {
-  "generated_by": "Phase 4 hotfix manual review",
-  "generated_from_tests": [
-    "tests/validation/test_phase4_baseline_characterization.py",
-    "tests/test_phase113_front_matter_title.py",
-    "tests/test_phase12_trace_id.py"
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "9f9d9fc35a57515837e2248732de6af592f199a1",
+  "generated_at": "2026-07-22T00:13:55.187108+00:00",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/test_phase3_non_calculation_parity.py",
+    "tests/validation/test_response_validation_pipeline.py",
+    "tests/finance/test_calculation_api_contract.py",
+    "tests/finance/test_calculation_streaming_contract.py",
+    "tests/finance/",
+    "scripts/check_eval_leakage.py",
+    "tests/test_phase4_front_matter.py"
   ],
-  "parity_checks": {
-    "non_calculation_calls_llm": {
+  "checks": [
+    {
+      "id": "parity_01",
+      "name": "Non-calculation queries still return answer",
       "status": "pass",
-      "description": "When validation pipeline is disabled, non-calculation queries still call the LLM as before.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_non_calculation_calls_llm"
-      ]
+      "test": "tests/test_phase3_non_calculation_parity.py"
     },
-    "calculation_success_bypasses_llm": {
+    {
+      "id": "parity_02",
+      "name": "Conversation intent skips validation",
       "status": "pass",
-      "description": "Calculation EXECUTED still bypasses LLM when validation is disabled.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_calculation_success_bypasses_llm"
-      ]
+      "test": "tests/validation/test_response_validation_pipeline.py"
     },
-    "calculation_blocked_bypasses_llm": {
+    {
+      "id": "parity_03",
+      "name": "AnswerResult API contract compatible",
       "status": "pass",
-      "description": "Calculation BLOCKED still bypasses LLM when validation is disabled.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_calculation_blocked_bypasses_llm"
-      ]
+      "test": "tests/finance/test_calculation_api_contract.py"
     },
-    "front_matter_title_still_works": {
+    {
+      "id": "parity_04",
+      "name": "Trace structure preserves existing fields",
       "status": "pass",
-      "description": "Front matter title query still returns deterministic answer without LLM.",
-      "evidence": [
-        "tests/test_phase113_front_matter_title.py: test_query_uses_front_matter_title_without_llm_or_vector_search"
-      ]
+      "test": "tests/test_phase3_non_calculation_parity.py"
     },
-    "trace_id_propagation": {
+    {
+      "id": "parity_05",
+      "name": "calculations field is optional in response",
       "status": "pass",
-      "description": "Trace ID is still propagated to the response when validation is enabled.",
-      "evidence": [
-        "tests/test_phase12_trace_id.py: test_query_returns_trace_id_from_logger"
-      ]
+      "test": "tests/finance/test_calculation_api_contract.py"
     },
-    "orchestrator_receives_same_args": {
+    {
+      "id": "parity_06",
+      "name": "SSE done event carries calculations payload",
       "status": "pass",
-      "description": "Orchestrator receives the same arguments regardless of validation pipeline enablement.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_orchestrator_receives_same_args"
-      ]
+      "test": "tests/finance/test_calculation_streaming_contract.py"
     },
-    "default_engine_has_calculation_pipeline": {
+    {
+      "id": "parity_07",
+      "name": "Phase 3 nine calculation operations pass",
       "status": "pass",
-      "description": "Default RAGEngine has calculation pipeline enabled.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_default_engine_has_calculation_pipeline"
-      ]
+      "test": "tests/finance/"
     },
-    "default_engine_has_validation_pipeline": {
+    {
+      "id": "parity_08",
+      "name": "No eval/exec in calculation code",
       "status": "pass",
-      "description": "Default RAGEngine has validation pipeline enabled (enable_validation_pipeline=True).",
-      "evidence": [
-        "src/services/rag_engine.py: enable_validation_pipeline=True default"
-      ]
+      "test": "scripts/check_eval_leakage.py"
     },
-    "disable_validation_pipeline": {
+    {
+      "id": "parity_09",
+      "name": "Front matter title extraction unchanged",
       "status": "pass",
-      "description": "Validation pipeline can be disabled via constructor flag.",
-      "evidence": [
-        "tests/test_phase3_calculation_bypass.py: test_disable_calculation_pipeline"
-      ]
+      "test": "tests/test_phase4_front_matter.py"
     }
-  }
+  ]
 }

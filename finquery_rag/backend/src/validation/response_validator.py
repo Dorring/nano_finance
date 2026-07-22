@@ -19,6 +19,7 @@ IS the evidence.
 Layer dependency: ``domain <- validation``. Imports only from ``src.domain``
 and stdlib.
 """
+
 from __future__ import annotations
 
 from src.domain.calculation import CalculationResult, CalculationStatus
@@ -144,7 +145,8 @@ class ResponseValidator:
 
         # Suppress NUMERIC_UNGROUND for claims supported by calculation.
         numeric_issues = tuple(
-            i for i in numeric_issues
+            i
+            for i in numeric_issues
             if not (
                 i.code == CODE_NUMERIC_UNGROUND
                 and i.claim_text in calc_supported_claim_ids
@@ -157,7 +159,9 @@ class ResponseValidator:
         )
 
         # Run citation validator (with sources for chunk/page validation).
-        citation_issues = self._citation_validator.validate(claims, evidence, policy, sources)
+        citation_issues = self._citation_validator.validate(
+            claims, evidence, policy, sources
+        )
 
         # Run unsupported claim validator.
         unsupported_issues = self._unsupported_validator.validate(
@@ -217,7 +221,6 @@ class ResponseValidator:
             return set()
 
         calc_value = calculation_result.value
-        calc_unit = calculation_result.unit
         target_metric = calculation_result.target_metric
 
         supported: set[str] = set()
@@ -228,9 +231,7 @@ class ResponseValidator:
                 continue
             if claim.value is None:
                 continue
-            if CalculationValidator._values_match(
-                claim.value, claim.claim_type, calc_value, calc_unit
-            ):
+            if CalculationValidator()._values_match(calc_value, claim.value):
                 supported.add(claim.raw_text)
 
         return supported
@@ -250,12 +251,8 @@ class ResponseValidator:
         if not issues:
             return ValidationStatus.PASSED
 
-        has_critical = any(
-            i.severity is ValidationSeverity.CRITICAL for i in issues
-        )
-        has_error = any(
-            i.severity is ValidationSeverity.ERROR for i in issues
-        )
+        has_critical = any(i.severity is ValidationSeverity.CRITICAL for i in issues)
+        has_error = any(i.severity is ValidationSeverity.ERROR for i in issues)
 
         if has_critical:
             return ValidationStatus.BLOCKED

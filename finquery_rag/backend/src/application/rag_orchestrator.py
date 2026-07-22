@@ -216,31 +216,25 @@ class RAGOrchestrator:
             confidence = 1.0
             deterministic_answer = front_matter_answer["diagnostic"]
             # Build evidence for front matter validation.
-            evidence_for_validation = tuple(
-                EvidenceItem.from_chunk(c) for c in chunks
-            )
+            evidence_for_validation = tuple(EvidenceItem.from_chunk(c) for c in chunks)
             # Run answerability + validation for front matter path.
             if self._validation_pipeline is not None:
                 from src.retrieval.context_builder import SufficiencyResult
+
                 fm_sufficiency = SufficiencyResult(
                     is_sufficient=True,
                     best_score=1.0,
                     average_score=1.0,
                 )
-                answerability_result = (
-                    self._validation_pipeline.evaluate_answerability(
-                        question=question,
-                        intent="front_matter",
-                        evidence=evidence_for_validation,
-                        sufficiency_result=fm_sufficiency,
-                        calculation_result=None,
-                        requested_documents=tuple(doc_names),
-                    )
+                answerability_result = self._validation_pipeline.evaluate_answerability(
+                    question=question,
+                    intent="front_matter",
+                    evidence=evidence_for_validation,
+                    sufficiency_result=fm_sufficiency,
+                    calculation_result=None,
+                    requested_documents=tuple(doc_names),
                 )
-                if (
-                    answerability_result.status
-                    is AnswerabilityStatus.NOT_ANSWERABLE
-                ):
+                if answerability_result.status is AnswerabilityStatus.NOT_ANSWERABLE:
                     answer = (
                         "I cannot answer this question based on the "
                         "available evidence. The retrieved documents "
@@ -251,20 +245,21 @@ class RAGOrchestrator:
                     deterministic_answer = {
                         "path": "answerability_blocked",
                         "status": answerability_result.status.value,
-                        "reason_codes": list(
-                            answerability_result.reason_codes
-                        ),
+                        "reason_codes": list(answerability_result.reason_codes),
                     }
                 else:
-                    answer, validation_result, repair_result, initial_validation_result = (
-                        self._validate_and_repair_once(
-                            answer=answer,
-                            intent="front_matter",
-                            sources=tuple(sources),
-                            evidence=evidence_for_validation,
-                            calculation_result=None,
-                            answerability=answerability_result,
-                        )
+                    (
+                        answer,
+                        validation_result,
+                        repair_result,
+                        initial_validation_result,
+                    ) = self._validate_and_repair_once(
+                        answer=answer,
+                        intent="front_matter",
+                        sources=tuple(sources),
+                        evidence=evidence_for_validation,
+                        calculation_result=None,
+                        answerability=answerability_result,
                     )
         else:
             # Phase 3: Check context sufficiency
@@ -287,28 +282,21 @@ class RAGOrchestrator:
                     calculation_answer = render_calculation_result(calculation_result)
 
             # Build evidence for validation (used by all sub-paths).
-            evidence_for_validation = tuple(
-                EvidenceItem.from_chunk(c) for c in chunks
-            )
+            evidence_for_validation = tuple(EvidenceItem.from_chunk(c) for c in chunks)
 
             # Phase 4 hotfix: Run answerability for ALL paths (including
             # calculation EXECUTED/BLOCKED/FAILED).
             answerability_blocked = False
             if self._validation_pipeline is not None:
-                answerability_result = (
-                    self._validation_pipeline.evaluate_answerability(
-                        question=question,
-                        intent=intent["intent"],
-                        evidence=evidence_for_validation,
-                        sufficiency_result=sufficiency,
-                        calculation_result=calculation_result,
-                        requested_documents=tuple(doc_names),
-                    )
+                answerability_result = self._validation_pipeline.evaluate_answerability(
+                    question=question,
+                    intent=intent["intent"],
+                    evidence=evidence_for_validation,
+                    sufficiency_result=sufficiency,
+                    calculation_result=calculation_result,
+                    requested_documents=tuple(doc_names),
                 )
-                if (
-                    answerability_result.status
-                    is AnswerabilityStatus.NOT_ANSWERABLE
-                ):
+                if answerability_result.status is AnswerabilityStatus.NOT_ANSWERABLE:
                     answer = (
                         "I cannot answer this question based on the "
                         "available evidence. The retrieved documents "
@@ -319,9 +307,7 @@ class RAGOrchestrator:
                     deterministic_answer = {
                         "path": "answerability_blocked",
                         "status": answerability_result.status.value,
-                        "reason_codes": list(
-                            answerability_result.reason_codes
-                        ),
+                        "reason_codes": list(answerability_result.reason_codes),
                     }
                     answerability_blocked = True
                 elif (
@@ -329,12 +315,52 @@ class RAGOrchestrator:
                     is AnswerabilityStatus.CALCULATION_BLOCKED
                 ):
                     # Calculation BLOCKED/FAILED: use safe fallback.
-                    # No LLM, no generation. Validation is NOT_APPLICABLE
-                    # because the fallback is deterministic.
+                    # No LLM, no generation. Create explicit ValidationResult
+                    # so the public API always includes validation status.
+                    is_failed = (
+                        calculation_result is not None
+                        and calculation_result.status is CalculationStatus.FAILED
+                    )
+                    if is_failed:
+                        validation_result = ValidationResult(
+                            status=ValidationStatus.FAILED,
+                            issues=(
+                                ValidationIssue(
+                                    code=(
+                                        calculation_result.error_code
+                                        or "CALCULATION_FAILED"
+                                    ),
+                                    severity=ValidationSeverity.CRITICAL,
+                                    message="Calculation execution failed.",
+                                    claim_text="",
+                                    evidence_ids=(),
+                                    public_message=(
+                                        "计算执行失败，本次未返回未经验证的结果。"
+                                    ),
+                                ),
+                            ),
+                        )
+                    else:
+                        validation_result = ValidationResult(
+                            status=ValidationStatus.BLOCKED,
+                            issues=(
+                                ValidationIssue(
+                                    code=(
+                                        calculation_result.error_code
+                                        if calculation_result is not None
+                                        else "CALCULATION_BLOCKED"
+                                    ),
+                                    severity=ValidationSeverity.ERROR,
+                                    message="Calculation blocked: insufficient data.",
+                                    claim_text="",
+                                    evidence_ids=(),
+                                    public_message=("计算所需的数据或条件不足。"),
+                                ),
+                            ),
+                        )
                     if self._response_repair is not None:
-                        repair_result = self._response_repair.repair(
-                            answer=calculation_answer or "",
-                            validation=None,
+                        repair_result = self._response_repair.safe_fallback(
+                            validation=validation_result,
                             answerability=answerability_result,
                         )
                         answer = repair_result.answer
@@ -346,17 +372,12 @@ class RAGOrchestrator:
                     is_sufficient = False
                     confidence = 0.0
                     diagnostic_path = (
-                        "calculation_failed"
-                        if calculation_result is not None
-                        and calculation_result.status is CalculationStatus.FAILED
-                        else "calculation_blocked"
+                        "calculation_failed" if is_failed else "calculation_blocked"
                     )
                     deterministic_answer = {
                         "path": diagnostic_path,
                         "status": answerability_result.status.value,
-                        "reason_codes": list(
-                            answerability_result.reason_codes
-                        ),
+                        "reason_codes": list(answerability_result.reason_codes),
                         "error_code": (
                             calculation_result.error_code
                             if calculation_result is not None
@@ -419,7 +440,9 @@ class RAGOrchestrator:
                     if deterministic_context_answer:
                         answer = deterministic_context_answer["answer"]
                         is_sufficient = True
-                        deterministic_answer = deterministic_context_answer["diagnostic"]
+                        deterministic_answer = deterministic_context_answer[
+                            "diagnostic"
+                        ]
                         low_confidence_numeric_override = False
                     else:
                         low_confidence_numeric_override = (
@@ -451,10 +474,7 @@ class RAGOrchestrator:
             # Phase 4 hotfix: Post-generation validation for ALL paths
             # (calculation EXECUTED, deterministic, LLM) — but NOT for
             # answerability-blocked paths (which already have a safe fallback).
-            if (
-                self._validation_pipeline is not None
-                and not answerability_blocked
-            ):
+            if self._validation_pipeline is not None and not answerability_blocked:
                 answer, validation_result, repair_result, initial_validation_result = (
                     self._validate_and_repair_once(
                         answer=answer,
@@ -537,9 +557,7 @@ class RAGOrchestrator:
                 else None
             )
             trace_data["diagnostics"]["repair"] = (
-                repair_result.to_trace_dict()
-                if repair_result is not None
-                else None
+                repair_result.to_trace_dict() if repair_result is not None else None
             )
         trace_id = None
         try:
@@ -582,9 +600,7 @@ class RAGOrchestrator:
                 else None
             ),
             repair=(
-                repair_result.to_public_dict()
-                if repair_result is not None
-                else None
+                repair_result.to_public_dict() if repair_result is not None else None
             ),
         )
 
@@ -773,8 +789,7 @@ class RAGOrchestrator:
             ValidationStatus.BLOCKED,
             ValidationStatus.FAILED,
         ):
-            fallback = self._response_repair.repair(
-                answer=answer,
+            fallback = self._response_repair.safe_fallback(
                 validation=initial_validation,
                 answerability=answerability,
             )
@@ -830,8 +845,7 @@ class RAGOrchestrator:
             )
 
         # Still not PASSED -> safe fallback (NO second repair).
-        fallback = self._response_repair.repair(
-            answer=repair_result.answer,
+        fallback = self._response_repair.safe_fallback(
             validation=final_validation,
             answerability=answerability,
         )

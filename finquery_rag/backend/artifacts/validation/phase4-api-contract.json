@@ -1,55 +1,60 @@
 {
-  "generated_by": "Phase 4 hotfix manual review",
-  "generated_from_tests": [
-    "tests/validation/test_validation_http_sse.py",
-    "tests/validation/test_grounded_response_e2e.py"
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "9f9d9fc35a57515837e2248732de6af592f199a1",
+  "generated_at": "2026-07-22T00:13:55.180465+00:00",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/finance/test_calculation_api_contract.py",
+    "tests/finance/test_calculation_streaming_contract.py",
+    "tests/validation/test_trace_content_redaction.py"
   ],
   "endpoints": {
-    "POST /query": {
-      "response_fields": {
-        "answer": "string — final safe answer (possibly repaired or fallback)",
-        "sources": "list[dict] — source objects with chunk_id, filename, page",
-        "calculations": "list[dict] — calculation results (Phase 3)",
-        "answerability": "object | null — status, reason_codes, evidence_count, document_count, missing_requirements",
-        "validation": "object | null — status, checked_claim_count, supported_claim_count, unsupported_claim_count, issues",
-        "repair": "object | null — was_repaired, fallback_used",
-        "trace_id": "string | null — trace identifier"
-      },
-      "excluded_fields": [
-        "validation.issues[].message (internal only)",
-        "validation.issues[].evidence_ids (internal only)",
-        "repair.repair_notes (internal only)",
-        "answerability.best_score (internal only)",
-        "answerability.average_score (internal only)"
-      ]
-    },
-    "POST /query/stream": {
-      "events": {
-        "token": "data: {type: token, content: answer} — single token event with final safe answer",
-        "done": "data: {type: done, sources, confidence, calculations, answerability?, validation?, repair?}",
-        "error": "data: {type: error, detail: {error_code, message}, retryable, trace_id}"
-      },
-      "safety_guarantees": [
-        "Blocked answers are NOT streamed as partial LLM tokens",
-        "Safe fallback is emitted as a single token event",
-        "Error events use error_code, not str(exc)",
-        "SSE done event includes validation verdicts when pipeline enabled"
-      ]
-    },
-    "GET /traces": {
-      "excluded_fields": [
-        "final_context (redacted to None)",
-        "answer (redacted to None)",
-        "error_message (not exposed)"
+    "/query": {
+      "response_fields": [
+        "answer",
+        "confidence",
+        "sources",
+        "trace_id",
+        "calculations",
+        "validation",
+        "answerability",
+        "repair"
       ],
-      "exposed_diagnostics": [
-        "context_available (bool)",
-        "answer_available (bool)",
-        "context_length (int)",
-        "context_sha256 (hex[:16])",
-        "answer_length (int)",
-        "answer_sha256 (hex[:16])",
-        "error_code (string | null)"
+      "excluded_fields": [
+        "error_message",
+        "internal_validation_message",
+        "repair_notes",
+        "evidence_ids",
+        "source_text",
+        "claim_text",
+        "stack_trace"
+      ]
+    },
+    "/query/stream": {
+      "events": [
+        "token",
+        "done",
+        "error"
+      ],
+      "done_fields": [
+        "answer",
+        "validation",
+        "calculations",
+        "answerability",
+        "sources"
+      ],
+      "excluded_from_stream": [
+        "partial_blocked_tokens",
+        "internal_error_message"
+      ]
+    },
+    "/traces": {
+      "excluded_fields": [
+        "final_context",
+        "answer",
+        "error_message",
+        "internal_message",
+        "claim_text"
       ]
     }
   }
