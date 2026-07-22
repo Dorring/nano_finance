@@ -1,14 +1,14 @@
 {
   "generated_by": "scripts/generate_phase4_artifacts.py",
-  "generated_commit": "9f9d9fc35a57515837e2248732de6af592f199a1",
-  "generated_at": "2026-07-22T00:13:55.172216+00:00",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:41:00.248653+00:00",
   "schema_version": "1.0",
   "source_tests": [
-    "tests/validation/test_calculation_validator.py",
-    "tests/validation/test_numeric_claim_validator.py",
-    "tests/validation/test_citation_validator.py",
-    "tests/validation/test_unit_period_validator.py",
-    "tests/validation/test_unsupported_claim_validator.py",
+    "tests/validation/test_calculation_validator_full.py",
+    "tests/validation/test_citation_and_calculation_validation.py",
+    "tests/validation/test_claim_and_numeric_validation.py",
+    "tests/validation/test_metric_period_grounding.py",
+    "tests/validation/test_source_object_validation.py",
     "tests/validation/test_response_validation_pipeline.py"
   ],
   "codes": [

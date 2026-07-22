@@ -1,23 +1,22 @@
 {
   "generated_by": "scripts/generate_phase4_artifacts.py",
-  "generated_commit": "9f9d9fc35a57515837e2248732de6af592f199a1",
-  "generated_at": "2026-07-22T00:13:55.187108+00:00",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:41:00.267204+00:00",
   "schema_version": "1.0",
   "source_tests": [
-    "tests/test_phase3_non_calculation_parity.py",
+    "tests/finance/test_phase3_non_calculation_parity.py",
     "tests/validation/test_response_validation_pipeline.py",
     "tests/finance/test_calculation_api_contract.py",
     "tests/finance/test_calculation_streaming_contract.py",
-    "tests/finance/",
     "scripts/check_eval_leakage.py",
-    "tests/test_phase4_front_matter.py"
+    "tests/validation/test_front_matter_validation_wiring.py"
   ],
   "checks": [
     {
       "id": "parity_01",
       "name": "Non-calculation queries still return answer",
       "status": "pass",
-      "test": "tests/test_phase3_non_calculation_parity.py"
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
     },
     {
       "id": "parity_02",
@@ -35,7 +34,7 @@
       "id": "parity_04",
       "name": "Trace structure preserves existing fields",
       "status": "pass",
-      "test": "tests/test_phase3_non_calculation_parity.py"
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
     },
     {
       "id": "parity_05",
@@ -53,7 +52,7 @@
       "id": "parity_07",
       "name": "Phase 3 nine calculation operations pass",
       "status": "pass",
-      "test": "tests/finance/"
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
     },
     {
       "id": "parity_08",
@@ -65,7 +64,7 @@
       "id": "parity_09",
       "name": "Front matter title extraction unchanged",
       "status": "pass",
-      "test": "tests/test_phase4_front_matter.py"
+      "test": "tests/validation/test_front_matter_validation_wiring.py"
     }
   ]
 }
