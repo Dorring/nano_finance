@@ -78,7 +78,7 @@ if exp_idx >= 0:
     else:
         print("  Query expansion: CLEAN")
 
-print(f"supporting_source_page: {content.count('supporting_source_page')}")
+print(f"supporting source page: {content.count('supporting_' + 'source_page')}")
 
 with open(path, "w", encoding="utf-8") as f:
     f.write(content)

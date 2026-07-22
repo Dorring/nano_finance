@@ -1,9 +1,6 @@
 """Tests for src.evaluation.calibration search and selection."""
 from __future__ import annotations
 
-import copy
-import random
-
 from src.evaluation.calibration import (
     eliminate_unsafe_candidates,
     search_calibration_space,

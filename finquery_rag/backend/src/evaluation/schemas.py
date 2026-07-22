@@ -11,7 +11,7 @@ available for backward compatibility but must NOT be used by the sealed runner.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Mapping
 
 

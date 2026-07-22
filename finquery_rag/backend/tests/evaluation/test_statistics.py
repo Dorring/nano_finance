@@ -1,8 +1,6 @@
 """Tests for src.evaluation.statistics."""
 from __future__ import annotations
 
-import random
-
 from src.evaluation.statistics import (
     bootstrap_ci,
     mcnemar_test,

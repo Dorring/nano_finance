@@ -11,8 +11,6 @@ from src.evaluation.schemas import (
     EvaluationLabel,
     EvaluationPrediction,
     EvaluationQuery,
-    ExpectedCalculation,
-    ExpectedSource,
 )
 
 

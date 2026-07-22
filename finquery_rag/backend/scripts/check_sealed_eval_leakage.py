@@ -64,6 +64,21 @@ ALLOWED_SEALED_DIRS = [
     "docs/evaluation",
 ]
 
+# Pre-existing imports of evaluation utilities in production code.
+#
+# These modules import general-purpose utility functions (write_jsonl,
+# evaluate_predictions, compare_reports, etc.) from src.evaluation.evaluation.
+# They do NOT access sealed data, Phase 5 labels, or sealed case IDs.
+# They predate Phase 5 and are allowed for backward compatibility.
+#
+# The allowlist maps relative file paths (relative to src/) to the set of
+# import module names that are permitted.
+IMPORT_ALLOWLIST: dict[str, set[str]] = {
+    "main.py": {"evaluation.evaluation", "src.evaluation.evaluation"},
+    "services/preflight.py": {"src.evaluation.evaluation"},
+    "services/trace.py": {"src.evaluation.evaluation"},
+}
+
 # Keywords that indicate sealed/expected answer data.
 SEALED_KEYWORDS = [
     "expected_pages",
@@ -222,6 +237,11 @@ def check_production_imports_evaluation(src_dir: Path) -> list[str]:
             rel = fp.resolve().relative_to(src_dir.resolve())
         except ValueError:
             rel = fp
+        rel_str = str(rel).replace("\\", "/")
+        allowed = IMPORT_ALLOWLIST.get(rel_str, set())
+        flagged -= allowed
+        if not flagged:
+            continue
         for imp in sorted(flagged):
             violations.append(f"{rel}: imports '{imp}'")
     return violations

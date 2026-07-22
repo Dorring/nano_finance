@@ -22,7 +22,6 @@ import pytest
 
 from src.evaluation.evaluation import (
     EvaluationCase,
-    ExpectedCalculation,
     ExpectedSource,
     Prediction,
     evaluate_predictions,
