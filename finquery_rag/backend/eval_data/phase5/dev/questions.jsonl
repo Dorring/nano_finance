@@ -1,0 +1,10 @@
+{"case_id": "dev-001", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What was the total revenue reported on page 1 of the annual report?", "tags": ["document_qa", "direct", "english"]}
+{"case_id": "dev-002", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "Calculate the sum of Q1 revenue (100) and Q2 revenue (200).", "tags": ["financial_calculation", "direct", "english"]}
+{"case_id": "dev-003", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What is the CEO's home address mentioned in the report?", "tags": ["document_qa", "adversarial_no_answer", "english"]}
+{"case_id": "dev-004", "document_names": ["annual_report_2025.pdf", "competitor_report_2025.pdf"], "metadata": {}, "question": "Compare the net income of the company across both reports.", "tags": ["multi_document_comparison", "multi_hop", "english", "multi_document"]}
+{"case_id": "dev-005", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What is the document title shown on the cover page?", "tags": ["front_matter", "direct", "english"]}
+{"case_id": "dev-006", "document_names": ["balance_sheet.pdf"], "metadata": {}, "question": "What is the total assets value stated on the balance sheet?", "tags": ["document_qa", "direct", "english"]}
+{"case_id": "dev-007", "document_names": ["income_statement.pdf"], "metadata": {}, "question": "Subtract operating expenses (400) from gross profit (1000).", "tags": ["financial_calculation", "direct", "english"]}
+{"case_id": "dev-008", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "报告里有没有提到董事长配偶的银行账号?", "tags": ["document_qa", "adversarial_no_answer", "chinese"]}
+{"case_id": "dev-009", "document_names": ["report_a.pdf", "report_b.pdf"], "metadata": {}, "question": "Which of the two reports shows a higher operating margin?", "tags": ["multi_document_comparison", "multi_hop", "english", "multi_document"]}
+{"case_id": "dev-010", "document_names": ["quarterly_earnings.pdf"], "metadata": {}, "question": "What is the report period covered, as stated on the first page?", "tags": ["front_matter", "direct", "english"]}
