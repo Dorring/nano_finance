@@ -1,7 +1,7 @@
 {
   "generated_by": "scripts/generate_phase4_artifacts.py",
-  "generated_commit": "43aef91bcb4170aa1ad483933cb366e0133e5632",
-  "generated_at": "2026-07-22T00:42:26.735069+00:00",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
   "schema_version": "1.0",
   "source_tests": [
     "tests/validation/test_answerability.py",

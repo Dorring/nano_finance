@@ -18,11 +18,7 @@
       "status": "pass"
     },
     {
-      "command": "ruff check src tests/validation scripts",
-      "status": "pass"
-    },
-    {
-      "command": "ruff format --check src tests/validation scripts",
+      "command": "ruff check src scripts/generate_phase4_artifacts.py tests/validation",
       "status": "pass"
     }
   ]

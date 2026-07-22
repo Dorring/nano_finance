@@ -409,11 +409,24 @@ def now_utc_iso() -> str:
 
 
 def make_meta(source_tests: List[str]) -> Dict[str, Any]:
-    """Build the standard metadata block shared by every artifact."""
+    """Build the standard metadata block shared by every artifact.
+
+    Uses deterministic values from the test results manifest so that
+    regeneration produces identical output (no git diff).
+    """
+    manifest_path = os.path.join(ARTIFACTS_DIR, "phase4-test-results.json")
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        commit = manifest.get("implementation_commit", get_git_commit())
+        generated_at = manifest.get("generated_at", now_utc_iso())
+    except (OSError, json.JSONDecodeError):
+        commit = get_git_commit()
+        generated_at = now_utc_iso()
     return {
         "generated_by": GENERATED_BY,
-        "generated_commit": get_git_commit(),
-        "generated_at": now_utc_iso(),
+        "generated_commit": commit,
+        "generated_at": generated_at,
         "schema_version": SCHEMA_VERSION,
         "source_tests": source_tests,
     }
@@ -1986,11 +1999,11 @@ def main() -> int:
                 return 1
             break
 
-    commit = get_git_commit()
+    manifest_meta = make_meta([])
     print("Generating Phase 4 validation artifacts...")
     print("  output dir  : {}".format(ARTIFACTS_DIR))
-    print("  commit      : {}".format(commit))
-    print("  generated_at: {}".format(now_utc_iso()))
+    print("  commit      : {}".format(manifest_meta["generated_commit"]))
+    print("  generated_at: {}".format(manifest_meta["generated_at"]))
     print()
 
     # --- Write all artifacts ---

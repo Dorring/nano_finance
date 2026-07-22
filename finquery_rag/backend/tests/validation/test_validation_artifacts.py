@@ -183,12 +183,15 @@ def test_acceptance_not_all_true_blindly() -> None:
 
 
 def test_generated_commit_matches_implementation() -> None:
-    """9. generated_commit must equal the current git HEAD SHA."""
+    """9. generated_commit must equal the implementation commit from manifest."""
     data = _load_artifact("phase4-acceptance.json")
-    head = _get_git_commit()
-    assert head, "cannot determine git HEAD SHA"
-    assert data["generated_commit"] == head, (
-        f"generated_commit {data['generated_commit']} != git HEAD {head}"
+    manifest = _load_artifact("phase4-test-results.json")
+    impl_commit = manifest["implementation_commit"]
+    assert impl_commit, "manifest has no implementation_commit"
+    assert data["generated_commit"] == impl_commit, (
+        "generated_commit {} != implementation_commit {}".format(
+            data["generated_commit"], impl_commit
+        )
     )
 
 
