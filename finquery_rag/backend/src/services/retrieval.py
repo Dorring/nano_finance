@@ -1,7 +1,10 @@
 import sqlite3
 import json
 import re
-import jieba_fast as jieba
+try:
+    import jieba_fast as jieba
+except ImportError:
+    import jieba
 from collections import defaultdict
 from typing import List, Dict
 from .chunk_id import ensure_scoped_chunk_id, make_chunk_id
