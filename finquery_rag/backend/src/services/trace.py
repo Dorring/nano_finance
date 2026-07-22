@@ -5,13 +5,11 @@ Logs query lifecycle: rewrite, filter, candidates, scores, context, model info, 
 Supports content sanitization and sampling.
 """
 import sqlite3
-import hashlib
 import json
 import os
 import time
 import uuid
 import re
-from typing import Optional, Dict, Any, List
 
 from src.evaluation.evaluation import write_jsonl
 from .sqlite_migrations import ensure_column, run_component_migrations, table_exists

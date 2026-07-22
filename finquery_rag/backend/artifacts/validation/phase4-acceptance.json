@@ -1,0 +1,864 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/validation/test_answerability.py",
+    "tests/validation/test_grounded_response_e2e.py",
+    "tests/validation/test_calculation_validator_full.py",
+    "tests/validation/test_citation_and_calculation_validation.py",
+    "tests/validation/test_claim_and_numeric_validation.py",
+    "tests/validation/test_metric_period_grounding.py",
+    "tests/validation/test_source_object_validation.py",
+    "tests/validation/test_response_validation_pipeline.py",
+    "tests/validation/test_response_repair.py",
+    "tests/validation/test_repair_revalidation.py",
+    "tests/validation/test_validation_policy.py",
+    "tests/validation/test_validation_domain.py",
+    "tests/validation/test_validation_http_sse.py",
+    "tests/validation/test_trace_content_redaction.py",
+    "tests/validation/test_calculation_validation_runtime.py",
+    "tests/validation/test_calculation_validation_http_runtime.py",
+    "tests/validation/test_calculation_validation_sse_runtime.py",
+    "tests/validation/test_calculation_validation_architecture.py",
+    "tests/validation/test_phase4_baseline_characterization.py",
+    "tests/validation/test_front_matter_validation_wiring.py",
+    "tests/validation/test_partial_answerability_behavior.py",
+    "tests/finance/test_phase3_non_calculation_parity.py",
+    "tests/finance/test_calculation_api_contract.py",
+    "tests/finance/test_calculation_streaming_contract.py",
+    "scripts/check_eval_leakage.py",
+    "scripts/generate_phase4_artifacts.py"
+  ],
+  "criteria": [
+    {
+      "id": "AC-01",
+      "criterion": "No Phase 5 work is introduced in this phase",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_executed_returns_rendered_answer_directly"
+        }
+      ]
+    },
+    {
+      "id": "AC-02",
+      "criterion": "No sealed or hidden test files are modified",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_blocked_returns_deterministic_refusal"
+        }
+      ]
+    },
+    {
+      "id": "AC-03",
+      "criterion": "No model retraining is performed",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_failed_returns_safe_failure_without_stack"
+        }
+      ]
+    },
+    {
+      "id": "AC-04",
+      "criterion": "No new training data is introduced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_ordinary_document_qa_uses_llm"
+        }
+      ]
+    },
+    {
+      "id": "AC-05",
+      "criterion": "No threshold tuning beyond specification",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_strict_grounding_and_block_actions"
+        }
+      ]
+    },
+    {
+      "id": "AC-06",
+      "criterion": "No new formula definitions are added",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_policies_are_frozen"
+        }
+      ]
+    },
+    {
+      "id": "AC-07",
+      "criterion": "Phase 4 scope is validation-only",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_unknown_intent_falls_back_to_document_qa"
+        }
+      ]
+    },
+    {
+      "id": "AC-08",
+      "criterion": "No changes to the embedding pipeline",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_deterministic_extractor_can_short_circuit_llm"
+        }
+      ]
+    },
+    {
+      "id": "AC-09",
+      "criterion": "No changes to retrieval ranking weights",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_insufficient_evidence_may_still_call_llm"
+        }
+      ]
+    },
+    {
+      "id": "AC-10",
+      "criterion": "AnswerabilityEvaluator component exists",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/answerability.py"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_answerability.py",
+          "test_name": "test_answerable_with_evidence"
+        }
+      ]
+    },
+    {
+      "id": "AC-11",
+      "criterion": "ClaimExtractor component exists",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/claim_extractor.py"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_currency_amount"
+        }
+      ]
+    },
+    {
+      "id": "AC-12",
+      "criterion": "Six validators exist (Calculation, NumericClaim, UnitPeriod, Citation, UnsupportedClaim, Response)",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/calculation_validator.py"
+        },
+        {
+          "type": "source",
+          "path": "src/validation/numeric_claim_validator.py"
+        },
+        {
+          "type": "source",
+          "path": "src/validation/unit_period_validator.py"
+        },
+        {
+          "type": "source",
+          "path": "src/validation/citation_validator.py"
+        },
+        {
+          "type": "source",
+          "path": "src/validation/unsupported_claim_validator.py"
+        }
+      ]
+    },
+    {
+      "id": "AC-13",
+      "criterion": "ResponseRepair component exists",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/response_repair.py"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_repair.py",
+          "test_name": "test_repairable_strips_ungrounded_claims"
+        }
+      ]
+    },
+    {
+      "id": "AC-14",
+      "criterion": "GroundedValidationPipeline exists",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/validation_pipeline.py"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_validate_response_passes"
+        }
+      ]
+    },
+    {
+      "id": "AC-15",
+      "criterion": "ValidationPolicy exists",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "source",
+          "path": "src/validation/validation_policy.py"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_strict_grounding_and_block_actions"
+        }
+      ]
+    },
+    {
+      "id": "AC-16",
+      "criterion": "Answerability check runs before generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_answerability.py",
+          "test_name": "test_answerable_with_evidence"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_answer_returned_as_is"
+        }
+      ]
+    },
+    {
+      "id": "AC-17",
+      "criterion": "NOT_ANSWERABLE blocks the LLM call",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_llm_not_invoked_on_not_answerable"
+        }
+      ]
+    },
+    {
+      "id": "AC-18",
+      "criterion": "PARTIALLY_ANSWERABLE restricts answer to found documents",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_partial_answerability_behavior.py",
+          "test_name": "test_partial_prefix_added"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_partial_answerability_behavior.py",
+          "test_name": "test_partial_suffix_lists_missing"
+        }
+      ]
+    },
+    {
+      "id": "AC-19",
+      "criterion": "CALCULATION_BLOCKED blocks LLM and creates explicit ValidationResult",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_calculation_blocked_skips_llm"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validation_runtime.py",
+          "test_name": "test_blocked_has_answerability_and_validation"
+        }
+      ]
+    },
+    {
+      "id": "AC-20",
+      "criterion": "LLM is bypassed when answerability is blocked (no token generation)",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_calculation_blocked_skips_llm"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validation_runtime.py",
+          "test_name": "test_failed_has_answerability_and_validation"
+        }
+      ]
+    },
+    {
+      "id": "AC-21",
+      "criterion": "CalculationValidator runs post-generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_03_value_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validation_runtime.py",
+          "test_name": "test_executed_runs_answerability_and_validation"
+        }
+      ]
+    },
+    {
+      "id": "AC-22",
+      "criterion": "NumericClaimValidator runs post-generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_unsupported_numeric_claim"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_ungrounded_numeric_blocks"
+        }
+      ]
+    },
+    {
+      "id": "AC-23",
+      "criterion": "UnitPeriodValidator runs post-generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_period_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_currency_mismatch"
+        }
+      ]
+    },
+    {
+      "id": "AC-24",
+      "criterion": "CitationValidator runs post-generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_citation_and_calculation_validation.py",
+          "test_name": "test_citation_missing_when_required"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_missing_citation_blocks_when_required"
+        }
+      ]
+    },
+    {
+      "id": "AC-25",
+      "criterion": "UnsupportedClaimValidator runs post-generation",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_unsupported_numeric_claim"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_calculation_mismatch_blocks"
+        }
+      ]
+    },
+    {
+      "id": "AC-26",
+      "criterion": "Ungrounded numeric claims are blocked",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_ungrounded_numeric_blocks"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_no_evidence_all_unsupported"
+        }
+      ]
+    },
+    {
+      "id": "AC-27",
+      "criterion": "Unit mismatches are blocked",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_currency_mismatch"
+        }
+      ]
+    },
+    {
+      "id": "AC-28",
+      "criterion": "Period mismatches are blocked",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_claim_and_numeric_validation.py",
+          "test_name": "test_period_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_metric_period_grounding.py",
+          "test_name": "test_value_in_evidence_but_wrong_period"
+        }
+      ]
+    },
+    {
+      "id": "AC-29",
+      "criterion": "Missing citations are blocked",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_citation_and_calculation_validation.py",
+          "test_name": "test_citation_missing_when_required"
+        }
+      ]
+    },
+    {
+      "id": "AC-30",
+      "criterion": "Citations that do not support the claim are blocked",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_citation_and_calculation_validation.py",
+          "test_name": "test_unresolved_citation"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_source_object_validation.py",
+          "test_name": "test_chunk_id_not_in_evidence"
+        }
+      ]
+    },
+    {
+      "id": "AC-31",
+      "criterion": "Calculation value consistency is enforced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_03_value_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_02_value_missing"
+        }
+      ]
+    },
+    {
+      "id": "AC-32",
+      "criterion": "Calculation unit consistency is enforced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_04_unit_mismatch"
+        }
+      ]
+    },
+    {
+      "id": "AC-33",
+      "criterion": "Calculation formula version consistency is enforced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_05_formula_version_mismatch"
+        }
+      ]
+    },
+    {
+      "id": "AC-34",
+      "criterion": "Calculation operand consistency is enforced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_06_operand_count_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_07_operand_provenance_missing"
+        }
+      ]
+    },
+    {
+      "id": "AC-35",
+      "criterion": "Calculation payload consistency is enforced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_08_payload_value_mismatch"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_calculation_validator_full.py",
+          "test_name": "test_09_status_mismatch_blocked_as_executed"
+        }
+      ]
+    },
+    {
+      "id": "AC-36",
+      "criterion": "At most one repair attempt is allowed",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_04_repairable_revalidation_passed"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_repair.py",
+          "test_name": "test_repair_at_most_once"
+        }
+      ]
+    },
+    {
+      "id": "AC-37",
+      "criterion": "No LLM call is made during repair",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_repair.py",
+          "test_name": "test_repair_does_not_call_llm"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_09_llm_not_called_during_repair"
+        }
+      ]
+    },
+    {
+      "id": "AC-38",
+      "criterion": "Fail-safe fallback is used when repair fails",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_05_repairable_revalidation_blocked"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_06_repairable_revalidation_failed"
+        }
+      ]
+    },
+    {
+      "id": "AC-39",
+      "criterion": "Validator exception triggers fail-closed behaviour",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_08_validator_exception_fail_closed"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_failed_status_has_critical_issue"
+        }
+      ]
+    },
+    {
+      "id": "AC-40",
+      "criterion": "Revalidation runs after repair",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_04_repairable_revalidation_passed"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_repair_revalidation.py",
+          "test_name": "test_07_repairable_empty_after_repair"
+        }
+      ]
+    },
+    {
+      "id": "AC-41",
+      "criterion": "Conversation intent remains backward compatible",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/finance/test_phase3_non_calculation_parity.py",
+          "test_name": "test_conversation"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_response_validation_pipeline.py",
+          "test_name": "test_conversation_intent_not_applicable"
+        }
+      ]
+    },
+    {
+      "id": "AC-42",
+      "criterion": "Phase 3 nine calculation operations pass",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test_suite",
+          "path": "tests/finance",
+          "command": "pytest -q tests/finance"
+        }
+      ]
+    },
+    {
+      "id": "AC-43",
+      "criterion": "HTTP /query endpoint contract is satisfied",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/finance/test_calculation_api_contract.py",
+          "test_name": "test_calculation_success_has_calculations"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_http_sse.py",
+          "test_name": "test_http_response_includes_answerability"
+        }
+      ]
+    },
+    {
+      "id": "AC-44",
+      "criterion": "SSE streaming contract is satisfied",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/finance/test_calculation_streaming_contract.py",
+          "test_name": "test_done_event_with_executed_calculation"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_http_sse.py",
+          "test_name": "test_sse_done_includes_validation"
+        }
+      ]
+    },
+    {
+      "id": "AC-45",
+      "criterion": "Session stores only the safe final answer",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_blocked_replaces_answer_with_fallback"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_grounded_response_e2e.py",
+          "test_name": "test_failed_uses_safe_fallback"
+        }
+      ]
+    },
+    {
+      "id": "AC-46",
+      "criterion": "Trace content is redacted for privacy",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_trace_content_redaction.py",
+          "test_name": "test_trace_dict_uses_message_hash_not_message"
+        },
+        {
+          "type": "test",
+          "path": "tests/validation/test_trace_content_redaction.py",
+          "test_name": "test_public_trace_excludes_sensitive_fields"
+        }
+      ]
+    },
+    {
+      "id": "AC-47",
+      "criterion": "API backward compatibility is preserved",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/finance/test_calculation_api_contract.py",
+          "test_name": "test_old_frontend_ignores_calculations"
+        },
+        {
+          "type": "test",
+          "path": "tests/finance/test_calculation_api_contract.py",
+          "test_name": "test_all_legacy_fields_present"
+        }
+      ]
+    },
+    {
+      "id": "AC-48",
+      "criterion": "Phase 4 artifacts are generated",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "script",
+          "path": "scripts/generate_phase4_artifacts.py"
+        },
+        {
+          "type": "artifact",
+          "path": "artifacts/validation/phase4-acceptance.json"
+        }
+      ]
+    },
+    {
+      "id": "AC-49",
+      "criterion": "Tests pass, scanner is clean and compileall is clean",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "command",
+          "path": "pytest -q"
+        },
+        {
+          "type": "script",
+          "path": "scripts/check_eval_leakage.py"
+        }
+      ]
+    },
+    {
+      "id": "AC-50",
+      "criterion": "Ruff lint passes",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "command",
+          "path": "ruff check src tests/validation scripts"
+        }
+      ]
+    },
+    {
+      "id": "AC-51",
+      "criterion": "A formal pull request is created",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "pull_request",
+          "path": "146"
+        }
+      ]
+    },
+    {
+      "id": "AC-52",
+      "criterion": "No Phase 5 features are introduced",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_phase4_baseline_characterization.py",
+          "test_name": "test_non_calculation_legacy_dict_has_no_validation"
+        }
+      ]
+    },
+    {
+      "id": "AC-53",
+      "criterion": "No new formula definitions are added",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_policies_are_frozen"
+        }
+      ]
+    },
+    {
+      "id": "AC-54",
+      "criterion": "No threshold tuning is performed",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/validation/test_validation_policy.py",
+          "test_name": "test_strict_grounding_and_block_actions"
+        }
+      ]
+    },
+    {
+      "id": "AC-55",
+      "criterion": "Phase 4 documentation is complete",
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "doc",
+          "path": "docs/architecture/phase4-grounding-and-validation.md"
+        }
+      ]
+    }
+  ]
+}

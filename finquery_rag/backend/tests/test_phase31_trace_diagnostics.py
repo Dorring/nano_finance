@@ -81,8 +81,9 @@ def test_query_paths_pass_diagnostics_to_trace_static():
     # Orchestrator must still construct diagnostics and log trace.
     assert '"diagnostics": {' in orchestrator
     assert '"context_sufficient": is_sufficient' in orchestrator
-    # main.py trace lookup helper must still exist.
-    assert 'trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}' in main
+    # main.py trace lookup helper must still exist (Phase 4 hotfix: two-line form).
+    assert 'diagnostics = _json_field(row.get("diagnostics_json")) or {}' in main
+    assert 'trace["diagnostics"] = diagnostics' in main
 
 
 

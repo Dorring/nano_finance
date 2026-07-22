@@ -5,21 +5,39 @@ from openai import OpenAI
 import json
 import time
 
-from .services.auth import create_access_token, get_current_user, get_current_user_optional, get_password_hash, verify_password
+from .services.auth import create_access_token, get_current_user, get_password_hash, verify_password
 from .services.ingest import process_pdf
-from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats, clear_all_for_user
+from .services.vector_store import add_documents, list_all_documents, delete_document_collection, get_collection_stats
 from .services.rag_engine import RAGEngine
 from .services.document_registry import DocumentRegistry, VALID_TRANSITIONS
 from .services.session_manager import SessionManager
 from .services.memory_profile import UserMemoryStore
 from .services.health import collect_health_snapshot
-from .services.intent import classify_query_intent
 from .services.feedback import FeedbackStore
 from .services.query_scope import resolve_query_document_names
 from .services.streaming import make_stream_done_event, make_stream_error_event, safe_log_query_trace
 from .services.retrieval_config import get_reranker_model, get_reranker_name
 from .evaluation.evaluation import compare_reports, evaluate_payload, feedback_to_replay_case, trace_to_replay_case
-from .models.schemas import *  #全部 Pydantic 模型
+from .models.schemas import (
+    AnswerabilityResponse,
+    DocumentInfo,
+    DocumentsListResponse,
+    EvalCompareRequest,
+    EvalScoreRequest,
+    FeedbackRequest,
+    FeedbackResponse,
+    MemoryProfileRequest,
+    MemoryProfileResponse,
+    QueryRequest,
+    QueryResponse,
+    RepairResponse,
+    Token,
+    UploadResponse,
+    UserLogin,
+    UserRegister,
+    UserResponse,
+    ValidationResponse,
+)
 from .models.user import User #User ORM 模型
 from .database import get_db, engine, Base #SQLAlchemy 数据库连接和基础模型
 from sqlalchemy.orm import Session #SQLAlchemy 会话管理
@@ -240,26 +258,39 @@ def _resolve_query_document_names_for_user(user_id, requested_doc_names):
 
 
 def _public_trace(row: dict) -> dict:
-    """Return tenant-scoped trace data without exposing tenant_id."""
+    """Return tenant-scoped trace data without exposing sensitive content.
+
+    Phase 4 hotfix: ``final_context``, ``answer``, and ``error_message``
+    are intentionally excluded from the public trace payload. Only
+    availability flags, lengths, and hashes are exposed from diagnostics.
+    """
     keys = [
         "trace_id",
         "query_original",
         "query_rewritten",
         "intent",
-        "final_context",
-        "answer",
         "model_name",
         "prompt_version",
         "index_version",
         "latency_ms",
-        "error_message",
         "created_at",
     ]
     trace = {key: row.get(key) for key in keys}
     trace["filter_conditions"] = _json_field(row.get("filter_conditions"))
     trace["candidates"] = _json_field(row.get("candidates_json"))
     trace["sources"] = _json_field(row.get("sources_json")) or []
-    trace["diagnostics"] = _json_field(row.get("diagnostics_json")) or {}
+    diagnostics = _json_field(row.get("diagnostics_json")) or {}
+    trace["diagnostics"] = diagnostics
+    # Expose only safe content-availability diagnostics (no raw text).
+    trace["context_available"] = diagnostics.get("context_length", 0) > 0
+    trace["answer_available"] = diagnostics.get("answer_length", 0) > 0
+    trace["context_length"] = diagnostics.get("context_length")
+    trace["context_sha256"] = diagnostics.get("context_sha256")
+    trace["answer_length"] = diagnostics.get("answer_length")
+    trace["answer_sha256"] = diagnostics.get("answer_sha256")
+    trace["error_code"] = diagnostics.get("error_code") or (
+        diagnostics.get("calculation", {}) or {}
+    ).get("error_code")
     return trace
 
 def _tenant_ops_summary(user_id: int) -> dict:
@@ -851,7 +882,7 @@ async def upload_document(file: UploadFile = File(...), current_user: User = Dep
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise api_error(500, "processing_error", "Processing error: %s" % str(e))
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query", response_model=QueryResponse, response_model_exclude_none=True)
 async def query_documents(request: QueryRequest, current_user: User = Depends(get_current_user)):
     """
     对一个或多个文档进行提问。
@@ -912,6 +943,18 @@ async def query_documents(request: QueryRequest, current_user: User = Depends(ge
             retrieved_chunks=result.get("retrieved_chunks", []),
             retrieval_debug=result.get("retrieval_debug", {}),
             calculations=result.get("calculations", []),
+            answerability=(
+                AnswerabilityResponse(**result["answerability"])
+                if result.get("answerability") else None
+            ),
+            validation=(
+                ValidationResponse(**result["validation"])
+                if result.get("validation") else None
+            ),
+            repair=(
+                RepairResponse(**result["repair"])
+                if result.get("repair") else None
+            ),
         )
 
     except HTTPException:
@@ -974,6 +1017,12 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             intent_confidence = result.get("intent_confidence")
             trace_id = result.get("trace_id")
             calculations = result.get("calculations", [])
+            # Phase 4: forward validation verdicts to the SSE done event.
+            # Only included when the validation pipeline produced them, so
+            # the legacy event shape is preserved when validation is disabled.
+            answerability_data = result.get("answerability")
+            validation_data = result.get("validation")
+            repair_data = result.get("repair")
 
             # Save session messages (compatible with /query behavior).
             if session_id:
@@ -1002,7 +1051,7 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
             yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
 
             # Emit the done event with all fields including calculations.
-            yield make_stream_done_event(
+            done_kwargs = dict(
                 sources=sources,
                 confidence=confidence,
                 context_sufficient=context_sufficient,
@@ -1011,6 +1060,13 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                 trace_id=trace_id,
                 calculations=calculations,
             )
+            if answerability_data is not None:
+                done_kwargs["answerability"] = answerability_data
+            if validation_data is not None:
+                done_kwargs["validation"] = validation_data
+            if repair_data is not None:
+                done_kwargs["repair"] = repair_data
+            yield make_stream_done_event(**done_kwargs)
 
         except Exception as exc:
             error_message = "Streaming query failed. Please retry."
@@ -1020,9 +1076,13 @@ async def query_documents_stream(request: QueryRequest, current_user: User = Dep
                     "tenant_id": current_user.id,
                     "query_original": request.question,
                     "model_name": llm_model_name,
-                    "answer": error_message,
-                    "error_message": str(exc),
-                    "diagnostics": {"stream_error": True},
+                    "answer": None,
+                    "error_message": None,
+                    "diagnostics": {
+                        "stream_error": True,
+                        "error_code": "STREAM_INTERNAL_ERROR",
+                        "exception_type": type(exc).__name__,
+                    },
                     "latency_ms": 0,
                 }
                 trace_id = safe_log_query_trace(engine, trace_payload)

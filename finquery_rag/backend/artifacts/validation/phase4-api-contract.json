@@ -1,0 +1,61 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/finance/test_calculation_api_contract.py",
+    "tests/finance/test_calculation_streaming_contract.py",
+    "tests/validation/test_trace_content_redaction.py"
+  ],
+  "endpoints": {
+    "/query": {
+      "response_fields": [
+        "answer",
+        "confidence",
+        "sources",
+        "trace_id",
+        "calculations",
+        "validation",
+        "answerability",
+        "repair"
+      ],
+      "excluded_fields": [
+        "error_message",
+        "internal_validation_message",
+        "repair_notes",
+        "evidence_ids",
+        "source_text",
+        "claim_text",
+        "stack_trace"
+      ]
+    },
+    "/query/stream": {
+      "events": [
+        "token",
+        "done",
+        "error"
+      ],
+      "done_fields": [
+        "answer",
+        "validation",
+        "calculations",
+        "answerability",
+        "sources"
+      ],
+      "excluded_from_stream": [
+        "partial_blocked_tokens",
+        "internal_error_message"
+      ]
+    },
+    "/traces": {
+      "excluded_fields": [
+        "final_context",
+        "answer",
+        "error_message",
+        "internal_message",
+        "claim_text"
+      ]
+    }
+  }
+}

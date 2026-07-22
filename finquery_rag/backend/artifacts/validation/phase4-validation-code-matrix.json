@@ -1,0 +1,184 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/validation/test_calculation_validator_full.py",
+    "tests/validation/test_citation_and_calculation_validation.py",
+    "tests/validation/test_claim_and_numeric_validation.py",
+    "tests/validation/test_metric_period_grounding.py",
+    "tests/validation/test_source_object_validation.py",
+    "tests/validation/test_response_validation_pipeline.py"
+  ],
+  "codes": [
+    {
+      "code": "CODE_CALCULATION_VALUE_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_VALUE_MISMATCH"
+    },
+    {
+      "code": "CODE_CALCULATION_VALUE_MISSING",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_VALUE_MISSING"
+    },
+    {
+      "code": "CODE_CALCULATION_UNIT_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_UNIT_MISMATCH"
+    },
+    {
+      "code": "CODE_FORMULA_VERSION_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_FORMULA_VERSION_MISMATCH"
+    },
+    {
+      "code": "CODE_OPERAND_COUNT_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_OPERAND_COUNT_MISMATCH"
+    },
+    {
+      "code": "CODE_OPERAND_PROVENANCE_MISSING",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_OPERAND_PROVENANCE_MISSING"
+    },
+    {
+      "code": "CODE_CALCULATION_STATUS_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_STATUS_MISMATCH"
+    },
+    {
+      "code": "CODE_CALCULATION_PAYLOAD_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_PAYLOAD_MISMATCH"
+    },
+    {
+      "code": "CODE_CALCULATION_EXTRA_NUMERIC_CLAIM",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_EXTRA_NUMERIC_CLAIM"
+    },
+    {
+      "code": "CODE_CALCULATION_MISMATCH",
+      "severity": "error",
+      "validator": "CalculationValidator",
+      "description": "CODE_CALCULATION_MISMATCH"
+    },
+    {
+      "code": "CODE_NUMERIC_UNGROUND",
+      "severity": "error",
+      "validator": "NumericClaimValidator",
+      "description": "CODE_NUMERIC_UNGROUND"
+    },
+    {
+      "code": "CODE_NUMERIC_VALUE_MISMATCH",
+      "severity": "error",
+      "validator": "NumericClaimValidator",
+      "description": "CODE_NUMERIC_VALUE_MISMATCH"
+    },
+    {
+      "code": "CODE_METRIC_VALUE_MISMATCH",
+      "severity": "error",
+      "validator": "NumericClaimValidator",
+      "description": "CODE_METRIC_VALUE_MISMATCH"
+    },
+    {
+      "code": "CODE_PERIOD_VALUE_MISMATCH",
+      "severity": "error",
+      "validator": "NumericClaimValidator",
+      "description": "CODE_PERIOD_VALUE_MISMATCH"
+    },
+    {
+      "code": "CODE_PERIOD_AMBIGUOUS",
+      "severity": "error",
+      "validator": "NumericClaimValidator",
+      "description": "CODE_PERIOD_AMBIGUOUS"
+    },
+    {
+      "code": "CODE_CITATION_MISSING",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_MISSING"
+    },
+    {
+      "code": "CODE_CITATION_UNRESOLVED",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_UNRESOLVED"
+    },
+    {
+      "code": "CODE_CITATION_NOT_RETRIEVED",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_NOT_RETRIEVED"
+    },
+    {
+      "code": "CODE_CITATION_PAGE_MISMATCH",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_PAGE_MISMATCH"
+    },
+    {
+      "code": "CODE_CITATION_DOCUMENT_MISMATCH",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_DOCUMENT_MISMATCH"
+    },
+    {
+      "code": "CODE_CITATION_CHUNK_MISSING",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_CHUNK_MISSING"
+    },
+    {
+      "code": "CODE_CITATION_DOES_NOT_SUPPORT_CLAIM",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_CITATION_DOES_NOT_SUPPORT_CLAIM"
+    },
+    {
+      "code": "CODE_DOCUMENT_COVERAGE_MISSING",
+      "severity": "error",
+      "validator": "CitationValidator",
+      "description": "CODE_DOCUMENT_COVERAGE_MISSING"
+    },
+    {
+      "code": "CODE_PERIOD_MISMATCH",
+      "severity": "error",
+      "validator": "UnitPeriodValidator",
+      "description": "CODE_PERIOD_MISMATCH"
+    },
+    {
+      "code": "CODE_CURRENCY_MISMATCH",
+      "severity": "error",
+      "validator": "UnitPeriodValidator",
+      "description": "CODE_CURRENCY_MISMATCH"
+    },
+    {
+      "code": "CODE_UNIT_MISMATCH",
+      "severity": "error",
+      "validator": "UnitPeriodValidator",
+      "description": "CODE_UNIT_MISMATCH"
+    },
+    {
+      "code": "CODE_UNSUPPORTED_CLAIM",
+      "severity": "error",
+      "validator": "UnsupportedClaimValidator",
+      "description": "CODE_UNSUPPORTED_CLAIM"
+    },
+    {
+      "code": "VALIDATOR_ERROR",
+      "severity": "critical",
+      "validator": "ResponseValidator",
+      "description": "Validator encountered an internal error"
+    }
+  ]
+}

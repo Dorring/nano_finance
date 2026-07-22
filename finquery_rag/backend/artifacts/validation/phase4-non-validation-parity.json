@@ -1,0 +1,70 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/finance/test_phase3_non_calculation_parity.py",
+    "tests/validation/test_response_validation_pipeline.py",
+    "tests/finance/test_calculation_api_contract.py",
+    "tests/finance/test_calculation_streaming_contract.py",
+    "scripts/check_eval_leakage.py",
+    "tests/validation/test_front_matter_validation_wiring.py"
+  ],
+  "checks": [
+    {
+      "id": "parity_01",
+      "name": "Non-calculation queries still return answer",
+      "status": "pass",
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
+    },
+    {
+      "id": "parity_02",
+      "name": "Conversation intent skips validation",
+      "status": "pass",
+      "test": "tests/validation/test_response_validation_pipeline.py"
+    },
+    {
+      "id": "parity_03",
+      "name": "AnswerResult API contract compatible",
+      "status": "pass",
+      "test": "tests/finance/test_calculation_api_contract.py"
+    },
+    {
+      "id": "parity_04",
+      "name": "Trace structure preserves existing fields",
+      "status": "pass",
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
+    },
+    {
+      "id": "parity_05",
+      "name": "calculations field is optional in response",
+      "status": "pass",
+      "test": "tests/finance/test_calculation_api_contract.py"
+    },
+    {
+      "id": "parity_06",
+      "name": "SSE done event carries calculations payload",
+      "status": "pass",
+      "test": "tests/finance/test_calculation_streaming_contract.py"
+    },
+    {
+      "id": "parity_07",
+      "name": "Phase 3 nine calculation operations pass",
+      "status": "pass",
+      "test": "tests/finance/test_phase3_non_calculation_parity.py"
+    },
+    {
+      "id": "parity_08",
+      "name": "No eval/exec in calculation code",
+      "status": "pass",
+      "test": "scripts/check_eval_leakage.py"
+    },
+    {
+      "id": "parity_09",
+      "name": "Front matter title extraction unchanged",
+      "status": "pass",
+      "test": "tests/validation/test_front_matter_validation_wiring.py"
+    }
+  ]
+}

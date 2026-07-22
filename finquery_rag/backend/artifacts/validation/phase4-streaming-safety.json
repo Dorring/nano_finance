@@ -1,0 +1,50 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/validation/test_validation_http_sse.py",
+    "tests/validation/test_calculation_validation_sse_runtime.py",
+    "tests/validation/test_trace_content_redaction.py",
+    "tests/validation/test_grounded_response_e2e.py"
+  ],
+  "checks": [
+    {
+      "id": "sse_01",
+      "name": "Blocked answers do not emit token events",
+      "status": "pass",
+      "test": "tests/validation/test_validation_http_sse.py"
+    },
+    {
+      "id": "sse_02",
+      "name": "Done event includes validation status",
+      "status": "pass",
+      "test": "tests/validation/test_calculation_validation_sse_runtime.py"
+    },
+    {
+      "id": "sse_03",
+      "name": "Failed calculations do not emit partial tokens",
+      "status": "pass",
+      "test": "tests/validation/test_calculation_validation_sse_runtime.py"
+    },
+    {
+      "id": "sse_04",
+      "name": "Error events use safe error_code, not str(exc)",
+      "status": "pass",
+      "test": "tests/validation/test_trace_content_redaction.py"
+    },
+    {
+      "id": "sse_05",
+      "name": "Done event does not include internal error_message",
+      "status": "pass",
+      "test": "tests/validation/test_calculation_validation_sse_runtime.py"
+    },
+    {
+      "id": "sse_06",
+      "name": "Session stores only final safe answer",
+      "status": "pass",
+      "test": "tests/validation/test_grounded_response_e2e.py"
+    }
+  ]
+}

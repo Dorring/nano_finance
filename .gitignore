@@ -28,6 +28,11 @@ __pycache__/
 .agents/
 .codex/
 artifacts/
+!finquery_rag/backend/artifacts/
+finquery_rag/backend/artifacts/*
+!finquery_rag/backend/artifacts/calculation/
+!finquery_rag/backend/artifacts/validation/
+!finquery_rag/backend/artifacts/refactor/
 outputs/
 checkpoints/
 checkpoint*/

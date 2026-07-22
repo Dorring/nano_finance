@@ -26,11 +26,19 @@ class CloseableMockLLM:
 
 
 class TestLowConfidenceNoLLM:
-    """Item 8: Low-confidence context must NOT call LLM."""
+    """Item 8: Low-confidence context must NOT call LLM.
+
+    Phase 4 note: these tests characterize the Phase 3 behavior with the
+    validation pipeline DISABLED. The default RAGEngine now enables the
+    validation pipeline, which produces a different (safer) refusal
+    message via AnswerabilityEvaluator. Pass ``enable_validation_pipeline=False``
+    to preserve the Phase 3 semantics these tests assert.
+    """
     def test_insufficient_context_skips_llm(self, tmp_path):
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=False)
-        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b.db'))
+        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b.db'),
+                        enable_validation_pipeline=False)
         # Mock at orchestrator dependency level (query delegates to orchestrator)
         from src.retrieval.context_builder import SufficiencyResult
         eng._sufficiency_evaluator.evaluate = lambda chunks: SufficiencyResult(is_sufficient=False, best_score=0.01, average_score=0.01)
@@ -48,7 +56,8 @@ class TestLowConfidenceNoLLM:
     def test_sufficient_context_calls_llm(self, tmp_path):
         from services.rag_engine import RAGEngine
         mc = CloseableMockLLM(allow_calls=True, response='Revenue was 10M.')
-        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b2.db'))
+        eng = RAGEngine(mc, use_hybrid=False, bm25_db_path=os.path.join(str(tmp_path), 'b2.db'),
+                        enable_validation_pipeline=False)
         # Mock at orchestrator dependency level (query delegates to orchestrator)
         from src.retrieval.context_builder import SufficiencyResult
         eng._sufficiency_evaluator.evaluate = lambda chunks: SufficiencyResult(is_sufficient=True, best_score=0.8, average_score=0.75)

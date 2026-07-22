@@ -1,0 +1,36 @@
+{
+  "generated_by": "scripts/generate_phase4_artifacts.py",
+  "generated_commit": "2b26fc111fce9bd38e6ad36a0f38fd3542ed413f",
+  "generated_at": "2026-07-22T00:40:00Z",
+  "schema_version": "1.0",
+  "source_tests": [
+    "tests/validation/test_answerability.py",
+    "tests/validation/test_grounded_response_e2e.py"
+  ],
+  "statuses": [
+    {
+      "status": "answerable",
+      "llm_called": true,
+      "validation_run": true,
+      "description": "Evidence is sufficient to answer"
+    },
+    {
+      "status": "partially_answerable",
+      "llm_called": true,
+      "validation_run": true,
+      "description": "Some evidence found; answer restricted to found documents"
+    },
+    {
+      "status": "not_answerable",
+      "llm_called": false,
+      "validation_run": false,
+      "description": "No sufficient evidence; safe fallback"
+    },
+    {
+      "status": "calculation_blocked",
+      "llm_called": false,
+      "validation_run": "explicit",
+      "description": "Calculation failed; explicit ValidationResult created"
+    }
+  ]
+}
