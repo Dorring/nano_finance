@@ -1,0 +1,198 @@
+{
+  "manifest_type": "training_runs",
+  "schema_version": "1.0",
+  "runs": [
+    {
+      "run_id": "tokenizer-nanochat-bpe-65k",
+      "stage": "tokenizer_training",
+      "algorithm": "byte-level-bpe",
+      "vocab_size": 65000,
+      "training_data_composition": {
+        "chinese_finance": {"percentage": 20, "source": "Chinese finance corpus"},
+        "chinese_general": {"percentage": 40, "source": "SkyPile/Wiki"},
+        "english_general": {"percentage": 40, "source": "ClimbMix"}
+      },
+      "training_params": {
+        "max_chars": "2B",
+        "doc_cap": 10000,
+        "vocab_size": 65000
+      },
+      "output_files": [
+        "~/.cache/nanochat/tokenizer/token_bytes.pt",
+        "~/.cache/nanochat/tokenizer/tokenizer.pkl"
+      ],
+      "status": "completed",
+      "verified": true,
+      "evidence_artifact": "artifacts/release/phase6/tokenizer-manifest.json"
+    },
+    {
+      "run_id": "d24_final_mixdata",
+      "stage": "pretraining",
+      "git_commit": "historical",
+      "hardware": {
+        "gpu_type": "RTX 4090",
+        "gpu_count": 3
+      },
+      "distributed_backend": "nanochat DDP",
+      "precision": "fp32",
+      "seed": 0,
+      "model_config": {
+        "n_layer": 24,
+        "n_head": 12,
+        "n_kv_head": 12,
+        "n_embd": 1536,
+        "head_dim": 128,
+        "vocab_size": 65000,
+        "sequence_len": 2048,
+        "window_pattern": "L",
+        "aspect_ratio": 64,
+        "depth": 24
+      },
+      "optimizer_config": {
+        "optimizer": "Muon",
+        "embedding_lr": 0.3,
+        "unembedding_lr": 0.008,
+        "weight_decay": 0.28
+      },
+      "data_manifest": "~/.cache/nanochat/base_data_climbmix/",
+      "shard_count": 171,
+      "shard_format": "parquet",
+      "total_batch_size": 1048576,
+      "target_param_data_ratio": 50.0,
+      "final_step": 28000,
+      "training_time_seconds": 2428705,
+      "checkpoint_output": "d24_final_mixdata",
+      "metrics": [
+        {
+          "name": "val_bpb",
+          "value": 0.7626,
+          "step": 28000,
+          "verified": true,
+          "source": "checkpoint meta_028000.json",
+          "extraction_method": "parsed_meta"
+        },
+        {
+          "name": "val_bpb",
+          "value": 0.7698,
+          "step": 7060,
+          "verified": false,
+          "status": "historical_self_reported",
+          "source": "historical training summary"
+        }
+      ],
+      "status": "completed",
+      "verified": true,
+      "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
+    },
+    {
+      "run_id": "d24_finance_v2_lr010",
+      "stage": "sft",
+      "parent_run_id": "d24_final_mixdata",
+      "parent_checkpoint_step": 28000,
+      "git_commit": "historical",
+      "hardware": {
+        "gpu_type": "RTX 4090",
+        "gpu_count": 3
+      },
+      "distributed_backend": "nanochat DDP",
+      "precision": "fp32",
+      "seed": 0,
+      "model_config": {
+        "n_layer": 24,
+        "n_head": 12,
+        "n_kv_head": 12,
+        "n_embd": 1536,
+        "head_dim": 128,
+        "vocab_size": 65000,
+        "sequence_len": 2048,
+        "window_pattern": "L"
+      },
+      "optimizer_config": {
+        "optimizer": "Muon",
+        "embedding_lr": 0.3,
+        "unembedding_lr": 0.008,
+        "matrix_lr": 0.02,
+        "init_lr_frac": 0.1,
+        "warmup_ratio": 0.05,
+        "warmdown_ratio": 0.5
+      },
+      "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
+      "total_samples": 39534,
+      "finance_train_file": "train_v2_balanced.jsonl",
+      "smoltalk_size": 30000,
+      "max_seq_len": 2048,
+      "device_batch_size": 4,
+      "total_batch_size": 1048576,
+      "loss_mask": "assistant_only",
+      "user_labels": -100,
+      "checkpoint_steps": [125, 150, 200, 250, 275, 300, 350, 375],
+      "best_step": 150,
+      "metrics": [
+        {
+          "name": "val_bpb",
+          "value": 0.5558,
+          "step": 150,
+          "verified": true,
+          "source": "checkpoint meta_000150.json",
+          "extraction_method": "parsed_meta"
+        },
+        {
+          "name": "finance_macro",
+          "value": 0.2297,
+          "step": 150,
+          "verified": false,
+          "status": "historical_self_reported",
+          "source": "historical evaluation summary",
+          "note": "failed experiment, finance macro dropped"
+        }
+      ],
+      "status": "completed",
+      "verified": true,
+      "note": "SFT V2 lr010 failed experiment; not production baseline",
+      "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
+    },
+    {
+      "run_id": "d24_finance_v2_lr005",
+      "stage": "sft",
+      "parent_run_id": "d24_final_mixdata",
+      "parent_checkpoint_step": 28000,
+      "git_commit": "historical",
+      "hardware": {
+        "gpu_type": "RTX 4090",
+        "gpu_count": 3
+      },
+      "distributed_backend": "nanochat DDP",
+      "precision": "fp32",
+      "seed": 0,
+      "model_config": {
+        "n_layer": 24,
+        "n_head": 12,
+        "n_kv_head": 12,
+        "n_embd": 1536,
+        "vocab_size": 65000,
+        "sequence_len": 2048
+      },
+      "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
+      "total_samples": 39534,
+      "status": "completed",
+      "verified": true,
+      "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
+    },
+    {
+      "run_id": "phase5-synthetic-heldout-v2",
+      "stage": "evaluation",
+      "eval_model": "finquery-finance-v2-lr010-150",
+      "eval_checkpoint": "d24_finance_v2_lr010 step 150",
+      "data_classification": "synthetic_held_out",
+      "dev_samples": 48,
+      "cal_samples": 48,
+      "sealed_samples": 54,
+      "strict_pass": 0,
+      "strict_pass_rate": 0.0,
+      "status": "completed",
+      "verified": true,
+      "note": "Infrastructure functional test only; NOT a quality metric",
+      "evidence_artifact": "artifacts/release/phase6/evaluation-evidence.json"
+    }
+  ]
+}

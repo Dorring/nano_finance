@@ -27,12 +27,15 @@ __pycache__/
 .claude/
 .agents/
 .codex/
-artifacts/
+artifacts/*
 !finquery_rag/backend/artifacts/
 finquery_rag/backend/artifacts/*
 !finquery_rag/backend/artifacts/calculation/
 !finquery_rag/backend/artifacts/validation/
 !finquery_rag/backend/artifacts/refactor/
+!artifacts/release/
+artifacts/release/*
+!artifacts/release/phase6/
 outputs/
 checkpoints/
 checkpoint*/

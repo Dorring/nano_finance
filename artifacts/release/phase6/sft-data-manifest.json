@@ -1,0 +1,311 @@
+{
+  "data_files": {
+    "cot_train.jsonl": {
+      "sha256": "9d045091ddc63a81ebb611426f1894f231086ac43cbeb28e436229ba21fcbc56",
+      "size_bytes": 7257994
+    },
+    "finance_eval_small_val.jsonl": {
+      "sha256": "f603bd39b02ad95ee40f39f46331be5c5741bfb119aa3ee591ae36d40aa67822",
+      "size_bytes": 588293
+    },
+    "finance_sft_v1.jsonl": {
+      "sha256": "0382599ea807ae65520ee664fd7eb32e67cb57ce5ed1b5014e510fe0fa999334",
+      "size_bytes": 97393442
+    },
+    "test.jsonl": {
+      "sha256": "69c3e5445bf322e946873fc032e8307a8c6a0df13be9a18df96fe7b2039bcd73",
+      "size_bytes": 9334104
+    },
+    "train.jsonl": {
+      "sha256": "c8c4ba65a7615c30d8328b6235d8dd6b29915a23bce1d96b7b3085de4432c972",
+      "size_bytes": 66003160
+    },
+    "train_v2_balanced.jsonl": {
+      "sha256": "e23600cc928fedfd85b22d27e95c282a6c425450a9bfe8f9ada6dc6fe4656722",
+      "size_bytes": 340062128
+    },
+    "val.jsonl": {
+      "sha256": "e4896aab28bf6355ffdda9d9ce1fe1cccaefc27bd1370d4d6847326df84165c3",
+      "size_bytes": 9050685
+    }
+  },
+  "expected_total_samples": 39534,
+  "finance_train_file": "train_v2_balanced.jsonl",
+  "historical_results": {
+    "sft1147": {
+      "finance_macro": 0.4432,
+      "has_checkpoint": false,
+      "note": "production baseline, no checkpoint preserved",
+      "val_bpb": 0.4842
+    },
+    "sft800": {
+      "finance_macro": 0.3736,
+      "has_checkpoint": false,
+      "note": "historical result, no checkpoint preserved",
+      "val_bpb": 0.4783
+    },
+    "v2_lr010_step150": {
+      "finance_macro": 0.2297,
+      "has_checkpoint": true,
+      "note": "failed experiment, finance macro dropped",
+      "val_bpb": 0.5558
+    }
+  },
+  "manifest_type": "sft_data",
+  "metadata": {
+    "dataset_stats": {
+      "ectsum": {
+        "duplicates": 0,
+        "skipped": 0,
+        "total": 2425,
+        "valid": 2425
+      },
+      "finance_r1": {
+        "duplicates": 0,
+        "skipped": 0,
+        "total": 1225,
+        "valid": 1225
+      },
+      "finer": {
+        "duplicates": 186,
+        "skipped": 0,
+        "total": 3220,
+        "valid": 3034
+      },
+      "finqa": {
+        "duplicates": 63,
+        "skipped": 0,
+        "total": 8207,
+        "valid": 8144
+      },
+      "finred": {
+        "duplicates": 0,
+        "skipped": 0,
+        "total": 4359,
+        "valid": 4359
+      },
+      "finsen": {
+        "duplicates": 18,
+        "skipped": 0,
+        "total": 3000,
+        "valid": 2982
+      },
+      "fiqa": {
+        "duplicates": 0,
+        "skipped": 0,
+        "total": 822,
+        "valid": 822
+      },
+      "tatqa": {
+        "duplicates": 0,
+        "skipped": 0,
+        "total": 16543,
+        "valid": 16543
+      }
+    },
+    "safe_limit": 2020,
+    "total_samples": 39534,
+    "version": "v2"
+  },
+  "schema_version": "1.0",
+  "smoltalk_size": 30000,
+  "sources": {
+    "ectsum": {
+      "category": null,
+      "count": 2425,
+      "source_id": "ectsum"
+    },
+    "finance_r1": {
+      "category": null,
+      "count": 1225,
+      "source_id": "finance_r1"
+    },
+    "finer": {
+      "category": null,
+      "count": 3034,
+      "source_id": "finer"
+    },
+    "finqa": {
+      "category": null,
+      "count": 8144,
+      "source_id": "finqa"
+    },
+    "finred": {
+      "category": null,
+      "count": 4359,
+      "source_id": "finred"
+    },
+    "finsen": {
+      "category": null,
+      "count": 2982,
+      "source_id": "finsen"
+    },
+    "fiqa": {
+      "category": null,
+      "count": 822,
+      "source_id": "fiqa"
+    },
+    "tatqa": {
+      "category": null,
+      "count": 16543,
+      "source_id": "tatqa"
+    }
+  },
+  "split_manifest": {
+    "cot_source": "finance_r1",
+    "counts": {
+      "cot_train": 979,
+      "test": 3956,
+      "train": 30641,
+      "val": 3958
+    },
+    "ratios": {
+      "test": 0.1,
+      "train": 0.8,
+      "val": 0.1
+    },
+    "seed": 42,
+    "sources": {
+      "ectsum": {
+        "groups": 2425,
+        "test": 243,
+        "train": 1939,
+        "val": 243
+      },
+      "finance_r1": {
+        "groups": 1225,
+        "test": 123,
+        "train": 979,
+        "val": 123
+      },
+      "finer": {
+        "groups": 3034,
+        "test": 304,
+        "train": 2426,
+        "val": 304
+      },
+      "finqa": {
+        "groups": 3131,
+        "test": 815,
+        "train": 6514,
+        "val": 815
+      },
+      "finred": {
+        "groups": 4359,
+        "test": 436,
+        "train": 3487,
+        "val": 436
+      },
+      "finsen": {
+        "groups": 2982,
+        "test": 298,
+        "train": 2385,
+        "val": 299
+      },
+      "fiqa": {
+        "groups": 822,
+        "test": 82,
+        "train": 657,
+        "val": 83
+      },
+      "tatqa": {
+        "groups": 2808,
+        "test": 1655,
+        "train": 13233,
+        "val": 1655
+      }
+    }
+  },
+  "splits": {
+    "test": 3956,
+    "train": 31628,
+    "val": 3950
+  },
+  "supervised_token_report": {
+    "assistant_tokens": 2490537,
+    "count": 39534,
+    "sources": {
+      "ectsum": {
+        "assistant_avg": 76.23,
+        "assistant_max": 400,
+        "assistant_p50": 64,
+        "assistant_p95": 180,
+        "assistant_token_share": 0.07422214566577409,
+        "assistant_tokens": 184853,
+        "count": 2425,
+        "user_tokens": 3345135
+      },
+      "finance_r1": {
+        "assistant_avg": 1505.72,
+        "assistant_max": 1956,
+        "assistant_p50": 1564,
+        "assistant_p95": 1888,
+        "assistant_token_share": 0.7406065438899322,
+        "assistant_tokens": 1844508,
+        "count": 1225,
+        "user_tokens": 40417
+      },
+      "finer": {
+        "assistant_avg": 38.13,
+        "assistant_max": 212,
+        "assistant_p50": 34,
+        "assistant_p95": 94,
+        "assistant_token_share": 0.046455443143386344,
+        "assistant_tokens": 115699,
+        "count": 3034,
+        "user_tokens": 195936
+      },
+      "finqa": {
+        "assistant_avg": 3.32,
+        "assistant_max": 107,
+        "assistant_p50": 3,
+        "assistant_p95": 5,
+        "assistant_token_share": 0.010861914518836701,
+        "assistant_tokens": 27052,
+        "count": 8144,
+        "user_tokens": 6220550
+      },
+      "finred": {
+        "assistant_avg": 37.49,
+        "assistant_max": 270,
+        "assistant_p50": 30,
+        "assistant_p95": 79,
+        "assistant_token_share": 0.06562319692500052,
+        "assistant_tokens": 163437,
+        "count": 4359,
+        "user_tokens": 403779
+      },
+      "finsen": {
+        "assistant_avg": 2.0,
+        "assistant_max": 2,
+        "assistant_p50": 2,
+        "assistant_p95": 2,
+        "assistant_token_share": 0.0023946642832449387,
+        "assistant_tokens": 5964,
+        "count": 2982,
+        "user_tokens": 105745
+      },
+      "fiqa": {
+        "assistant_avg": 26.01,
+        "assistant_max": 41,
+        "assistant_p50": 26,
+        "assistant_p95": 31,
+        "assistant_token_share": 0.008584092506957335,
+        "assistant_tokens": 21379,
+        "count": 822,
+        "user_tokens": 43625
+      },
+      "tatqa": {
+        "assistant_avg": 7.72,
+        "assistant_max": 161,
+        "assistant_p50": 4,
+        "assistant_p95": 29,
+        "assistant_token_share": 0.051251999066867907,
+        "assistant_tokens": 127645,
+        "count": 16543,
+        "user_tokens": 8875948
+      }
+    }
+  },
+  "total_samples": 39534
+}

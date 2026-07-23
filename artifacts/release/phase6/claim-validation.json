@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "prohibited_claims": {
+      "issues": [],
+      "passed": true
+    },
+    "unverified_claims": {
+      "issues": [],
+      "passed": true
+    },
+    "verified_claims": {
+      "issues": [],
+      "passed": true
+    }
+  },
+  "claim_map_path": "artifacts/release/phase6/claim-evidence-map.json",
+  "errors": [],
+  "passed": true,
+  "schema_version": "1.0",
+  "summary": {
+    "prohibited_claims_count": 5,
+    "total_issues": 0,
+    "unverified_claims_count": 2,
+    "verified_claims_count": 9
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "manifest_type": "license_inventory",
+  "schema_version": "1.0",
+  "project_license": {
+    "name": "MIT",
+    "source": "karpathy/nanochat",
+    "attribution": "Copyright 2025 Andrej Karpathy",
+    "redistribution_allowed": true,
+    "commercial_use": true
+  },
+  "code_licenses": [
+    {
+      "component": "nanochat base code",
+      "license": "MIT",
+      "source": "karpathy/nanochat",
+      "redistribution_allowed": true,
+      "commercial_use": true,
+      "attribution": "Copyright 2025 Andrej Karpathy"
+    },
+    {
+      "component": "nano_finance application code",
+      "license": "MIT",
+      "source": "project-specific",
+      "redistribution_allowed": true,
+      "commercial_use": true,
+      "attribution": "Based on karpathy/nanochat"
+    },
+    {
+      "component": "PyTorch",
+      "license": "BSD-3-Clause",
+      "source": "pytorch/pytorch",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "FastAPI",
+      "license": "MIT",
+      "source": "tiangolo/fastapi",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "ChromaDB",
+      "license": "Apache-2.0",
+      "source": "chroma-core/chroma",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "rank-bm25",
+      "license": "MIT",
+      "source": "dorianbrown/rank_bm25",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "jieba",
+      "license": "MIT",
+      "source": "fxsjy/jieba",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "pydantic",
+      "license": "MIT",
+      "source": "pydantic/pydantic",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "pytest",
+      "license": "MIT",
+      "source": "pytest-dev/pytest",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "component": "ruff",
+      "license": "MIT",
+      "source": "astral-sh/ruff",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    }
+  ],
+  "model_weight_license": {
+    "component": "nano-finance-d24-sft-v1 model weights",
+    "license": "unknown",
+    "source": "project-trained",
+    "redistribution_allowed": false,
+    "commercial_use": "unknown",
+    "note": "Model weights license not explicitly granted; do not redistribute"
+  },
+  "tokenizer_license": {
+    "component": "nanochat-bpe-65k tokenizer",
+    "license": "MIT",
+    "source": "project-trained on licensed data",
+    "redistribution_allowed": true,
+    "commercial_use": true,
+    "note": "Tokenizer code is MIT; training data licenses vary"
+  },
+  "data_licenses": [
+    {
+      "component": "ClimbMix (pretraining)",
+      "license": "unknown",
+      "source": "NVIDIA",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "SkyPile (pretraining)",
+      "license": "unknown",
+      "source": "Skywork",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "Chinese finance corpus (pretraining)",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "FinQA (SFT)",
+      "license": "unknown",
+      "source": "FinQA dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "TAT-QA (SFT)",
+      "license": "unknown",
+      "source": "TAT-QA dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "ECTSum (SFT)",
+      "license": "unknown",
+      "source": "ECTSum dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "FinER (SFT)",
+      "license": "unknown",
+      "source": "FinER dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "FinRED (SFT)",
+      "license": "unknown",
+      "source": "FinRED dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "FinSen (SFT)",
+      "license": "unknown",
+      "source": "FinSen dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "FiQA (SFT)",
+      "license": "unknown",
+      "source": "FiQA dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "finance_r1 (SFT)",
+      "license": "unknown",
+      "source": "R1-style reasoning data",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "SmolTalk (SFT)",
+      "license": "unknown",
+      "source": "SmolTalk dataset",
+      "redistribution_allowed": false,
+      "commercial_use": "unknown"
+    }
+  ],
+  "third_party_model_licenses": [
+    {
+      "component": "embedding model",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": "unknown",
+      "commercial_use": "unknown"
+    },
+    {
+      "component": "reranker model",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": "unknown",
+      "commercial_use": "unknown"
+    }
+  ],
+  "summary": {
+    "total_components": 25,
+    "mit_licensed": 8,
+    "unknown_license": 15,
+    "redistribution_blocked": 15,
+    "note": "Any component with unknown license must not be claimed as freely commercializable"
+  }
+}

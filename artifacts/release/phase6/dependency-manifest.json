@@ -1,0 +1,195 @@
+{
+  "manifest_type": "dependency",
+  "schema_version": "1.0",
+  "python_version": "3.12.2",
+  "core_dependencies": [
+    {
+      "name": "torch",
+      "purpose": "deep learning framework for training and inference",
+      "license": "BSD-3-Clause",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "numpy",
+      "purpose": "numerical computation",
+      "license": "BSD-3-Clause",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "transformers",
+      "purpose": "model utilities and tokenization",
+      "license": "Apache-2.0",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "chromadb",
+      "purpose": "vector database for RAG dense retrieval",
+      "license": "Apache-2.0",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "rank-bm25",
+      "purpose": "BM25 sparse retrieval for RAG",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "fastapi",
+      "purpose": "HTTP API server for RAG queries",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "uvicorn",
+      "purpose": "ASGI server for FastAPI",
+      "license": "BSD-3-Clause",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "pydantic",
+      "purpose": "data validation and settings management",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "jieba",
+      "purpose": "Chinese word segmentation for BM25",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "pytest",
+      "purpose": "testing framework",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "ruff",
+      "purpose": "code linting and formatting",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    },
+    {
+      "name": "mypy",
+      "purpose": "static type checking",
+      "license": "MIT",
+      "redistribution_allowed": true,
+      "commercial_use": true
+    }
+  ],
+  "model_dependencies": [
+    {
+      "name": "nanochat-base",
+      "purpose": "base architecture and training code",
+      "license": "MIT",
+      "source": "karpathy/nanochat",
+      "redistribution_allowed": true,
+      "commercial_use": true,
+      "attribution": "Copyright 2025 Andrej Karpathy"
+    },
+    {
+      "name": "embedding-model",
+      "purpose": "dense retrieval embeddings for RAG",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": "unknown",
+      "commercial_use": "unknown"
+    },
+    {
+      "name": "reranker-model",
+      "purpose": "reranking for RAG retrieval",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": "unknown",
+      "commercial_use": "unknown"
+    }
+  ],
+  "data_dependencies": [
+    {
+      "name": "ClimbMix",
+      "purpose": "English general pretraining data",
+      "license": "unknown",
+      "source": "NVIDIA",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "SkyPile",
+      "purpose": "Chinese general pretraining data",
+      "license": "unknown",
+      "source": "Skywork",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "Chinese finance corpus",
+      "purpose": "Chinese finance pretraining data",
+      "license": "unknown",
+      "source": "to be confirmed",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "FinQA",
+      "purpose": "SFT financial QA data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "TAT-QA",
+      "purpose": "SFT tabular QA data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "ECTSum",
+      "purpose": "SFT earnings call summary data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "FinER",
+      "purpose": "SFT entity recognition data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "FinRED",
+      "purpose": "SFT relation extraction data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "FinSen",
+      "purpose": "SFT sentiment classification data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "FiQA",
+      "purpose": "SFT financial QA data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "finance_r1",
+      "purpose": "SFT R1-style explicit reasoning data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    },
+    {
+      "name": "SmolTalk",
+      "purpose": "SFT general capability data",
+      "license": "unknown",
+      "redistribution_allowed": false
+    }
+  ]
+}

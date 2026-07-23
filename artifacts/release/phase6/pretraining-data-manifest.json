@@ -1,0 +1,704 @@
+{
+  "actual_shard_count": 171,
+  "data_dir": "~/.cache/nanochat/base_data_climbmix/",
+  "expected_shard_count": 171,
+  "manifest_type": "pretraining_data",
+  "schema_version": "1.0",
+  "shard_format": "parquet",
+  "shards": [
+    {
+      "name": "shard_0000.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0001.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0002.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0003.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0004.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0005.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0006.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0007.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0008.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0009.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0010.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0011.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0012.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0013.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0014.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0015.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0016.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0017.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0018.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0019.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0020.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0021.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0022.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0023.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0024.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0025.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0026.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0027.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0028.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0029.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0030.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0031.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0032.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0033.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0034.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0035.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0036.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0037.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0038.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0039.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0040.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0041.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0042.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0043.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0044.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0045.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0046.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0047.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0048.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0049.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0050.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0051.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0052.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0053.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0054.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0055.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0056.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0057.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0058.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0059.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0060.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0061.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0062.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0063.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0064.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0065.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0066.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0067.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0068.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0069.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0070.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0071.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0072.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0073.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0074.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0075.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0076.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0077.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0078.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0079.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0080.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0081.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0082.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0083.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0084.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0085.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0086.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0087.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0088.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0089.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0090.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0091.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0092.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0093.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0094.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0095.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0096.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0097.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0098.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0099.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0100.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0101.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0102.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0103.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0104.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0105.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0106.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0107.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0108.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0109.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0110.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0111.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0112.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0113.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0114.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0115.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0116.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0117.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0118.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0119.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0120.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0121.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0122.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0123.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0124.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0125.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0126.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0127.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0128.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0129.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0130.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0131.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0132.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0133.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0134.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0135.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0136.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0137.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0138.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0139.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0140.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0141.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0142.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0143.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0144.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0145.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0146.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0147.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0148.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0149.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0150.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0151.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0152.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0153.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0154.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0155.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0156.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0157.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0158.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0159.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0160.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0161.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0162.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0163.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0164.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0165.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0166.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0167.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0168.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0169.parquet",
+      "size_bytes": 0
+    },
+    {
+      "name": "shard_0170.parquet",
+      "size_bytes": 0
+    }
+  ],
+  "training_params": {
+    "target_param_data_ratio": 50.0,
+    "total_batch_size": 1048576,
+    "training_time_seconds": 2428705
+  },
+  "training_result": {
+    "checkpoint": "d24_final_mixdata",
+    "final_step": 28000,
+    "val_bpb_final": 0.7626
+  }
+}

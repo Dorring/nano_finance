@@ -1,0 +1,70 @@
+{
+  "manifest_type": "evaluation_evidence",
+  "schema_version": "1.0",
+  "evaluation_id": "phase5-synthetic-heldout-v2",
+  "data_classification": "synthetic_held_out",
+  "is_real_sealed_evaluation": false,
+  "evaluation_purpose": "infrastructure_functional_test",
+  "is_quality_metric": false,
+  "is_resume_metric": false,
+  "is_model_comparison_metric": false,
+  "evaluated_model": {
+    "model_identity": "finquery-finance-v2-lr010-150",
+    "checkpoint": "d24_finance_v2_lr010",
+    "checkpoint_step": 150,
+    "model_nature": "SFT V2 lr010 failed experiment checkpoint",
+    "val_bpb": 0.5558,
+    "finance_macro": 0.2297,
+    "is_production_baseline": false,
+    "note": "This is a failed experiment checkpoint, NOT the production baseline"
+  },
+  "sample_counts": {
+    "dev": 48,
+    "cal": 48,
+    "sealed": 54,
+    "total": 150
+  },
+  "strict_pass_result": {
+    "passed": 0,
+    "total": 54,
+    "pass_rate": 0.0,
+    "is_quality_metric": false,
+    "not_for_quality_estimation": true,
+    "not_for_model_comparison": true,
+    "not_for_resume": true,
+    "note": "0/54 strict pass rate is an infrastructure functional test result, NOT a model quality metric"
+  },
+  "isolation_mechanisms": {
+    "evaluation_query_label_isolation": true,
+    "blind_scoring_isolation": true,
+    "calibration_set_separated": true,
+    "rc_freeze_verified": true,
+    "rc_hash_count": 8
+  },
+  "ablation_studies": {
+    "ablations_run": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"],
+    "calibration_thresholds": "applied"
+  },
+  "questions_hash": {
+    "questions_raw_sha256": "original questions file hash",
+    "questions_canonical_sha256": "JSON-parsed sorted hash"
+  },
+  "citations_allowed": [
+    "Phase 5 infrastructure (Blind/Scoring isolation, RC Freeze, Calibration, A0-A9 ablations) is functional",
+    "Data classification is synthetic_held_out",
+    "0/54 strict pass result exists as infrastructure test output",
+    "The evaluated model is finquery-finance-v2-lr010-150"
+  ],
+  "citations_prohibited": [
+    "Phase 5 proves strong generalization",
+    "0/54 as a model quality metric",
+    "0/54 for model comparison",
+    "0/54 for resume metrics",
+    "Any claim that the model achieves production-grade accuracy based on this evaluation"
+  ],
+  "evidence_files": [
+    "artifacts/release/phase6/training-runs.json"
+  ],
+  "status": "completed",
+  "verified": true
+}

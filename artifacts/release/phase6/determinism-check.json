@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "field_sorting": {
+      "issues": [],
+      "passed": true
+    },
+    "output_stability": {
+      "issues": [],
+      "passed": true
+    }
+  },
+  "issues": [],
+  "passed": true,
+  "schema_version": "1.0",
+  "scripts_checked": [
+    "collect_training_evidence.py",
+    "build_tokenizer_manifest.py",
+    "build_data_manifests.py",
+    "build_checkpoint_manifest.py",
+    "generate_release_manifest.py"
+  ],
+  "summary": {
+    "files_compared": 7,
+    "scripts_run": 5,
+    "total_issues": 0
+  }
+}
