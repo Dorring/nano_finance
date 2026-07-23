@@ -99,133 +99,43 @@ ABLATION_VARIANTS: list[dict[str, Any]] = [
 _VARIANT_BY_ID: dict[str, dict[str, Any]] = {v["id"]: v for v in ABLATION_VARIANTS}
 
 # v2: per-variant EvaluationFeatureFlags that drive runtime injection into
-# the RAGEngine. These flags describe the *compositional* ablation scheme
-# (each variant toggles a cumulative set of capabilities), distinct from
-# the legacy single-component ``config_diff`` which is retained for
-# backward compatibility. The mapping follows the Phase 5 v2 ablation
-# protocol:
-#   A0  Dense only
-#   A1  BM25 only
-#   A2  Dense + BM25
-#   A3  Dense + BM25 + RRF (query rewrite engaged; RRF fusion is implicit
-#       in hybrid retrieval, so ``reranker_enabled`` stays False)
-#   A4  Hybrid + Reranker
-#   A5  Hybrid + Reranker + Calculator
-#   A6  Full without Validation
-#   A7  Full without Citation Validation
-#   A8  Full without Answerability
-#   A9  Full System
+# the RAGEngine. The flags follow the SAME single-component ablation scheme
+# as the legacy ``config_diff``: A0 is Full System (all flags True), and
+# each of A1-A9 disables exactly ONE component. This guarantees that every
+# variant changes exactly one thing relative to A0, so deltas are
+# attributable. The ``config_diff`` and ``feature_flags`` for a given
+# variant ID describe the SAME ablation in two representations.
+#
+#   A0  Full System                    (all True)
+#   A1  Dense Only                     (bm25_enabled=False)
+#   A2  BM25 Only                      (dense_enabled=False)
+#   A3  No Reranker                    (reranker_enabled=False)
+#   A4  No Query Rewrite               (query_rewrite_enabled=False)
+#   A5  No Hierarchical Context        (hierarchical_context_enabled=False)
+#   A6  No Calculator                  (calculator_enabled=False)
+#   A7  No Answerability Gate          (answerability_enabled=False)
+#   A8  No Post-generation Validation  (post_validation_enabled=False)
+#   A9  No Citation Validation         (citation_validation_enabled=False)
+#
+# Note: A8 disables the entire validation pipeline at construction time
+# (enable_validation_pipeline=False), so the fine-grained answerability and
+# citation flags are also effectively off. A7 and A9 keep the pipeline
+# constructed and use runtime stubs to disable only the targeted sub-stage.
 _VARIANT_FEATURE_FLAGS: dict[str, EvaluationFeatureFlags] = {
-    "A0": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=False,
-        reranker_enabled=False,
-        query_rewrite_enabled=False,
-        hierarchical_context_enabled=False,
-        calculator_enabled=False,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A1": EvaluationFeatureFlags(
-        dense_enabled=False,
-        bm25_enabled=True,
-        reranker_enabled=False,
-        query_rewrite_enabled=False,
-        hierarchical_context_enabled=False,
-        calculator_enabled=False,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A2": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=False,
-        query_rewrite_enabled=False,
-        hierarchical_context_enabled=False,
-        calculator_enabled=False,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A3": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=False,
-        query_rewrite_enabled=True,
-        hierarchical_context_enabled=False,
-        calculator_enabled=False,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A4": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=False,
-        hierarchical_context_enabled=False,
-        calculator_enabled=False,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A5": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=False,
-        hierarchical_context_enabled=False,
-        calculator_enabled=True,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A6": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=True,
-        hierarchical_context_enabled=True,
-        calculator_enabled=True,
-        answerability_enabled=False,
-        post_validation_enabled=False,
-        citation_validation_enabled=False,
-    ),
-    "A7": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=True,
-        hierarchical_context_enabled=True,
-        calculator_enabled=True,
-        answerability_enabled=True,
-        post_validation_enabled=True,
-        citation_validation_enabled=False,
-    ),
+    "A0": EvaluationFeatureFlags(),  # Full System — all defaults True
+    "A1": EvaluationFeatureFlags(bm25_enabled=False),
+    "A2": EvaluationFeatureFlags(dense_enabled=False),
+    "A3": EvaluationFeatureFlags(reranker_enabled=False),
+    "A4": EvaluationFeatureFlags(query_rewrite_enabled=False),
+    "A5": EvaluationFeatureFlags(hierarchical_context_enabled=False),
+    "A6": EvaluationFeatureFlags(calculator_enabled=False),
+    "A7": EvaluationFeatureFlags(answerability_enabled=False),
     "A8": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=True,
-        hierarchical_context_enabled=True,
-        calculator_enabled=True,
+        post_validation_enabled=False,
         answerability_enabled=False,
-        post_validation_enabled=True,
-        citation_validation_enabled=True,
+        citation_validation_enabled=False,
     ),
-    "A9": EvaluationFeatureFlags(
-        dense_enabled=True,
-        bm25_enabled=True,
-        reranker_enabled=True,
-        query_rewrite_enabled=True,
-        hierarchical_context_enabled=True,
-        calculator_enabled=True,
-        answerability_enabled=True,
-        post_validation_enabled=True,
-        citation_validation_enabled=True,
-    ),
+    "A9": EvaluationFeatureFlags(citation_validation_enabled=False),
 }
 
 

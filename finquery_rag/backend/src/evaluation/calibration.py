@@ -176,18 +176,23 @@ def apply_params_to_prediction(
         total_tokens += chunk_tokens
     chunks = limited
 
-    best_threshold = params.get("sufficiency_best_score_threshold", 0.0)
-    avg_threshold = params.get("sufficiency_average_score_threshold", 0.0)
+    # Match the runtime logic of EvidenceSufficiencyEvaluator.evaluate():
+    #   - If best_score < 0.05 (max_possible_rrf): use rrf_sufficiency_threshold
+    #   - Else: use dense_sufficiency_threshold
+    #   - is_sufficient = best_score >= threshold
+    rrf_threshold = params.get("rrf_sufficiency_threshold", 0.0)
+    dense_threshold = params.get("dense_sufficiency_threshold", 0.0)
 
     scores = [float(c.get("score", 1.0)) for c in chunks]
     best_score = max(scores) if scores else 0.0
-    avg_score = sum(scores) / len(scores) if scores else 0.0
 
-    context_sufficient = bool(chunks)
-    if best_threshold > 0.0 and best_score < best_threshold:
-        context_sufficient = False
-    if avg_threshold > 0.0 and avg_score < avg_threshold:
-        context_sufficient = False
+    max_possible_rrf = 0.05
+    if best_score < max_possible_rrf:
+        threshold = rrf_threshold
+    else:
+        threshold = dense_threshold
+
+    context_sufficient = bool(chunks) and best_score >= threshold
 
     answer = pred.answer
     validation = pred.validation

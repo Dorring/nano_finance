@@ -45,23 +45,23 @@ class TestAllVariantsHaveDistinctFlags:
         assert len(seen) == 10
 
 
-class TestA9FullSystemAllTrue:
-    def test_a9_full_system_all_true(self) -> None:
-        """A9 has all 9 flags set to True."""
-        flags = get_variant_feature_flags("A9")
-        for name in _ALL_FLAG_FIELDS:
-            assert getattr(flags, name) is True, f"A9.{name} should be True"
-
-
-class TestA0MinimalFlags:
-    def test_a0_minimal_flags(self) -> None:
-        """A0 has only dense=True, all others False."""
+class TestA0FullSystemAllTrue:
+    def test_a0_full_system_all_true(self) -> None:
+        """A0 (Full System) has all 9 flags set to True."""
         flags = get_variant_feature_flags("A0")
-        assert flags.dense_enabled is True
         for name in _ALL_FLAG_FIELDS:
-            if name == "dense_enabled":
+            assert getattr(flags, name) is True, f"A0.{name} should be True"
+
+
+class TestA1DenseOnly:
+    def test_a1_dense_only_disables_bm25(self) -> None:
+        """A1 (Dense Only) has bm25_enabled=False, all others True."""
+        flags = get_variant_feature_flags("A1")
+        assert flags.bm25_enabled is False
+        for name in _ALL_FLAG_FIELDS:
+            if name == "bm25_enabled":
                 continue
-            assert getattr(flags, name) is False, f"A0.{name} should be False"
+            assert getattr(flags, name) is True, f"A1.{name} should be True"
 
 
 class TestApplyFeatureFlagsToEngineKwargs:
@@ -81,13 +81,16 @@ class TestApplyFeatureFlagsToEngineKwargs:
         kwargs = apply_feature_flags_to_engine_kwargs(flags)
         assert kwargs["use_hybrid"] is False
 
-    def test_bm25_only_disables_hybrid(self) -> None:
+    def test_bm25_only_keeps_hybrid_for_bm25_path(self) -> None:
+        # BM25-only needs use_hybrid=True so the hybrid retrieval path
+        # actually calls BM25; dense is then disabled via runtime patch
+        # (not via use_hybrid, which would disable BM25 instead).
         flags = EvaluationFeatureFlags(
             dense_enabled=False,
             bm25_enabled=True,
         )
         kwargs = apply_feature_flags_to_engine_kwargs(flags)
-        assert kwargs["use_hybrid"] is False
+        assert kwargs["use_hybrid"] is True
 
     def test_reranker_disabled_passes_none(self) -> None:
         flags = EvaluationFeatureFlags(reranker_enabled=False)
@@ -181,13 +184,35 @@ class TestA5CalculatorEnabled:
         assert flags.calculator_enabled is True
 
 
-class TestA6NoValidation:
-    def test_a6_no_validation(self) -> None:
-        """A6 has post_validation=False, answerability=False, citation_validation=False."""
+class TestA6NoCalculator:
+    def test_a6_no_calculator(self) -> None:
+        """A6 (No Calculator) has calculator_enabled=False, all others True."""
         flags = get_variant_feature_flags("A6")
+        assert flags.calculator_enabled is False
+        for name in _ALL_FLAG_FIELDS:
+            if name == "calculator_enabled":
+                continue
+            assert getattr(flags, name) is True, f"A6.{name} should be True"
+
+
+class TestA8NoPostGenerationValidation:
+    def test_a8_disables_full_validation_pipeline(self) -> None:
+        """A8 (No Post-generation Validation) disables the whole validation
+        pipeline at construction time, so all three validation flags are
+        False (post_validation, answerability, citation_validation)."""
+        flags = get_variant_feature_flags("A8")
         assert flags.post_validation_enabled is False
         assert flags.answerability_enabled is False
         assert flags.citation_validation_enabled is False
+        # Non-validation flags stay True.
+        for name in _ALL_FLAG_FIELDS:
+            if name in {
+                "post_validation_enabled",
+                "answerability_enabled",
+                "citation_validation_enabled",
+            }:
+                continue
+            assert getattr(flags, name) is True, f"A8.{name} should be True"
 
 
 class TestAssertFeatureFlagsEnforced:
@@ -199,8 +224,14 @@ class TestAssertFeatureFlagsEnforced:
             _validation_pipeline = None
 
         class _FakeEngine:
-            _reranker = None
+            use_hybrid = True  # bm25_enabled=True (default)
+            reranker = None  # reranker_enabled=False
             _orchestrator = _FakeOrchestrator()
+            _retrieval_pipeline = None
+            _llm_gateway = None
+            _context_builder = None
+            _calculation_pipeline = None
+            _validation_pipeline = None
 
         flags = EvaluationFeatureFlags(
             reranker_enabled=False,
@@ -211,8 +242,13 @@ class TestAssertFeatureFlagsEnforced:
 
     def test_detects_reranker_when_disabled(self) -> None:
         class _FakeEngine:
-            _reranker = object()  # truthy
+            use_hybrid = True
+            reranker = object()  # truthy — should not be present when disabled
             _orchestrator = None
+            _retrieval_pipeline = None
+            _llm_gateway = None
+            _context_builder = None
+            _validation_pipeline = None
 
         flags = EvaluationFeatureFlags(reranker_enabled=False)
         violations = assert_feature_flags_enforced(flags, _FakeEngine())
@@ -220,8 +256,13 @@ class TestAssertFeatureFlagsEnforced:
 
     def test_detects_missing_reranker_when_enabled(self) -> None:
         class _FakeEngine:
-            _reranker = None
+            use_hybrid = True
+            reranker = None  # missing when should be present
             _orchestrator = None
+            _retrieval_pipeline = None
+            _llm_gateway = None
+            _context_builder = None
+            _validation_pipeline = None
 
         flags = EvaluationFeatureFlags(reranker_enabled=True)
         violations = assert_feature_flags_enforced(flags, _FakeEngine())

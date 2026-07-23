@@ -193,7 +193,7 @@ def build_sealed_artifact(
     ]
     data = dict(meta)
     data["run_type"] = "sealed"
-    data["sealed_run_policy"] = dict(protocol.get("sealed_run_policy", {}))
+    data["held_out_run_policy"] = dict(protocol.get("held_out_run_policy", {}))
     data["public_manifest"] = "eval_data/phase5/sealed/manifest.public.json"
     data["sealed_labels_local_path"] = ".sealed/labels.jsonl"
     return data, evidence

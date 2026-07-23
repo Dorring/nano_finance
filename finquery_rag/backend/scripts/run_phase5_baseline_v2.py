@@ -5,6 +5,10 @@ Runs blind evaluation on a specified partition (dev, calibration, or
 sealed) using the Phase 5 v2 per-partition ChromaDB and BM25 indexes
 built by ``scripts/build_phase5_eval_index.py``.
 
+This script uses the unified :func:`build_evaluation_engine` factory
+which handles partition index setup, sentinel query verification, and
+records the engine application state for auditability.
+
 Outputs:
 - ``{partition}-report.json``  — metrics, slices, failure taxonomy
 - ``{partition}-predictions.jsonl`` — raw predictions (for calibration
@@ -28,7 +32,6 @@ import argparse
 import asyncio
 import hashlib
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -37,16 +40,14 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from src.evaluation.blind_runner import run_blind_queries  # noqa: E402
 from src.evaluation.dataset_loader import load_queries_and_labels  # noqa: E402
+from src.evaluation.engine_factory import (  # noqa: E402
+    PARTITION_USER_IDS,
+    build_evaluation_engine,
+)
+from src.evaluation.failure_taxonomy import classify_all_failures  # noqa: E402
 from src.evaluation.metrics import compute_all_metrics  # noqa: E402
 from src.evaluation.slices import compute_slice_metrics  # noqa: E402
-from src.evaluation.failure_taxonomy import classify_all_failures  # noqa: E402
 from src.evaluation.statistics import wilson_interval  # noqa: E402
-
-PARTITION_USER_IDS: dict[str, int] = {
-    "dev": 9001,
-    "calibration": 9002,
-    "sealed": 9003,
-}
 
 OUTPUT_BASE = BACKEND_DIR / "artifacts" / "evaluation" / "phase5"
 
@@ -80,8 +81,8 @@ def compute_dir_sha256(dirpath: str | Path) -> str | None:
     return h.hexdigest()
 
 
-def compute_manifest(partition: str) -> dict:
-    """Compute resource hashes for the baseline manifest."""
+def compute_manifest(partition: str, engine_record) -> dict:
+    """Compute resource hashes and engine application record for the manifest."""
     index_dir = BACKEND_DIR / "indexes" / "phase5" / partition
     hashes: dict = {
         "partition": partition,
@@ -91,13 +92,12 @@ def compute_manifest(partition: str) -> dict:
         "bm25_db_path": str(index_dir / "rag_bm25.db"),
         "bm25_db_sha256": compute_sha256(index_dir / "rag_bm25.db"),
         "chunk_manifest_sha256": compute_sha256(index_dir / "chunk-manifest.json"),
+        "model_server_endpoint": "http://localhost:8500",
+        "model_server_name": "finquery-finance-sft1147",
+        "sentinel_query_passed": engine_record.sentinel_query_passed,
+        "sentinel_query_result_count": engine_record.sentinel_query_result_count,
     }
 
-    # Model server info
-    hashes["model_server_endpoint"] = "http://localhost:8500"
-    hashes["model_server_name"] = "finquery-finance-sft1147"
-
-    # Git commit
     import subprocess
 
     try:
@@ -114,21 +114,6 @@ def compute_manifest(partition: str) -> dict:
     return hashes
 
 
-def setup_partition_index(partition: str) -> None:
-    """Set environment variables for the partition-specific index."""
-    index_dir = BACKEND_DIR / "indexes" / "phase5" / partition
-    chroma_path = index_dir / "chroma"
-    bm25_path = str(index_dir / "rag_bm25.db")
-
-    os.environ["CHROMA_PATH"] = str(chroma_path)
-    os.environ["BM25_DB_PATH"] = bm25_path
-
-    # Reset ChromaDB client singleton
-    import src.services.vector_store as vs
-
-    vs._chroma_client = None
-
-
 async def run_partition_evaluation(partition: str) -> dict | None:
     """Run blind evaluation on the specified partition."""
     questions_path = (
@@ -139,32 +124,36 @@ async def run_partition_evaluation(partition: str) -> dict | None:
     queries, labels = load_queries_and_labels(str(questions_path), str(labels_path))
     print(f"Loaded {len(queries)} {partition} queries, {len(labels)} labels")
 
-    # Set up partition-specific index
-    setup_partition_index(partition)
-    user_id = PARTITION_USER_IDS[partition]
-
-    # Initialize RAG engine
+    # Build engine via unified factory (handles partition index + sentinel query)
     try:
         from openai import OpenAI
-
-        from src.services.rag_engine import RAGEngine
 
         client = OpenAI(
             api_key="sk-placeholder",
             base_url="http://localhost:8500/v1",
         )
-        engine = RAGEngine(
-            llm_client=client,
+        engine, engine_record = build_evaluation_engine(
+            client,
+            partition=partition,
             model_name="finquery-finance-sft1147",
+            run_sentinel=True,
         )
-        print(f"RAG engine initialized (user_id={user_id})")
+        user_id = engine_record.partition_user_id
+        n_results = engine_record.calibration.n_results or 3
+        print(
+            f"RAG engine initialized (user_id={user_id}, "
+            f"sentinel_passed={engine_record.sentinel_query_passed}, "
+            f"sentinel_count={engine_record.sentinel_query_result_count})"
+        )
     except Exception as exc:
         print(f"Failed to initialize RAG engine: {exc}")
         return None
 
     # Run blind evaluation
-    print(f"Running blind evaluation on {partition} set...")
-    predictions = await run_blind_queries(queries, engine, user_id=user_id, n_results=3)
+    print(f"Running blind evaluation on {partition} set (n_results={n_results})...")
+    predictions = await run_blind_queries(
+        queries, engine, user_id=user_id, n_results=n_results
+    )
     print(f"Generated {len(predictions)} predictions")
 
     # Save predictions JSONL (needed for calibration Stage 1)
@@ -187,7 +176,16 @@ async def run_partition_evaluation(partition: str) -> dict | None:
     ci_low, ci_high = wilson_interval(n_pass, n)
 
     result = {
-        "manifest": compute_manifest(partition),
+        "manifest": compute_manifest(partition, engine_record),
+        "engine_application_record": {
+            "partition": engine_record.partition,
+            "partition_user_id": engine_record.partition_user_id,
+            "sentinel_query_passed": engine_record.sentinel_query_passed,
+            "sentinel_query_result_count": engine_record.sentinel_query_result_count,
+            "calibration_applied": engine_record.calibration.applied,
+            "calibration_skipped": engine_record.calibration.skipped,
+            "n_results": engine_record.calibration.n_results,
+        },
         "summary": {
             "total_queries": n,
             "strict_pass_count": n_pass,
@@ -224,7 +222,7 @@ def main() -> int:
     if result is None:
         print("Evaluation failed — RAG engine could not be initialized.")
         output = {
-            "manifest": compute_manifest(args.partition),
+            "manifest": {"partition": args.partition},
             "evaluation_status": "failed",
         }
     else:

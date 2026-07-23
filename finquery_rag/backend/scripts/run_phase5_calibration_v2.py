@@ -43,7 +43,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -233,22 +232,42 @@ def run_stage1_replay(
 
 def _build_engine_with_params(
     params: dict[str, Any],
-) -> Any | None:
-    """Build a RAG engine configured with the winner calibration params."""
+) -> tuple[Any, Any] | None:
+    """Build a RAG engine with winner calibration params truly injected.
+
+    Uses :func:`build_evaluation_engine` which applies all 7
+    runtime-applicable calibration params via
+    :func:`apply_calibration_params_runtime` and runs a sentinel query
+    to verify index wiring before returning.
+    """
     try:
         from openai import OpenAI
 
-        from src.services.rag_engine import RAGEngine
+        from src.evaluation.engine_factory import build_evaluation_engine
 
         client = OpenAI(
             api_key="sk-placeholder",
             base_url="http://localhost:8500/v1",
         )
-        engine = RAGEngine(
-            llm_client=client,
+        engine, engine_record = build_evaluation_engine(
+            client,
+            partition="calibration",
+            calibration_params=params,
             model_name="finquery-finance-sft1147",
+            run_sentinel=True,
         )
-        return engine
+        print(
+            f"  Calibration params applied: {engine_record.calibration.applied}"
+        )
+        if engine_record.calibration.skipped:
+            print(
+                f"  Calibration params skipped: {engine_record.calibration.skipped}"
+            )
+        print(
+            f"  Sentinel query: passed={engine_record.sentinel_query_passed}, "
+            f"count={engine_record.sentinel_query_result_count}"
+        )
+        return engine, engine_record
     except Exception as exc:  # noqa: BLE001
         print(f"  Failed to build RAG engine: {exc}")
         return None
@@ -265,9 +284,11 @@ async def run_stage2_rerun(
     """Stage 2: End-to-end rerun with winner config to verify parity.
 
     Re-runs the RAG engine on the calibration partition with the winning
-    configuration from Stage 1. Compares the rerun macro_strict_pass_rate
-    against the Stage 1 replay value. If the difference exceeds the
-    parity threshold, flags as parity failure and recommends baseline.
+    configuration from Stage 1 truly injected via
+    :func:`apply_calibration_params_runtime`. Compares the rerun
+    macro_strict_pass_rate against the Stage 1 replay value. If the
+    difference exceeds the parity threshold, flags as parity failure and
+    recommends baseline.
     """
     print("[Stage 2] End-to-end rerun starting...")
     print(f"  Winner params: {winner_params}")
@@ -285,8 +306,8 @@ async def run_stage2_rerun(
             "recommendation": "baseline",
         }
 
-    engine = _build_engine_with_params(winner_params)
-    if engine is None:
+    result = _build_engine_with_params(winner_params)
+    if result is None:
         print("  RAG engine unavailable — skipping rerun")
         return {
             "stage": 2,
@@ -300,23 +321,18 @@ async def run_stage2_rerun(
             "note": "RAG engine could not be initialized; fall back to baseline",
         }
 
+    engine, engine_record = result
+
     from src.evaluation.blind_runner import run_blind_queries
 
-    n_results = int(winner_params.get("n_results", 3))
+    n_results = engine_record.calibration.n_results or int(
+        winner_params.get("n_results", 3)
+    )
+    user_id = engine_record.partition_user_id
     print(f"  Running {len(queries)} calibration queries with n_results={n_results}...")
 
-    # Set the partition index env vars for the calibration partition
-    cal_index_dir = BACKEND_DIR / "indexes" / "phase5" / "calibration"
-    os.environ["CHROMA_PATH"] = str(cal_index_dir / "chroma")
-    os.environ["BM25_DB_PATH"] = str(cal_index_dir / "rag_bm25.db")
-
-    # Reset ChromaDB client singleton
-    import src.services.vector_store as vs
-
-    vs._chroma_client = None
-
     predictions = await run_blind_queries(
-        queries, engine, user_id=CALIBRATION_USER_ID, n_results=n_results
+        queries, engine, user_id=user_id, n_results=n_results
     )
     print(f"  Generated {len(predictions)} rerun predictions")
 
@@ -337,6 +353,15 @@ async def run_stage2_rerun(
         "stage_name": "end_to_end_rerun",
         "requires_rag_engine": True,
         "rerun_status": "completed",
+        "calibration_param_injection": {
+            "applied": engine_record.calibration.applied,
+            "skipped": engine_record.calibration.skipped,
+            "n_results": engine_record.calibration.n_results,
+        },
+        "sentinel_query": {
+            "passed": engine_record.sentinel_query_passed,
+            "result_count": engine_record.sentinel_query_result_count,
+        },
         "parity_check": {
             "replay_macro_strict_pass_rate": stage1_replay_macro,
             "rerun_macro_strict_pass_rate": rerun_macro,
@@ -402,7 +427,7 @@ def build_final_report(
 
     return {
         "calibration_version": "v2",
-        "protocol_version": "2.0",
+        "protocol_version": "2.1",
         "baseline_macro_strict_pass_rate": baseline_metrics.get(
             "macro_strict_pass_rate", 0.0
         ),

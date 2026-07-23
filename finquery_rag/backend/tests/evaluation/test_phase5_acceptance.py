@@ -11,7 +11,7 @@ Phase 5 RAG evaluation system. They check:
  6.  The frozen protocol file exists and is valid JSON.
  7.  The protocol's ``primary_metric`` is ``macro_strict_pass_rate``.
  8.  The protocol defines exactly 10 ablation variants (A0–A9).
- 9.  The protocol carries a ``sealed_run_policy`` block.
+ 9.  The protocol carries a ``held_out_run_policy`` block.
  10. The dev partition has ``questions.jsonl`` and ``labels.jsonl``.
  11. Dev questions and labels share the same ``case_id`` set.
  12. Dev questions contain no ``expected_*`` fields on disk.
@@ -147,11 +147,11 @@ class TestProtocol:
         ids = [v.get("id") for v in variants]
         assert ids == [f"A{i}" for i in range(10)], f"variant ids: {ids}"
 
-    def test_protocol_has_sealed_run_policy(self, protocol: dict) -> None:
-        """Protocol must carry a sealed_run_policy block."""
-        policy = protocol.get("sealed_run_policy")
-        assert isinstance(policy, dict), "sealed_run_policy must be an object"
-        assert len(policy) > 0, "sealed_run_policy must not be empty"
+    def test_protocol_has_held_out_run_policy(self, protocol: dict) -> None:
+        """Protocol must carry a held_out_run_policy block."""
+        policy = protocol.get("held_out_run_policy")
+        assert isinstance(policy, dict), "held_out_run_policy must be an object"
+        assert len(policy) > 0, "held_out_run_policy must not be empty"
 
 
 # ---------------------------------------------------------------------------

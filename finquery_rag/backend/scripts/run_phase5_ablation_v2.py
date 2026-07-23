@@ -5,6 +5,12 @@ Runs all 10 ablation variants (A0-A9) from the pre-registered protocol
 on the dev partition using the Phase 5 v2 per-partition ChromaDB and
 BM25 indexes (user_id=9001).
 
+Each variant uses :func:`get_variant_feature_flags` to obtain an
+:class:`EvaluationFeatureFlags` object, which is then injected into the
+RAGEngine via :func:`build_evaluation_engine`. All 9 feature flags
+truly reach the engine components (constructor kwargs + runtime patches),
+and the application is verified by :func:`assert_feature_flags_enforced`.
+
 Variant A0 (Full System) is the baseline. Variants A1-A7 are
 production-safe. Variants A8-A9 disable validation and are NOT
 production-safe.
@@ -21,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -30,64 +35,21 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from src.evaluation.ablation import (  # noqa: E402
     ABLATION_VARIANTS,
-    get_ablation_config,
-    validate_ablation_config,
     ablation_report,
+    get_variant_feature_flags,
     is_production_safe,
+    validate_ablation_config,
 )
 from src.evaluation.blind_runner import run_blind_queries  # noqa: E402
 from src.evaluation.dataset_loader import load_queries_and_labels  # noqa: E402
+from src.evaluation.engine_factory import build_evaluation_engine  # noqa: E402
+from src.evaluation.feature_flag_injection import (  # noqa: E402
+    assert_feature_flags_enforced,
+)
 from src.evaluation.metrics import compute_all_metrics  # noqa: E402
 from src.evaluation.slices import compute_slice_metrics  # noqa: E402
 
 OUTPUT_DIR = BACKEND_DIR / "artifacts" / "evaluation" / "phase5" / "ablation-v2"
-
-DEV_USER_ID = 9001
-
-BASE_CONFIG = {
-    "use_hybrid": True,
-    "enable_calculation_pipeline": True,
-    "enable_validation_pipeline": True,
-    "reranker_name": None,
-    "max_context_tokens": 1100,
-    "max_new_tokens": 512,
-}
-
-
-def setup_dev_index() -> None:
-    """Set environment variables for the dev partition index."""
-    index_dir = BACKEND_DIR / "indexes" / "phase5" / "dev"
-    os.environ["CHROMA_PATH"] = str(index_dir / "chroma")
-    os.environ["BM25_DB_PATH"] = str(index_dir / "rag_bm25.db")
-
-    import src.services.vector_store as vs
-
-    vs._chroma_client = None
-
-
-def build_engine_config(variant_id: str) -> dict:
-    """Build RAGEngine kwargs for a given ablation variant."""
-    variant_config = get_ablation_config(BASE_CONFIG, variant_id)
-    engine_kwargs = {
-        "model_name": "finquery-finance-sft1147",
-        "use_hybrid": variant_config.get("use_hybrid", True),
-        "enable_calculation_pipeline": variant_config.get(
-            "enable_calculation_pipeline", True
-        ),
-        "enable_validation_pipeline": variant_config.get(
-            "enable_validation_pipeline", True
-        ),
-        "max_context_tokens": variant_config.get("max_context_tokens", 1100),
-        "max_new_tokens": variant_config.get("max_new_tokens", 512),
-    }
-    diff = variant_config
-    if diff.get("disable_bm25"):
-        engine_kwargs["use_hybrid"] = False
-    if diff.get("disable-calculation-pipeline"):
-        engine_kwargs["enable_calculation_pipeline"] = False
-    if diff.get("disable-validation-pipeline"):
-        engine_kwargs["enable_validation_pipeline"] = False
-    return engine_kwargs
 
 
 async def run_ablation_variant(
@@ -102,24 +64,42 @@ async def run_ablation_variant(
         print(f"    Config validation errors: {errors}")
         return {"error": "config_validation_failed", "errors": errors}
 
-    engine_kwargs = build_engine_config(variant_id)
-    print(f"    Engine config: {engine_kwargs}")
+    flags = get_variant_feature_flags(variant_id)
+    print(f"    Feature flags: {flags.to_dict()}")
 
     try:
         from openai import OpenAI
-        from src.services.rag_engine import RAGEngine
 
         client = OpenAI(
             api_key="sk-placeholder",
             base_url="http://localhost:8500/v1",
         )
-        engine = RAGEngine(llm_client=client, **engine_kwargs)
+        engine, engine_record = build_evaluation_engine(
+            client,
+            partition="dev",
+            feature_flags=flags,
+            model_name="finquery-finance-sft1147",
+            run_sentinel=True,
+        )
     except Exception as exc:
         print(f"    Failed to initialize engine: {exc}")
         return {"error": f"engine_init_failed: {exc}"}
 
+    # Verify all 9 flags are actually enforced on the engine
+    violations = assert_feature_flags_enforced(flags, engine)
+    if violations:
+        print(f"    Feature flag enforcement violations: {violations}")
+        return {
+            "error": "feature_flag_enforcement_failed",
+            "violations": violations,
+        }
+    print("    All 9 feature flags verified enforced")
+
+    user_id = engine_record.partition_user_id
+    n_results = engine_record.calibration.n_results or 3
+
     predictions = await run_blind_queries(
-        queries, engine, user_id=DEV_USER_ID, n_results=3
+        queries, engine, user_id=user_id, n_results=n_results
     )
     print(f"    Generated {len(predictions)} predictions")
 
@@ -131,6 +111,14 @@ async def run_ablation_variant(
         "variant_name": variant_name,
         "production_safe": is_production_safe(variant_id),
         "config_diff": variant["config_diff"],
+        "feature_flags": flags.to_dict(),
+        "feature_flag_application": {
+            "constructor_kwargs": engine_record.feature_flags.constructor_kwargs,
+            "runtime_patches": engine_record.feature_flags.runtime_patches,
+            "noops": engine_record.feature_flags.noops,
+        },
+        "sentinel_query_passed": engine_record.sentinel_query_passed,
+        "sentinel_query_result_count": engine_record.sentinel_query_result_count,
         "metrics": metrics,
         "slice_metrics": slice_m,
     }
@@ -143,11 +131,7 @@ async def run_all_ablations() -> dict:
 
     queries, labels = load_queries_and_labels(str(dev_questions), str(dev_labels))
     print(f"Loaded {len(queries)} dev queries and {len(labels)} labels")
-    print(
-        f"Running {len(ABLATION_VARIANTS)} ablation variants (user_id={DEV_USER_ID})..."
-    )
-
-    setup_dev_index()
+    print(f"Running {len(ABLATION_VARIANTS)} ablation variants...")
 
     results: dict[str, dict] = {}
     for variant in ABLATION_VARIANTS:
@@ -161,7 +145,7 @@ async def run_all_ablations() -> dict:
 
 def main() -> int:
     print("=" * 60)
-    print("Phase 5 v2 Ablation Study (partition indexes)")
+    print("Phase 5 v2 Ablation Study (partition indexes + feature flags)")
     print("=" * 60)
 
     results = asyncio.run(run_all_ablations())
@@ -174,10 +158,10 @@ def main() -> int:
     output = {
         "ablation_version": "v2",
         "ablation_status": "completed",
+        "feature_flag_injection": "all_9_flags_reach_components_via_engine_factory",
         "total_variants": len(ABLATION_VARIANTS),
         "successful_variants": len(metrics_by_variant),
         "failed_variants": len(results) - len(metrics_by_variant),
-        "user_id": DEV_USER_ID,
         "report": report,
         "variants": {},
     }
@@ -197,6 +181,14 @@ def main() -> int:
                 "status": "completed",
                 "production_safe": result.get("production_safe", True),
                 "config_diff": result.get("config_diff", {}),
+                "feature_flags": result.get("feature_flags", {}),
+                "feature_flag_application": result.get(
+                    "feature_flag_application", {}
+                ),
+                "sentinel_query_passed": result.get("sentinel_query_passed", False),
+                "sentinel_query_result_count": result.get(
+                    "sentinel_query_result_count", 0
+                ),
                 "macro_strict_pass_rate": m.get("macro_strict_pass_rate", 0.0),
                 "strict_pass_rate": m.get("strict_pass_rate", 0.0),
                 "citation_recall": m.get("citation_recall", 0.0),
