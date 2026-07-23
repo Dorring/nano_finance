@@ -29,6 +29,8 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
+from src.evaluation.manifests import compute_jsonl_sha256  # noqa: E402
+
 OUTPUT_PATH = (
     BACKEND_DIR
     / "artifacts"
@@ -53,6 +55,15 @@ SELECTED_CONFIG_PATH = (
     / "phase5"
     / "calibration-v2"
     / "selected-config.json"
+)
+
+SEALED_QUESTIONS_PATH = (
+    BACKEND_DIR / "eval_data" / "phase5" / "sealed" / "questions.jsonl"
+)
+
+SEALED_INDEX_DIR = BACKEND_DIR / "indexes" / "phase5" / "sealed"
+CORPUS_MANIFEST_PATH = (
+    BACKEND_DIR / "eval_corpus" / "phase5" / "corpus-manifest.json"
 )
 
 
@@ -116,16 +127,33 @@ def main():
     rc_commit = result.stdout.strip()
     print(f"RC commit: {rc_commit}")
 
+    # Compute questions hash for sealed partition
+    questions_sha256 = None
+    if SEALED_QUESTIONS_PATH.is_file():
+        questions_sha256 = compute_jsonl_sha256(SEALED_QUESTIONS_PATH)
+
+    # Compute sealed partition index hashes (not default chroma_db)
+    sealed_chroma_dir = SEALED_INDEX_DIR / "chroma"
+    sealed_bm25_db = SEALED_INDEX_DIR / "rag_bm25.db"
+    sealed_chunk_manifest = SEALED_INDEX_DIR / "chunk-manifest.json"
+
+    # Compute corpus manifest hash
+    corpus_manifest_sha256 = compute_sha256(CORPUS_MANIFEST_PATH)
+
     # Compute hashes
     freeze_record = {
         "rc_commit": rc_commit,
+        "expected_commit": rc_commit,  # for blind runner verification
         "worktree_clean": clean,
         "frozen_at": "2026-07-23T00:00:00Z",  # deterministic
         "protocol_sha256": compute_sha256(PROTOCOL_PATH),
         "selected_config_sha256": compute_sha256(SELECTED_CONFIG_PATH),
         "config_sha256": compute_sha256(BACKEND_DIR / "pyproject.toml"),
-        "bm25_db_sha256": compute_sha256(BACKEND_DIR / "rag_bm25.db"),
-        "chroma_db_sha256": compute_dir_sha256(BACKEND_DIR / "chroma_db"),
+        "questions_sha256": questions_sha256,
+        "corpus_manifest_sha256": corpus_manifest_sha256,
+        "sealed_chroma_sha256": compute_dir_sha256(sealed_chroma_dir),
+        "sealed_bm25_sha256": compute_sha256(sealed_bm25_db),
+        "sealed_chunk_manifest_sha256": compute_sha256(sealed_chunk_manifest),
         "model_checkpoint_path": "chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
         "model_checkpoint_sha256": compute_sha256(
             Path(os.path.expanduser("~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt"))
@@ -138,10 +166,10 @@ def main():
         "model_server_name": "finquery-finance-sft1147",
     }
 
-    # Load selected config
+    # Load selected config — use "params" key (not "selected_params")
     with open(SELECTED_CONFIG_PATH, "r", encoding="utf-8") as f:
         selected_config = json.load(f)
-    freeze_record["selected_params"] = selected_config.get("selected_params", {})
+    freeze_record["selected_params"] = selected_config.get("params", {})
 
     # Save
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -154,8 +182,13 @@ def main():
     print(f"  Worktree clean: {clean}")
     print(f"  Protocol SHA256: {freeze_record['protocol_sha256']}")
     print(f"  Selected config SHA256: {freeze_record['selected_config_sha256']}")
+    print(f"  Questions SHA256: {freeze_record['questions_sha256']}")
+    print(f"  Corpus manifest SHA256: {freeze_record['corpus_manifest_sha256']}")
+    print(f"  Sealed chroma SHA256: {freeze_record['sealed_chroma_sha256']}")
+    print(f"  Sealed BM25 SHA256: {freeze_record['sealed_bm25_sha256']}")
     print(f"  Model checkpoint SHA256: {freeze_record['model_checkpoint_sha256']}")
     print(f"  Tokenizer SHA256: {freeze_record['tokenizer_sha256']}")
+    print(f"  Selected params: {freeze_record['selected_params']}")
 
     return 0
 

@@ -693,18 +693,41 @@ def evaluate_all():
        f"exists={bc is not None}, keys={list(bc.keys())[:10] if bc else 'none'}")
 
     # ── 20. seal_questions_labels (AC-52/53 done above, AC-54 here) ──
+    # AC-54 verifies the blind/scoring isolation boundary:
+    #   Blind run-manifest: questions_sha256 non-empty, labels_sha256 must be None
+    #   Scoring ledger: labels_sha256 non-empty, predictions_sha256 non-empty, bound
     if sm:
         qs = sm.get("questions_sha256") or ""
-        ls = sm.get("labels_sha256") or ""
-        ac("AC-54", "seal_questions_labels",
-           "Sealed manifest has questions_sha256 and labels_sha256",
-           bool(qs) and bool(ls),
-           f"questions_sha256={qs[:16]}..., "
-           f"labels_sha256={ls[:16]}...")
+        ls = sm.get("labels_sha256")
+        blind_ok = bool(qs) and ls is None
+        blind_evidence = (
+            f"blind_manifest: questions_sha256={qs[:16]}..., "
+            f"labels_sha256={ls}"
+        )
     else:
-        ac("AC-54", "seal_questions_labels",
-           "Sealed manifest has questions_sha256 and labels_sha256",
-           False, "run-manifest not found")
+        blind_ok = False
+        blind_evidence = "run-manifest not found"
+
+    sl = artifacts["scoring_ledger"]
+    if sl and isinstance(sl, list) and len(sl) > 0:
+        latest_entry = sl[-1]
+        sl_labels = latest_entry.get("labels_sha256") or ""
+        sl_preds = latest_entry.get("predictions_sha256") or ""
+        scoring_ok = bool(sl_labels) and bool(sl_preds)
+        scoring_evidence = (
+            f"scoring_ledger: labels_sha256={sl_labels[:16]}..., "
+            f"predictions_sha256={sl_preds[:16]}..."
+        )
+    else:
+        scoring_ok = False
+        scoring_evidence = "scoring ledger not found or empty"
+
+    ac("AC-54", "seal_questions_labels",
+       "Blind/scoring isolation: blind manifest has questions_sha256 (non-empty) "
+       "and labels_sha256 (null); scoring ledger has labels_sha256 and "
+       "predictions_sha256 (both non-empty, bound)",
+       blind_ok and scoring_ok,
+       f"{blind_evidence}; {scoring_evidence}")
 
     # ── 21. deterministic_runtime ──
     if sm:

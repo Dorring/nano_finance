@@ -158,7 +158,7 @@ def _run_rc_freeze_checks(skip: bool = False) -> RCFreezeReport | None:
     print("Running RC freeze pre-flight checks...")
     rc_manifest = _load_rc_freeze_manifest()
 
-    expected_commit = rc_manifest.get("expected_commit")
+    expected_commit = rc_manifest.get("expected_commit") or rc_manifest.get("rc_commit")
     expected_questions_sha = rc_manifest.get("questions_sha256")
     expected_protocol_sha = rc_manifest.get("protocol_sha256")
 
@@ -268,6 +268,21 @@ async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
     )
 
     # Write the run manifest with all metadata.
+    # NOTE: labels_path is intentionally NOT passed — blind runner must
+    # never access labels. labels_sha256 will be None in the manifest,
+    # which is the correct behavior for blind/scoring isolation.
+    rc_manifest = _load_rc_freeze_manifest()
+    model_checkpoint_path = rc_manifest.get("model_checkpoint_path")
+    tokenizer_path = rc_manifest.get("tokenizer_path")
+    corpus_manifest_path = (
+        BACKEND_DIR / "eval_corpus" / "phase5" / "corpus-manifest.json"
+    )
+    sealed_vector_index = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "chroma"
+    sealed_bm25_manifest = str(
+        BACKEND_DIR / "indexes" / "phase5" / "sealed" / "rag_bm25.db"
+    )
+    dependency_lock_path = BACKEND_DIR / "uv.lock"
+
     manifest = create_manifest(
         run_id=f"sealed-v2-{started_at}",
         run_type="sealed",
@@ -278,6 +293,12 @@ async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
         questions_path=SEALED_QUESTIONS_PATH,
         predictions_path=PREDICTIONS_PATH,
         config_path=SELECTED_CONFIG_PATH,
+        model_checkpoint_path=model_checkpoint_path,
+        tokenizer_path=tokenizer_path,
+        corpus_manifest_path=corpus_manifest_path,
+        vector_index_path=sealed_vector_index,
+        bm25_index_manifest=sealed_bm25_manifest,
+        dependency_lock_path=dependency_lock_path,
         repo_path=BACKEND_DIR,
     )
     _write_text_atomic(

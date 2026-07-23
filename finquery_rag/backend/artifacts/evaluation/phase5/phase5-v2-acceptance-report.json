@@ -1,8 +1,8 @@
 {
   "report_type": "phase5_v2_acceptance_report",
-  "generated_at": "2026-07-23T14:07:14.584777+00:00",
+  "generated_at": "2026-07-23T15:24:31.414500+00:00",
   "branch": "feat/nf-05-sealed-evaluation",
-  "rc_commit": "d5a6fa982b3bb3c97b85d4086528a17b0912f61f",
+  "rc_commit": "14d80fb0efe47743194ce393370f6b0583f16961",
   "protocol_version": "2.1",
   "model_name": "finquery-finance-v2-lr010-150",
   "model_note": "Temporary smoke model used for evaluation pipeline validation. Not for production quality estimation.",
@@ -238,14 +238,14 @@
       "section": "rc_freeze",
       "description": "RC freeze manifest has non-empty rc_commit",
       "passed": true,
-      "evidence": "rc_commit=0f62a8cdd3c6"
+      "evidence": "rc_commit=d4398e8497e8"
     },
     {
       "id": "AC-27",
       "section": "rc_freeze",
       "description": "RC freeze manifest has worktree_clean == True",
-      "passed": true,
-      "evidence": "worktree_clean=True"
+      "passed": false,
+      "evidence": "worktree_clean=False"
     },
     {
       "id": "AC-70",
@@ -446,9 +446,9 @@
     {
       "id": "AC-54",
       "section": "seal_questions_labels",
-      "description": "Sealed manifest has questions_sha256 and labels_sha256",
-      "passed": false,
-      "evidence": "questions_sha256=96b9f73c08bcf525..., labels_sha256=..."
+      "description": "Blind/scoring isolation: blind manifest has questions_sha256 (non-empty) and labels_sha256 (null); scoring ledger has labels_sha256 and predictions_sha256 (both non-empty, bound)",
+      "passed": true,
+      "evidence": "blind_manifest: questions_sha256=96b9f73c08bcf525..., labels_sha256=None; scoring_ledger: labels_sha256=c1012ce2d790f7b8..., predictions_sha256=3404380701a90dc1..."
     },
     {
       "id": "AC-55",
