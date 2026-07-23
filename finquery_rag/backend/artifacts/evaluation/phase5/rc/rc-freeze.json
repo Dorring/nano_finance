@@ -1,0 +1,26 @@
+{
+  "bm25_db_sha256": "dd8e174081576b4f797340eb8b34bf1d873231e23bd3237a435887b26d59bcbb",
+  "chroma_db_sha256": "ff44337490e60acb5e28d9cba444b0b74d96818e79448ac09b1ea9a0927a4065",
+  "config_sha256": "58f7dacf4ca7825b8e650ecc0c30f82639044ba17fb7abae0d4c15f86746c02f",
+  "frozen_at": "2026-07-23T00:00:00Z",
+  "model_checkpoint_path": "/mnt/disk/mxf/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
+  "model_checkpoint_sha256": "f6b93771b7d35d33f0dab5449b8568bc8135c176da442a74d12c0cc9941ca604",
+  "model_server_endpoint": "http://localhost:8500",
+  "model_server_name": "finquery-finance-sft1147",
+  "protocol_sha256": "2a4c7294ba183552af871ecb86545358cf2a68eb9c33e8dc34e54fd55e4f39c6",
+  "rc_commit": "82a92d899129826a0cfaf798c20a5deecb236061",
+  "selected_config_sha256": "c271dcffff3ddb80413675f8a941c101633ebeb02b275871dfaf48f28a43ffbb",
+  "selected_params": {
+    "document_coverage_threshold": 0.0,
+    "max_context_tokens": 2048,
+    "min_score_threshold": 0.0,
+    "n_results": 3,
+    "numeric_dense_floor": 0.0,
+    "numeric_rrf_floor": 0.0,
+    "sufficiency_average_score_threshold": 0.2,
+    "sufficiency_best_score_threshold": 0.3
+  },
+  "tokenizer_path": "/mnt/disk/mxf/.cache/nanochat/tokenizer/tokenizer.pkl",
+  "tokenizer_sha256": "388319b6be8f0e56a1f1063a2fcaaeae7013f4aec1320de73bd35a63721ade81",
+  "worktree_clean": true
+}

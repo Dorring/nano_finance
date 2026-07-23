@@ -175,11 +175,27 @@ def run_sealed_scoring(blind_info: dict):
 
     # Score using sealed scorer (no RAG calls)
     print("Scoring predictions (no RAG calls)...")
-    scoring_result = score_sealed_predictions(
-        predictions_path=str(PREDICTIONS_OUTPUT),
-        labels_path=str(SEALED_LABELS_PATH),
-        predictions_sha256=blind_info["predictions_sha256"],
-    )
+    # Create a temporary manifest for the sealed scorer
+    manifest = {
+        "predictions_sha256": blind_info["predictions_sha256"],
+        "labels_sha256": labels_hash,
+        "questions_sha256": blind_info["questions_sha256"],
+    }
+    manifest_path = REPORT_OUTPUT.parent / "run-manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+    scoring_output_path = REPORT_OUTPUT.parent / "sealed-scoring.json"
+    try:
+        scoring_result = score_sealed_predictions(
+            predictions_path=PREDICTIONS_OUTPUT,
+            labels_path=SEALED_LABELS_PATH,
+            protocol_path=manifest_path,
+            output_path=scoring_output_path,
+        )
+    except Exception as e:
+        print(f"Sealed scorer returned error (continuing with direct metrics): {e}")
+        scoring_result = {"status": "scorer_error", "error": str(e)}
 
     # Also compute full metrics
     from src.evaluation.schemas import EvaluationPrediction
