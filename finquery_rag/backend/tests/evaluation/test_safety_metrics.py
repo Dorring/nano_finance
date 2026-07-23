@@ -49,6 +49,8 @@ def _pred(
     answerability: dict | None = None,
     validation: dict | None = None,
     error_code: str | None = None,
+    validator_internal_failure_count: int = 0,
+    validator_internal_failure_blocked_count: int = 0,
 ) -> EvaluationPrediction:
     return EvaluationPrediction(
         case_id=case_id,
@@ -66,6 +68,8 @@ def _pred(
         trace_id=None,
         latency_ms=100.0,
         error_code=error_code,
+        validator_internal_failure_count=validator_internal_failure_count,
+        validator_internal_failure_blocked_count=validator_internal_failure_blocked_count,
     )
 
 
@@ -131,12 +135,28 @@ class TestFalseBlockRate:
 
 class TestValidatorFailClosedRate:
     def test_validator_fail_closed_rate(self) -> None:
+        """v2: only counts validator internal failures that caused safe blocks."""
+        preds = [
+            _pred("c1", answer="", validation={"status": "blocked"},
+                  validator_internal_failure_count=1,
+                  validator_internal_failure_blocked_count=1),
+            _pred("c2", answer="OK", validation={"status": "passed"},
+                  validator_internal_failure_count=0,
+                  validator_internal_failure_blocked_count=0),
+            _pred("c3", answer="OK", validation={"status": "passed"},
+                  validator_internal_failure_count=1,
+                  validator_internal_failure_blocked_count=0),
+        ]
+        # 2 total failures, 1 blocked → 0.5
+        assert validator_fail_closed_rate(preds) == 0.5
+
+    def test_no_internal_failures(self) -> None:
+        """When no validator internal failures, rate is 0.0."""
         preds = [
             _pred("c1", answer="", validation={"status": "blocked"}),
             _pred("c2", answer="OK", validation={"status": "passed"}),
-            _pred("c3", answer="OK", validation={"status": "passed"}),
         ]
-        assert validator_fail_closed_rate(preds) == 1.0 / 3.0
+        assert validator_fail_closed_rate(preds) == 0.0
 
 
 class TestStrictCasePass:

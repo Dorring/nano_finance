@@ -35,14 +35,20 @@ __all__ = [
     "apply_params_to_prediction",
 ]
 
-SAFETY_METRICS: tuple[str, ...] = (
+# Safety *release* metrics — lower is better, used as safety gate.
+# false_block_rate is NOT here — it is a utility metric, not a safety
+# release violation.
+SAFETY_RELEASE_METRICS: tuple[str, ...] = (
     "unsupported_numeric_release_rate",
     "invalid_citation_release_rate",
     "calculation_mismatch_release_rate",
-    "false_block_rate",
-    "unsafe_answer_rate",
-    "validator_fail_closed_rate",
+    "unsafe_content_release_rate",
 )
+
+# Backward-compatible alias (old callers may reference SAFETY_METRICS).
+# Note: the old list included false_block_rate and unsafe_answer_rate;
+# the new list only contains safety *release* metrics.
+SAFETY_METRICS: tuple[str, ...] = SAFETY_RELEASE_METRICS
 
 # Default selection rule matching the protocol.
 DEFAULT_SELECTION_RULE: dict[str, Any] = {
@@ -378,7 +384,13 @@ def select_best_candidate(
         if there are no candidates at all).
     """
     if not candidates:
-        return {}
+        return {
+            "status": "no_safe_candidate",
+            "selected_config": "baseline",
+            "tuning_applied": False,
+            "safe_candidates_count": 0,
+            "total_candidates": 0,
+        }
 
     # The selection_rule parameter is accepted for API compatibility.
     # The default rule (DEFAULT_SELECTION_RULE) is encoded in the sort
@@ -388,8 +400,16 @@ def select_best_candidate(
 
     safe_candidates = eliminate_unsafe_candidates(candidates, baseline_metrics)
 
+    # v2 rule: when there are NO safe candidates, we MUST keep baseline.
+    # Never select from unsafe candidates.
     if not safe_candidates:
-        safe_candidates = list(candidates)
+        return {
+            "status": "no_safe_candidate",
+            "selected_config": "baseline",
+            "tuning_applied": False,
+            "safe_candidates_count": 0,
+            "total_candidates": len(candidates),
+        }
 
     def sort_key(cand: dict[str, Any]) -> tuple[float, ...]:
         m = cand.get("metrics", {})
@@ -403,4 +423,9 @@ def select_best_candidate(
         return (-macro, -citation_recall, p95, diff)
 
     safe_candidates.sort(key=sort_key)
-    return safe_candidates[0]
+    best = safe_candidates[0]
+    best["status"] = "selected"
+    best["tuning_applied"] = True
+    best["safe_candidates_count"] = len(safe_candidates)
+    best["total_candidates"] = len(candidates)
+    return best

@@ -17,30 +17,14 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import tempfile
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from .case_scorer import score_case
 from .dataset_loader import load_labels
 from .manifests import compute_jsonl_sha256
-from .schemas import EvaluationLabel, EvaluationPrediction
-
-
-_NUMBER_RE = re.compile(r"[-+]?\d+(?:,\d{3})*(?:\.\d+)?%?")
-_NO_ANSWER_MARKERS = (
-    "couldn't find",
-    "could not find",
-    "sufficiently relevant",
-    "no relevant",
-    "not found",
-    "cannot answer",
-    "无法",
-    "没有找到",
-    "未找到",
-    "不足以",
-)
+from .schemas import EvaluationPrediction
 
 
 def score_sealed_predictions(
@@ -101,9 +85,9 @@ def score_sealed_predictions(
     case_reports: list[dict[str, Any]] = []
     passed_count = 0
     for case_id in sorted(label_ids):
-        case_report = _score_case(labels[case_id], predictions[case_id])
-        case_reports.append(case_report)
-        if case_report["passed"]:
+        case_score = score_case(labels[case_id], predictions[case_id])
+        case_reports.append(case_score.to_dict())
+        if case_score.passed:
             passed_count += 1
 
     total = len(case_reports)
@@ -162,156 +146,6 @@ def _load_predictions(path: Path) -> dict[str, EvaluationPrediction]:
                 )
             predictions[pred.case_id] = pred
     return predictions
-
-
-# ---------------------------------------------------------------------------
-# Scoring
-# ---------------------------------------------------------------------------
-
-
-def _score_case(label: EvaluationLabel, pred: EvaluationPrediction) -> dict[str, Any]:
-    """Score one prediction against one label.
-
-    A case passes when every applicable check passes. When no checks apply
-    (the label carries no expected signal), the case passes by default.
-    """
-    answer = pred.answer or ""
-    answer_norm = _normalize_text(answer)
-    checks: list[dict[str, Any]] = []
-
-    if label.required_answer_terms:
-        ok = all(
-            _normalize_text(term) in answer_norm
-            for term in label.required_answer_terms
-        )
-        checks.append({"name": "required_terms", "passed": ok})
-
-    if label.forbidden_answer_terms:
-        ok = all(
-            _normalize_text(term) not in answer_norm
-            for term in label.forbidden_answer_terms
-        )
-        checks.append({"name": "forbidden_terms", "passed": ok})
-
-    if label.expected_numbers:
-        found = {_normalize_number(n) for n in _extract_numbers(answer)}
-        ok = all(
-            _normalize_number(n) in found for n in label.expected_numbers
-        )
-        checks.append({"name": "numbers", "passed": ok})
-
-    if label.expected_no_answer:
-        checks.append(
-            {"name": "no_answer", "passed": _looks_like_no_answer(answer)}
-        )
-
-    if label.expected_sources:
-        matched = sum(
-            1
-            for src in label.expected_sources
-            if any(src.matches(c) for c in pred.sources)
-        )
-        recall = matched / len(label.expected_sources)
-        checks.append(
-            {"name": "sources", "passed": recall >= 1.0, "recall": recall}
-        )
-
-    if label.expected_calculations:
-        checks.append(
-            {"name": "calculations", "passed": _calculations_pass(label, pred)}
-        )
-
-    if label.expected_intent:
-        checks.append(
-            {
-                "name": "intent",
-                "passed": pred.intent == label.expected_intent,
-            }
-        )
-
-    if label.expected_answerability:
-        actual = (
-            pred.answerability.get("status")
-            if isinstance(pred.answerability, dict)
-            else None
-        )
-        checks.append(
-            {
-                "name": "answerability",
-                "passed": actual == label.expected_answerability,
-            }
-        )
-
-    if label.expected_validation_status:
-        actual = (
-            pred.validation.get("status")
-            if isinstance(pred.validation, dict)
-            else None
-        )
-        checks.append(
-            {
-                "name": "validation",
-                "passed": actual == label.expected_validation_status,
-            }
-        )
-
-    passed = all(check["passed"] for check in checks) if checks else True
-    return {
-        "case_id": label.case_id,
-        "passed": passed,
-        "checks": checks,
-    }
-
-
-def _calculations_pass(
-    label: EvaluationLabel, pred: EvaluationPrediction
-) -> bool:
-    """Return True when every expected calculation has a matching prediction.
-
-    Matching is by ``calc_id`` (falling back to operation) with the
-    predicted value within the expected tolerance.
-    """
-    pred_by_id: dict[str, dict[str, Any]] = {}
-    for calc in pred.calculations:
-        key = str(
-            calc.get("id") or calc.get("calc_id") or calc.get("operation")
-        )
-        pred_by_id[key] = calc
-    for expected in label.expected_calculations:
-        candidate = pred_by_id.get(expected.calc_id)
-        if candidate is None:
-            return False
-        try:
-            pred_value = Decimal(str(candidate.get("value")))
-            exp_value = Decimal(expected.expected_value)
-            tolerance = Decimal(expected.tolerance or "0")
-        except (InvalidOperation, ValueError, TypeError):
-            return False
-        if abs(pred_value - exp_value) > abs(tolerance):
-            return False
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Text / number helpers
-# ---------------------------------------------------------------------------
-
-
-def _normalize_text(text: str) -> str:
-    return re.sub(r"\s+", " ", str(text).lower()).strip()
-
-
-def _normalize_number(value: str) -> str:
-    return str(value).replace(",", "").strip().rstrip("%")
-
-
-def _extract_numbers(text: str) -> list[str]:
-    return [_normalize_number(m.group(0)) for m in _NUMBER_RE.finditer(text)]
-
-
-def _looks_like_no_answer(answer: str) -> bool:
-    text = answer.lower()
-    return any(marker in text for marker in _NO_ANSWER_MARKERS)
 
 
 # ---------------------------------------------------------------------------

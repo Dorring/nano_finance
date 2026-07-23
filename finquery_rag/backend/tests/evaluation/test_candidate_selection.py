@@ -1,4 +1,10 @@
-"""Tests for candidate selection rules in src.evaluation.calibration."""
+"""Tests for candidate selection rules in src.evaluation.calibration.
+
+v2 semantics: safety *release* metrics are the safety gate.
+``false_block_rate`` is a utility metric, not a safety release violation.
+When safe_candidates == 0, the function returns baseline (never selects
+from unsafe candidates).
+"""
 from __future__ import annotations
 
 from src.evaluation.calibration import select_best_candidate
@@ -8,9 +14,8 @@ _BASELINE = {
     "unsupported_numeric_release_rate": 0.0,
     "invalid_citation_release_rate": 0.0,
     "calculation_mismatch_release_rate": 0.0,
+    "unsafe_content_release_rate": 0.0,
     "false_block_rate": 0.0,
-    "unsafe_answer_rate": 0.0,
-    "validator_fail_closed_rate": 0.0,
     "citation_recall": 0.5,
     "p95_latency_ms": 100.0,
 }
@@ -23,9 +28,8 @@ def _candidate(
     unsupported: float = 0.0,
     mismatch: float = 0.0,
     invalid_citation: float = 0.0,
+    unsafe_content: float = 0.0,
     false_block: float = 0.0,
-    unsafe: float = 0.0,
-    fail_closed: float = 0.0,
     citation_recall: float = 0.5,
     p95: float = 100.0,
 ) -> dict:
@@ -36,9 +40,8 @@ def _candidate(
             "unsupported_numeric_release_rate": unsupported,
             "calculation_mismatch_release_rate": mismatch,
             "invalid_citation_release_rate": invalid_citation,
+            "unsafe_content_release_rate": unsafe_content,
             "false_block_rate": false_block,
-            "unsafe_answer_rate": unsafe,
-            "validator_fail_closed_rate": fail_closed,
             "citation_recall": citation_recall,
             "p95_latency_ms": p95,
         },
@@ -49,10 +52,10 @@ def _candidate(
 
 class TestSafetyWorseEliminated:
     def test_safety_worse_eliminated(self) -> None:
-        """A candidate with any safety metric worse than baseline is not selected."""
+        """A candidate with any safety release metric worse than baseline is not selected."""
         candidates = [
             _candidate("safe", macro=0.6),
-            _candidate("unsafe", macro=0.99, false_block=0.1),
+            _candidate("unsafe", macro=0.99, unsafe_content=0.1),
         ]
         best = select_best_candidate(candidates, _BASELINE)
         assert best["params"]["id"] == "safe"
@@ -90,3 +93,38 @@ class TestMaximizeMacroStrictPass:
         ]
         best = select_best_candidate(candidates, _BASELINE)
         assert best["params"]["id"] == "high"
+
+
+class TestNoSafeCandidateReturnsBaseline:
+    def test_no_safe_candidate_returns_baseline(self) -> None:
+        """When all candidates are unsafe, return baseline (never select unsafe)."""
+        candidates = [
+            _candidate("bad1", macro=0.99, unsafe_content=0.1),
+            _candidate("bad2", macro=0.99, unsupported=0.01),
+        ]
+        best = select_best_candidate(candidates, _BASELINE)
+        assert best["status"] == "no_safe_candidate"
+        assert best["selected_config"] == "baseline"
+        assert best["tuning_applied"] is False
+        assert best["safe_candidates_count"] == 0
+
+
+class TestEmptyCandidatesReturnsBaseline:
+    def test_empty_candidates_returns_baseline(self) -> None:
+        """When no candidates at all, return baseline."""
+        best = select_best_candidate([], _BASELINE)
+        assert best["status"] == "no_safe_candidate"
+        assert best["selected_config"] == "baseline"
+
+
+class TestFalseBlockIsUtilityNotSafety:
+    def test_false_block_not_safety(self) -> None:
+        """false_block_rate is utility, not safety — candidate with higher
+        false_block but higher macro should still win (it is safe)."""
+        candidates = [
+            _candidate("conservative", macro=0.6, false_block=0.0),
+            _candidate("aggressive", macro=0.9, false_block=0.2),
+        ]
+        best = select_best_candidate(candidates, _BASELINE)
+        # aggressive is safe (no safety release regression) and has higher macro
+        assert best["params"]["id"] == "aggressive"

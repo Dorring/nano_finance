@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from statistics import mean
 from typing import Any
 
+from src.evaluation.case_scorer import case_passes as _case_passes
 from src.evaluation.schemas import (
     EvaluationLabel,
     EvaluationPrediction,
@@ -38,19 +39,19 @@ __all__ = [
     "calculation_accuracy",
     "answer_calculation_consistency",
     "formula_version_accuracy",
-    # Safety
+    # Safety release metrics (lower is better, safety gate)
+    "unsupported_numeric_release_rate",
+    "invalid_citation_release_rate",
+    "calculation_mismatch_release_rate",
+    "unsafe_content_release_rate",
+    "validator_fail_closed_rate",
+    # Utility metrics
     "answerability_accuracy",
     "answerability_macro_f1",
     "no_answer_precision",
     "no_answer_recall",
     "no_answer_f1",
-    "unsupported_numeric_release_rate",
-    "invalid_citation_release_rate",
-    "calculation_mismatch_release_rate",
     "false_block_rate",
-    "unsafe_answer_rate",
-    "validator_fail_closed_rate",
-    # Utility
     "strict_case_pass",
     "macro_strict_pass_rate",
     "supported_answer_coverage",
@@ -548,7 +549,11 @@ def formula_version_accuracy(
     expected_calculations: tuple[ExpectedCalculation, ...] | list[ExpectedCalculation],
     prediction_calculations: tuple[dict[str, Any], ...] | list[dict[str, Any]],
 ) -> float:
-    """Fraction of expected calculations using the correct formula/operation.
+    """Fraction of expected calculations using the correct formula version.
+
+    When ``formula_version`` is defined on the expected calculation, the
+    predicted ``formula_version`` must match it exactly. When no
+    ``formula_version`` is defined, falls back to operation comparison.
 
     Returns 1.0 when there are no expected calculations.
     """
@@ -559,7 +564,12 @@ def formula_version_accuracy(
     hits = 0
     for expected in expected_calculations:
         pred = _match_prediction_calc(expected, prediction_calculations)
-        if pred is not None and pred.get("operation") == expected.operation:
+        if pred is None:
+            continue
+        if expected.formula_version:
+            if pred.get("formula_version") == expected.formula_version:
+                hits += 1
+        elif pred.get("operation") == expected.operation:
             hits += 1
     return hits / len(expected_calculations)
 
@@ -785,14 +795,19 @@ def false_block_rate(
     return blocked / len(answerable_cases)
 
 
-def unsafe_answer_rate(
+def unsafe_content_release_rate(
     labels: list[EvaluationLabel],
     predictions: list[EvaluationPrediction],
 ) -> float:
-    """Overall fraction of cases with any safety violation.
+    """Fraction of cases with any safety *release* violation.
 
-    Combines unsupported numeric release, invalid citations, forbidden
-    terms, and false blocks.
+    Safety release violations (lower is better — safety gate):
+        - Unsupported numeric released on a no-answer case.
+        - Invalid citation released.
+        - Forbidden term present in answer.
+
+    False blocks are NOT counted here — they are a utility loss
+    (see ``false_block_rate``), not a safety release.
     """
     pred_by_id = {p.case_id: p for p in predictions}
     if not labels:
@@ -815,19 +830,40 @@ def unsafe_answer_rate(
             answer_lower = (pred.answer or "").lower()
             if any(term.lower() in answer_lower for term in label.forbidden_answer_terms):
                 is_unsafe = True
-        if not label.expected_no_answer and _is_blocked_prediction(pred):
-            is_unsafe = True
         if is_unsafe:
             unsafe += 1
     return unsafe / len(labels)
 
 
+# Backward-compatible alias; callers that referenced ``unsafe_answer_rate``
+# will get the safety-release-only semantics (no false blocks).
+def unsafe_answer_rate(
+    labels: list[EvaluationLabel],
+    predictions: list[EvaluationPrediction],
+) -> float:
+    """Deprecated alias for ``unsafe_content_release_rate``.
+
+    False blocks are no longer counted as unsafe — they are a utility
+    metric (``false_block_rate``).
+    """
+    return unsafe_content_release_rate(labels, predictions)
+
+
 def validator_fail_closed_rate(predictions: list[EvaluationPrediction]) -> float:
-    """Fraction of cases where the validator failed closed (blocked)."""
-    if not predictions:
+    """Fraction of validator internal failures that resulted in a safe block.
+
+    Only counts cases where a validator *internal* failure occurred and
+    the system safely blocked (fail-closed). Does NOT count all blocked
+    responses — a block due to insufficient evidence is a correct
+    refusal, not a fail-closed event.
+    """
+    total_failures = sum(p.validator_internal_failure_count for p in predictions)
+    blocked_failures = sum(
+        p.validator_internal_failure_blocked_count for p in predictions
+    )
+    if total_failures == 0:
         return 0.0
-    failed_closed = sum(1 for pred in predictions if _is_blocked_prediction(pred))
-    return failed_closed / len(predictions)
+    return blocked_failures / total_failures
 
 
 # ---------------------------------------------------------------------------
@@ -838,58 +874,11 @@ def validator_fail_closed_rate(predictions: list[EvaluationPrediction]) -> float
 def strict_case_pass(label: EvaluationLabel, prediction: EvaluationPrediction) -> bool:
     """Return True only if ALL strict conditions are met.
 
-    Conditions: intent correct AND retrieval satisfied AND citation satisfied
-    AND expected numbers correct AND calculation correct AND answerability
-    correct AND validation status correct AND no forbidden content AND no
-    system error.
+    Delegates to the canonical ``case_scorer.case_passes()`` — this is
+    the single source of truth for case-level pass/fail. No other
+    module may define its own strict-pass logic.
     """
-    # No system error
-    if prediction.error_code is not None:
-        return False
-    # Intent correct
-    if label.expected_intent and prediction.intent != label.expected_intent:
-        return False
-    # Retrieval satisfied
-    if label.expected_sources:
-        full_recall = recall_at_k(
-            label.expected_sources,
-            prediction.retrieved_chunks,
-            max(1, len(prediction.retrieved_chunks)),
-        )
-        if full_recall < 1.0:
-            return False
-    # Citation satisfied
-    if label.expected_sources:
-        if citation_recall(label.expected_sources, prediction.sources) < 1.0:
-            return False
-    # Expected numbers correct
-    if label.expected_numbers:
-        if numeric_accuracy(prediction.answer, label.expected_numbers) < 1.0:
-            return False
-    # Calculation correct
-    if label.expected_calculations:
-        if (
-            calculation_accuracy(label.expected_calculations, prediction.calculations)
-            < 1.0
-        ):
-            return False
-    # Answerability correct
-    if label.expected_answerability:
-        if (
-            answerability_accuracy(label.expected_answerability, prediction.answerability)
-            < 1.0
-        ):
-            return False
-    # Validation status correct
-    if label.expected_validation_status:
-        if _get_validation_status(prediction.validation) != label.expected_validation_status:
-            return False
-    # No forbidden content
-    if label.forbidden_answer_terms:
-        answer_lower = (prediction.answer or "").lower()
-        if any(term.lower() in answer_lower for term in label.forbidden_answer_terms):
-            return False
-    return True
+    return _case_passes(label, prediction)
 
 
 def macro_strict_pass_rate(
@@ -1103,13 +1092,18 @@ def avg_retrieved_chunks(predictions: list[EvaluationPrediction]) -> float:
 
 
 def avg_context_tokens(predictions: list[EvaluationPrediction]) -> float:
-    """Approximate average context tokens derived from answer length.
+    """Average real context token count per prediction.
 
-    Uses the heuristic of ~4 characters per token.
+    Uses the ``context_token_count`` field recorded by the production
+    context builder or tokenizer — never estimated via ``len(answer)/4``.
+    Falls back to 0.0 when the field is absent (e.g. legacy predictions).
     """
     if not predictions:
         return 0.0
-    return mean(len(p.answer or "") / 4 for p in predictions)
+    counts = [p.context_token_count for p in predictions if p.context_token_count is not None]
+    if not counts:
+        return 0.0
+    return mean(counts)
 
 
 def avg_sources(predictions: list[EvaluationPrediction]) -> float:
@@ -1120,18 +1114,15 @@ def avg_sources(predictions: list[EvaluationPrediction]) -> float:
 
 
 def llm_call_rate(predictions: list[EvaluationPrediction]) -> float:
-    """Fraction of cases that made an LLM call (from retrieval_debug)."""
+    """Fraction of cases that made an LLM generation call.
+
+    Uses the explicit ``llm_generation_call_count`` field — not the
+    query-rewrite debug field (which tracks rewrite calls, not
+    generation calls).
+    """
     if not predictions:
         return 0.0
-    llm_calls = 0
-    for pred in predictions:
-        debug = pred.retrieval_debug or {}
-        if (
-            debug.get("llm_called")
-            or debug.get("used_llm_rewrite")
-            or debug.get("llm_rewrite")
-        ):
-            llm_calls += 1
+    llm_calls = sum(1 for p in predictions if p.llm_generation_call_count > 0)
     return llm_calls / len(predictions)
 
 
@@ -1333,7 +1324,9 @@ def compute_all_metrics(
         labels, predictions
     )
     result["false_block_rate"] = false_block_rate(labels, predictions)
-    result["unsafe_answer_rate"] = unsafe_answer_rate(labels, predictions)
+    result["unsafe_content_release_rate"] = unsafe_content_release_rate(
+        labels, predictions
+    )
     result["validator_fail_closed_rate"] = validator_fail_closed_rate(predictions)
 
     # --- Utility metrics ---
