@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -253,7 +254,7 @@ def _build_engine_with_params(
             client,
             partition="calibration",
             calibration_params=params,
-            model_name="finquery-finance-sft1147",
+            model_name=os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147"),
             run_sentinel=True,
         )
         print(

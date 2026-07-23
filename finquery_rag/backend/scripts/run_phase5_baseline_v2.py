@@ -32,6 +32,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -93,7 +94,7 @@ def compute_manifest(partition: str, engine_record) -> dict:
         "bm25_db_sha256": compute_sha256(index_dir / "rag_bm25.db"),
         "chunk_manifest_sha256": compute_sha256(index_dir / "chunk-manifest.json"),
         "model_server_endpoint": "http://localhost:8500",
-        "model_server_name": "finquery-finance-sft1147",
+        "model_server_name": os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147"),
         "sentinel_query_passed": engine_record.sentinel_query_passed,
         "sentinel_query_result_count": engine_record.sentinel_query_result_count,
     }
@@ -135,7 +136,7 @@ async def run_partition_evaluation(partition: str) -> dict | None:
         engine, engine_record = build_evaluation_engine(
             client,
             partition=partition,
-            model_name="finquery-finance-sft1147",
+            model_name=os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147"),
             run_sentinel=True,
         )
         user_id = engine_record.partition_user_id

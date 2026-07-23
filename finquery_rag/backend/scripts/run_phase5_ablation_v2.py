@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -78,7 +79,7 @@ async def run_ablation_variant(
             client,
             partition="dev",
             feature_flags=flags,
-            model_name="finquery-finance-sft1147",
+            model_name=os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147"),
             run_sentinel=True,
         )
     except Exception as exc:

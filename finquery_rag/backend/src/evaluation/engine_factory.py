@@ -251,7 +251,7 @@ def build_evaluation_engine(
     partition: str,
     calibration_params: dict[str, Any] | None = None,
     feature_flags: EvaluationFeatureFlags | None = None,
-    model_name: str = "finquery-finance-sft1147",
+    model_name: str = "",
     backend_dir: Path | None = None,
     run_sentinel: bool = True,
 ) -> tuple[Any, EngineApplicationRecord]:
@@ -270,6 +270,9 @@ def build_evaluation_engine(
     param and flag application for auditability.
     """
     from src.services.rag_engine import RAGEngine
+
+    if not model_name:
+        model_name = os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147")
 
     record = EngineApplicationRecord()
 

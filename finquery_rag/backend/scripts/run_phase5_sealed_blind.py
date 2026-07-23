@@ -91,7 +91,7 @@ RUN_MANIFEST_PATH = OUTPUT_DIR / "run-manifest.json"
 RC_FREEZE_REPORT_PATH = OUTPUT_DIR / "rc-freeze-report.json"
 
 MODEL_SERVER_ENDPOINT = "http://localhost:8500/v1"
-MODEL_NAME = "finquery-finance-sft1147"
+MODEL_NAME = os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147")
 
 
 def _now_iso() -> str:
