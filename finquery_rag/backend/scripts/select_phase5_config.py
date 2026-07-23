@@ -24,8 +24,6 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 from src.evaluation.calibration import (  # noqa: E402
-    select_best_candidate,
-    eliminate_unsafe_candidates,
     DEFAULT_SELECTION_RULE,
 )
 
@@ -125,12 +123,12 @@ def main():
         json.dump(selection_record, f, ensure_ascii=False, indent=2, sort_keys=True, default=str)
     print(f"\nSelected config saved to: {OUTPUT_PATH}")
 
-    print(f"\nSelection Summary:")
+    print("\nSelection Summary:")
     print(f"  Selected params: {winner_params}")
     print(f"  Total candidates: {cal_report.get('total_candidates', 0)}")
     print(f"  Safe candidates: {cal_report.get('safe_candidates', 0)}")
-    print(f"  Config change isolated: Yes")
-    print(f"  No sealed data used: Yes")
+    print("  Config change isolated: Yes")
+    print("  No sealed data used: Yes")
 
     return 0
 

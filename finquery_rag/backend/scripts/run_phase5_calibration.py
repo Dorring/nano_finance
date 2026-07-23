@@ -27,7 +27,6 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from src.evaluation.blind_runner import run_blind_queries  # noqa: E402
 from src.evaluation.dataset_loader import load_queries_and_labels  # noqa: E402
-from src.evaluation.metrics import compute_all_metrics  # noqa: E402
 from src.evaluation.calibration import (  # noqa: E402
     search_calibration_space,
     select_best_candidate,
@@ -196,7 +195,7 @@ def main():
     print(f"\nCalibration report saved to: {output_path}")
 
     if output.get("calibration_status") == "completed":
-        print(f"\nCalibration Summary:")
+        print("\nCalibration Summary:")
         print(f"  Total combinations: {output.get('total_combinations', 0)}")
         print(f"  Total candidates: {output.get('total_candidates', 0)}")
         print(f"  Safe candidates: {output.get('safe_candidates', 0)}")

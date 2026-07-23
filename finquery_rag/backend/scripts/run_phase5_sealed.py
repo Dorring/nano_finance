@@ -234,7 +234,7 @@ def run_sealed_scoring(blind_info: dict):
         json.dump(report, f, ensure_ascii=False, indent=2, sort_keys=True, default=str)
     print(f"\nSealed report saved to: {REPORT_OUTPUT}")
 
-    print(f"\nSealed Scoring Summary:")
+    print("\nSealed Scoring Summary:")
     print(f"  Total queries: {n}")
     print(f"  Strict pass: {n_pass}/{n}")
     print(f"  Strict pass rate: {pass_rate:.4f}")

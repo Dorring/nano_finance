@@ -18,7 +18,6 @@ Environment:
 from __future__ import annotations
 
 import asyncio
-import copy
 import json
 import sys
 from pathlib import Path
@@ -205,11 +204,11 @@ def main():
     print(f"\nAblation report saved to: {output_path}")
 
     # Print summary
-    print(f"\nAblation Summary:")
+    print("\nAblation Summary:")
     print(f"  Total variants: {output['total_variants']}")
     print(f"  Successful: {output['successful_variants']}")
     print(f"  Failed: {output['failed_variants']}")
-    print(f"\n  Variant Results:")
+    print("\n  Variant Results:")
     for vid in sorted(output["variants"].keys()):
         v = output["variants"][vid]
         status = "OK" if v["status"] == "completed" else "FAIL"

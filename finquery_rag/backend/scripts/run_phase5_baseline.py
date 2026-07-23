@@ -243,7 +243,7 @@ def main():
     # Print summary
     if output.get("evaluation_status") == "completed":
         summary = output.get("summary", {})
-        print(f"\nBaseline Summary:")
+        print("\nBaseline Summary:")
         print(f"  Total queries: {summary.get('total_queries', 0)}")
         print(f"  Strict pass: {summary.get('strict_pass_count', 0)}/{summary.get('total_queries', 0)}")
         print(f"  Strict pass rate: {summary.get('strict_pass_rate', 0):.4f}")

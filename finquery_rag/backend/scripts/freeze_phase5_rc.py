@@ -149,7 +149,7 @@ def main():
         json.dump(freeze_record, f, ensure_ascii=False, indent=2, sort_keys=True, default=str)
     print(f"\nRC freeze record saved to: {OUTPUT_PATH}")
 
-    print(f"\nFreeze Summary:")
+    print("\nFreeze Summary:")
     print(f"  RC commit: {rc_commit}")
     print(f"  Worktree clean: {clean}")
     print(f"  Protocol SHA256: {freeze_record['protocol_sha256']}")
