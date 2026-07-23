@@ -88,9 +88,9 @@ def compute_manifest(partition: str, engine_record) -> dict:
     hashes: dict = {
         "partition": partition,
         "user_id": PARTITION_USER_IDS[partition],
-        "chroma_db_path": str(index_dir / "chroma"),
+        "chroma_db_path": str((index_dir / "chroma").relative_to(BACKEND_DIR)),
         "chroma_db_sha256": compute_dir_sha256(index_dir / "chroma"),
-        "bm25_db_path": str(index_dir / "rag_bm25.db"),
+        "bm25_db_path": str((index_dir / "rag_bm25.db").relative_to(BACKEND_DIR)),
         "bm25_db_sha256": compute_sha256(index_dir / "rag_bm25.db"),
         "chunk_manifest_sha256": compute_sha256(index_dir / "chunk-manifest.json"),
         "model_server_endpoint": "http://localhost:8500",
@@ -197,7 +197,7 @@ async def run_partition_evaluation(partition: str) -> dict | None:
         },
         "slice_metrics": slice_metrics,
         "failure_taxonomy": failures,
-        "predictions_path": str(preds_path),
+        "predictions_path": str(preds_path.relative_to(BACKEND_DIR)),
     }
     return result
 

@@ -33,8 +33,7 @@ OUTPUT_PATH = (
     / "artifacts"
     / "evaluation"
     / "phase5"
-    / "rc"
-    / "rc-freeze.json"
+    / "rc-freeze-manifest.json"
 )
 
 PROTOCOL_PATH = (
@@ -51,7 +50,7 @@ SELECTED_CONFIG_PATH = (
     / "artifacts"
     / "evaluation"
     / "phase5"
-    / "calibration"
+    / "calibration-v2"
     / "selected-config.json"
 )
 
