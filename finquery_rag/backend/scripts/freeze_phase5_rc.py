@@ -139,6 +139,12 @@ def main():
     # Compute corpus manifest hash
     corpus_manifest_sha256 = compute_sha256(CORPUS_MANIFEST_PATH)
 
+    # Read model name from environment (same source as blind runner)
+    model_server_name = os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147")
+
+    # Compute dependency lock hash
+    dependency_lock_path = BACKEND_DIR / "uv.lock"
+
     # Compute hashes
     freeze_record = {
         "rc_commit": rc_commit,
@@ -153,6 +159,7 @@ def main():
         "sealed_chroma_sha256": compute_dir_sha256(sealed_chroma_dir),
         "sealed_bm25_sha256": compute_sha256(sealed_bm25_db),
         "sealed_chunk_manifest_sha256": compute_sha256(sealed_chunk_manifest),
+        "dependency_lock_sha256": compute_sha256(dependency_lock_path),
         "model_checkpoint_path": "chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
         "model_checkpoint_sha256": compute_sha256(
             Path(os.path.expanduser("~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt"))
@@ -162,7 +169,7 @@ def main():
             Path("/mnt/disk/mxf/.cache/nanochat/tokenizer/tokenizer.pkl")
         ),
         "model_server_endpoint": "http://localhost:8500",
-        "model_server_name": "finquery-finance-sft1147",
+        "model_server_name": model_server_name,
     }
 
     # Load selected config — use "params" key (not "selected_params")
@@ -187,6 +194,8 @@ def main():
     print(f"  Sealed BM25 SHA256: {freeze_record['sealed_bm25_sha256']}")
     print(f"  Model checkpoint SHA256: {freeze_record['model_checkpoint_sha256']}")
     print(f"  Tokenizer SHA256: {freeze_record['tokenizer_sha256']}")
+    print(f"  Dependency lock SHA256: {freeze_record['dependency_lock_sha256']}")
+    print(f"  Model server name: {freeze_record['model_server_name']}")
     print(f"  Selected params: {freeze_record['selected_params']}")
 
     return 0

@@ -161,6 +161,39 @@ def _run_rc_freeze_checks(skip: bool = False) -> RCFreezeReport | None:
     expected_commit = rc_manifest.get("expected_commit") or rc_manifest.get("rc_commit")
     expected_questions_sha = rc_manifest.get("questions_sha256")
     expected_protocol_sha = rc_manifest.get("protocol_sha256")
+    expected_selected_config_sha = rc_manifest.get("selected_config_sha256")
+    expected_corpus_manifest_sha = rc_manifest.get("corpus_manifest_sha256")
+    expected_chroma_sha = rc_manifest.get("sealed_chroma_sha256")
+    expected_bm25_sha = rc_manifest.get("sealed_bm25_sha256")
+    expected_model_checkpoint_sha = rc_manifest.get("model_checkpoint_sha256")
+    expected_tokenizer_sha = rc_manifest.get("tokenizer_sha256")
+    expected_dependency_lock_sha = rc_manifest.get("dependency_lock_sha256")
+    expected_model_server_name = rc_manifest.get("model_server_name")
+
+    # Resolve runtime paths for hash verification
+    corpus_manifest_path = (
+        BACKEND_DIR / "eval_corpus" / "phase5" / "corpus-manifest.json"
+    )
+    sealed_chroma_path = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "chroma"
+    sealed_bm25_path = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "rag_bm25.db"
+    dependency_lock_path = BACKEND_DIR / "uv.lock"
+
+    # Model checkpoint and tokenizer paths (resolve from manifest)
+    model_checkpoint_rel = rc_manifest.get("model_checkpoint_path", "")
+    tokenizer_rel = rc_manifest.get("tokenizer_path", "")
+    model_checkpoint_path = (
+        Path(os.path.expanduser(f"~/.cache/nanochat/{model_checkpoint_rel}"))
+        if model_checkpoint_rel
+        else None
+    )
+    tokenizer_path = (
+        Path("/mnt/disk/mxf/.cache/nanochat") / tokenizer_rel
+        if tokenizer_rel
+        else None
+    )
+
+    # Actual model server name from environment (same source as freeze script)
+    actual_model_server_name = os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147")
 
     try:
         report = verify_rc_freeze(
@@ -171,9 +204,27 @@ def _run_rc_freeze_checks(skip: bool = False) -> RCFreezeReport | None:
             expected_questions_sha256=expected_questions_sha,
             protocol_path=PROTOCOL_PATH,
             expected_protocol_sha256=expected_protocol_sha,
+            expected_selected_config_sha256=expected_selected_config_sha,
+            corpus_manifest_path=corpus_manifest_path,
+            expected_corpus_manifest_sha256=expected_corpus_manifest_sha,
+            sealed_chroma_path=sealed_chroma_path,
+            expected_chroma_sha256=expected_chroma_sha,
+            sealed_bm25_path=sealed_bm25_path,
+            expected_bm25_sha256=expected_bm25_sha,
+            model_checkpoint_path=model_checkpoint_path,
+            expected_model_checkpoint_sha256=expected_model_checkpoint_sha,
+            tokenizer_path=tokenizer_path,
+            expected_tokenizer_sha256=expected_tokenizer_sha,
+            dependency_lock_path=dependency_lock_path,
+            expected_dependency_lock_sha256=expected_dependency_lock_sha,
+            expected_model_server_name=expected_model_server_name,
+            actual_model_server_name=actual_model_server_name,
             require_clean_worktree=True,
         )
         print(f"  RC freeze PASSED (git_head={report.git_head[:12]}...)")
+        print(f"  All {len(report.checks)} checks passed:")
+        for name, result in sorted(report.checks.items()):
+            print(f"    {name}: {result}")
         return report
     except RCFreezeViolation as exc:
         print("  RC freeze FAILED:")
@@ -182,7 +233,10 @@ def _run_rc_freeze_checks(skip: bool = False) -> RCFreezeReport | None:
         raise
 
 
-async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
+async def _run_blind(
+    calibration_params: dict[str, Any],
+    rc_report: RCFreezeReport | None = None,
+) -> dict[str, Any]:
     """Load questions, run the engine, and write predictions atomically."""
     print("Loading sealed questions (NO labels accessed)...")
     queries = load_queries(str(SEALED_QUESTIONS_PATH))
@@ -213,6 +267,7 @@ async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
             f"Calibration params applied: "
             f"{engine_record.calibration.applied}"
         )
+        print(f"Effective model name: {MODEL_NAME}")
     except Exception as exc:
         print(f"Failed to initialize RAG engine: {exc}")
         raise
@@ -283,6 +338,10 @@ async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
     )
     dependency_lock_path = BACKEND_DIR / "uv.lock"
 
+    # Record effective model name and checkpoint hash (binding to RC freeze)
+    effective_model_name = MODEL_NAME
+    effective_checkpoint_sha256 = rc_manifest.get("model_checkpoint_sha256")
+
     manifest = create_manifest(
         run_id=f"sealed-v2-{started_at}",
         run_type="sealed",
@@ -300,6 +359,11 @@ async def _run_blind(calibration_params: dict[str, Any]) -> dict[str, Any]:
         bm25_index_manifest=sealed_bm25_manifest,
         dependency_lock_path=dependency_lock_path,
         repo_path=BACKEND_DIR,
+        preflight_git_clean=(
+            rc_report.preflight_git_clean if rc_report else None
+        ),
+        effective_model_name=effective_model_name,
+        effective_checkpoint_sha256=effective_checkpoint_sha256,
     )
     _write_text_atomic(
         RUN_MANIFEST_PATH,
@@ -385,7 +449,7 @@ def main() -> int:
 
     # 3. Run blind prediction
     try:
-        marker = asyncio.run(_run_blind(calibration_params))
+        marker = asyncio.run(_run_blind(calibration_params, rc_report=rc_report))
     except Exception as exc:
         print(f"\nBlind prediction failed: {exc}")
         return 1

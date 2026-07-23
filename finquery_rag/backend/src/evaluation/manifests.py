@@ -30,9 +30,12 @@ class RunManifest:
     run_id: str
     run_type: str  # "baseline", "calibration", "sealed", "ablation"
     git_commit: str
-    git_dirty: bool
+    git_dirty: bool  # post-run dirty state (may include new artifacts)
+    preflight_git_clean: bool  # pre-run clean state from RC freeze
     model_checkpoint_path: str | None
     model_checkpoint_sha256: str | None
+    effective_model_name: str | None
+    effective_checkpoint_sha256: str | None
     tokenizer_sha256: str | None
     embedding_model: str | None
     reranker_model: str | None
@@ -62,8 +65,11 @@ class RunManifest:
             run_type=str(data["run_type"]),
             git_commit=str(data.get("git_commit", "")),
             git_dirty=bool(data.get("git_dirty", False)),
+            preflight_git_clean=bool(data.get("preflight_git_clean", not data.get("git_dirty", False))),
             model_checkpoint_path=data.get("model_checkpoint_path"),
             model_checkpoint_sha256=data.get("model_checkpoint_sha256"),
+            effective_model_name=data.get("effective_model_name"),
+            effective_checkpoint_sha256=data.get("effective_checkpoint_sha256"),
             tokenizer_sha256=data.get("tokenizer_sha256"),
             embedding_model=data.get("embedding_model"),
             reranker_model=data.get("reranker_model"),
@@ -93,8 +99,12 @@ class RunManifest:
             "run_type": self.run_type,
             "git_commit": self.git_commit,
             "git_dirty": self.git_dirty,
+            "post_run_git_dirty": self.git_dirty,
+            "preflight_git_clean": self.preflight_git_clean,
             "model_checkpoint_path": self.model_checkpoint_path,
             "model_checkpoint_sha256": self.model_checkpoint_sha256,
+            "effective_model_name": self.effective_model_name,
+            "effective_checkpoint_sha256": self.effective_checkpoint_sha256,
             "tokenizer_sha256": self.tokenizer_sha256,
             "embedding_model": self.embedding_model,
             "reranker_model": self.reranker_model,
@@ -261,12 +271,23 @@ def create_manifest(
     temperature: float | None = None,
     run_ended_at: str | None = None,
     repo_path: str | Path = ".",
+    preflight_git_clean: bool | None = None,
+    effective_model_name: str | None = None,
+    effective_checkpoint_sha256: str | None = None,
 ) -> RunManifest:
     """Build a ``RunManifest``, filling in git/env info and file hashes.
 
     File hash fields are computed only when the corresponding path is
     provided. Git state is always attempted but degrades gracefully to
     ``("", False)`` outside a repo.
+
+    Args:
+        preflight_git_clean: Clean state captured BEFORE the blind run
+            (from RC freeze report). If None, defaults to the post-run
+            inverse of ``git_dirty``.
+        effective_model_name: The actual model name used at runtime
+            (from ``LLM_MODEL_NAME``).
+        effective_checkpoint_sha256: SHA256 of the actual checkpoint used.
     """
     commit, dirty = compute_git_state(repo_path)
     return RunManifest(
@@ -274,12 +295,15 @@ def create_manifest(
         run_type=run_type,
         git_commit=commit,
         git_dirty=dirty,
+        preflight_git_clean=(not dirty if preflight_git_clean is None else preflight_git_clean),
         model_checkpoint_path=model_checkpoint_path,
         model_checkpoint_sha256=(
             compute_file_sha256(model_checkpoint_path)
             if model_checkpoint_path
             else None
         ),
+        effective_model_name=effective_model_name,
+        effective_checkpoint_sha256=effective_checkpoint_sha256,
         tokenizer_sha256=(
             compute_file_sha256(tokenizer_path) if tokenizer_path else None
         ),

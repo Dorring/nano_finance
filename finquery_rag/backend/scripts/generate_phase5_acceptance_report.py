@@ -91,6 +91,7 @@ artifacts["sealed_manifest"] = _load_json(PHASE5_DIR, "sealed-v2", "run-manifest
 artifacts["scoring_report"] = _load_json(PHASE5_DIR, "sealed-v2", "scoring-report.json")
 artifacts["scoring_ledger"] = _load_json(PHASE5_DIR, "sealed-v2", "scoring-ledger.json")
 artifacts["rc_freeze_manifest"] = _load_json(PHASE5_DIR, "rc-freeze-manifest.json")
+artifacts["rc_freeze_report"] = _load_json(PHASE5_DIR, "sealed-v2", "rc-freeze-report.json")
 artifacts["protocol"] = _load_json(PHASE5_DIR, "protocol", "phase5-evaluation-protocol.json")
 artifacts["invalidated_status"] = _load_json(PHASE5_DIR, "invalidated-placeholder-run", "status.json")
 artifacts["index_manifest"] = _load_json(INDEXES_DIR, "index-manifest.json")
@@ -404,6 +405,7 @@ def evaluate_all():
 
     # ── 9. rc_freeze ──
     rcf = artifacts["rc_freeze_manifest"]
+    rcfr = artifacts["rc_freeze_report"]  # runtime verification report
     if rcf:
         ac("AC-26", "rc_freeze",
            "RC freeze manifest has non-empty rc_commit",
@@ -415,15 +417,66 @@ def evaluate_all():
            rcf.get("worktree_clean") is True,
            f"worktree_clean={rcf.get('worktree_clean')}")
 
+        # AC-70/71: replaced with hash equality checks (not just non-empty)
+        # Verify via the RC freeze report's runtime checks (each must be "OK:")
+        rc_checks = rcfr.get("checks", {}) if rcfr else {}
+
+        def _check_ok(name: str) -> bool:
+            val = rc_checks.get(name, "")
+            return isinstance(val, str) and val.startswith("OK:")
+
         ac("AC-70", "post_freeze_lock",
-           "RC freeze manifest has protocol_sha256",
-           bool(rcf.get("protocol_sha256")),
-           f"protocol_sha256={rcf.get('protocol_sha256', '')[:16]}...")
+           "selected_config_hash_matches: runtime hash == frozen hash",
+           _check_ok("selected_config_hash"),
+           f"rc_report check: {rc_checks.get('selected_config_hash', 'missing')}")
 
         ac("AC-71", "post_freeze_lock",
-           "RC freeze manifest has selected_config_sha256",
-           bool(rcf.get("selected_config_sha256")),
-           f"selected_config_sha256={rcf.get('selected_config_sha256', '')[:16]}...")
+           "corpus_manifest_hash_matches: runtime hash == frozen hash",
+           _check_ok("corpus_manifest_hash"),
+           f"rc_report check: {rc_checks.get('corpus_manifest_hash', 'missing')}")
+
+        ac("AC-74", "post_freeze_lock",
+           "sealed_chroma_hash_matches: runtime dir hash == frozen hash",
+           _check_ok("sealed_chroma_hash"),
+           f"rc_report check: {rc_checks.get('sealed_chroma_hash', 'missing')}")
+
+        ac("AC-75", "post_freeze_lock",
+           "sealed_bm25_hash_matches: runtime hash == frozen hash",
+           _check_ok("sealed_bm25_hash"),
+           f"rc_report check: {rc_checks.get('sealed_bm25_hash', 'missing')}")
+
+        ac("AC-76", "post_freeze_lock",
+           "model_checkpoint_hash_matches: runtime hash == frozen hash",
+           _check_ok("model_checkpoint_hash"),
+           f"rc_report check: {rc_checks.get('model_checkpoint_hash', 'missing')}")
+
+        ac("AC-77", "post_freeze_lock",
+           "tokenizer_hash_matches: runtime hash == frozen hash",
+           _check_ok("tokenizer_hash"),
+           f"rc_report check: {rc_checks.get('tokenizer_hash', 'missing')}")
+
+        ac("AC-78", "post_freeze_lock",
+           "dependency_lock_hash_matches: runtime hash == frozen hash",
+           _check_ok("dependency_lock_hash"),
+           f"rc_report check: {rc_checks.get('dependency_lock_hash', 'missing')}")
+
+        ac("AC-79", "post_freeze_lock",
+           "effective_model_name_matches: runtime model == frozen model",
+           _check_ok("model_server_name"),
+           f"rc_report check: {rc_checks.get('model_server_name', 'missing')}")
+
+        # AC-80: preflight_git_clean must be True (from run manifest)
+        sealed_manifest = artifacts["sealed_manifest"]
+        if sealed_manifest:
+            pgc = sealed_manifest.get("preflight_git_clean")
+            ac("AC-80", "post_freeze_lock",
+               "preflight_git_clean == True (worktree clean before blind run)",
+               pgc is True,
+               f"preflight_git_clean={pgc}")
+        else:
+            ac("AC-80", "post_freeze_lock",
+               "preflight_git_clean == True (worktree clean before blind run)",
+               False, "run-manifest not found")
     else:
         ac("AC-26", "rc_freeze",
            "RC freeze manifest has non-empty rc_commit",
@@ -431,12 +484,10 @@ def evaluate_all():
         ac("AC-27", "rc_freeze",
            "RC freeze manifest has worktree_clean == True",
            False, "rc-freeze-manifest.json not found")
-        ac("AC-70", "post_freeze_lock",
-           "RC freeze manifest has protocol_sha256",
-           False, "rc-freeze-manifest.json not found")
-        ac("AC-71", "post_freeze_lock",
-           "RC freeze manifest has selected_config_sha256",
-           False, "rc-freeze-manifest.json not found")
+        for cid in ["AC-70", "AC-71", "AC-74", "AC-75", "AC-76", "AC-77", "AC-78", "AC-79", "AC-80"]:
+            ac(cid, "post_freeze_lock",
+               "RC hash equality check",
+               False, "rc-freeze-manifest.json not found")
 
     # ── 10. blind_runner ──
     if proto:
