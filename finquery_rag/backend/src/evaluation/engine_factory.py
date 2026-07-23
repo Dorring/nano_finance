@@ -132,6 +132,7 @@ def setup_partition_index(partition: str, backend_dir: Path | None = None) -> in
     import src.services.vector_store as vs
 
     vs._chroma_client = None
+    vs.CHROMA_PATH = str(chroma_path)
 
     return PARTITION_USER_IDS[partition]
 
@@ -354,7 +355,7 @@ def verify_sentinel_query(
                 conversation_history=[],
                 memory_profile=None,
             )
-            if hasattr(raw, "__awaitable__"):
+            if asyncio.iscoroutine(raw):
                 raw = await raw
             if isinstance(raw, dict):
                 sources = raw.get("sources", [])
