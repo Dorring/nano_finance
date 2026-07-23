@@ -2,15 +2,24 @@
 
 Classifies prediction failures into a fixed taxonomy with a strict priority
 order. All operations are deterministic and offline.
+
+Streaming Contract errors should be tested via a dedicated SSE test suite,
+NOT inferred from the blind runner — the blind runner is non-streaming and
+can only surface streaming-related warnings indirectly.
 """
+
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from typing import Any
 
 from src.evaluation.metrics import (
     _get_answerability_status,
     _get_validation_status,
+    _normalize_number,
     _numbers_in_text,
+    _to_decimal,
     calculation_accuracy,
     citation_recall,
     recall_at_k,
@@ -19,6 +28,7 @@ from src.evaluation.metrics import (
 from src.evaluation.schemas import EvaluationLabel, EvaluationPrediction
 
 __all__ = [
+    "FailureClassification",
     "SYSTEM_ERROR",
     "AUTH_OR_ENVIRONMENT",
     "INTENT_ERROR",
@@ -36,11 +46,38 @@ __all__ = [
     "CALCULATION_ERROR",
     "VALIDATION_FALSE_PASS",
     "VALIDATION_FALSE_BLOCK",
+    "ANSWER_QUALITY_TERM_VIOLATION",
     "STREAMING_CONTRACT_ERROR",
     "FAILURE_PRIORITY",
     "classify_failure",
     "classify_all_failures",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Structured failure classification
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FailureClassification:
+    """Structured classification of a single failure.
+
+    Fields:
+        observed_failure: The failure category constant that was observed.
+        probable_root_cause: Most likely root cause or ``None`` if unknown.
+        upstream_failures: Upstream contributing factors.
+        downstream_failures: Downstream effects caused by this failure.
+        confidence: Classification confidence — ``"high"``, ``"medium"``,
+            or ``"low"``.
+    """
+
+    observed_failure: str
+    probable_root_cause: str | None
+    upstream_failures: tuple[str, ...]
+    downstream_failures: tuple[str, ...]
+    confidence: str
+
 
 # ---------------------------------------------------------------------------
 # Failure category constants (ordered by priority)
@@ -63,6 +100,7 @@ CITATION_ERROR = "citation_error"
 CALCULATION_ERROR = "calculation_error"
 VALIDATION_FALSE_PASS = "validation_false_pass"
 VALIDATION_FALSE_BLOCK = "validation_false_block"
+ANSWER_QUALITY_TERM_VIOLATION = "answer_quality_term_violation"
 STREAMING_CONTRACT_ERROR = "streaming_contract_error"
 
 # Fixed priority order (highest first).
@@ -84,15 +122,54 @@ FAILURE_PRIORITY: list[str] = [
     CALCULATION_ERROR,
     VALIDATION_FALSE_PASS,
     VALIDATION_FALSE_BLOCK,
+    ANSWER_QUALITY_TERM_VIOLATION,
     STREAMING_CONTRACT_ERROR,
 ]
 
 _BLOCKED_STATUSES = frozenset({"blocked", "rejected", "failed", "error"})
+_NO_ANSWER_ANSWERABILITY = frozenset({"no_answer", "not_answerable"})
 
 
-def _has_auth_error(error_code: str) -> bool:
-    """Check if the error code indicates an auth/environment issue."""
-    return error_code.startswith("auth_") or error_code.startswith("env_")
+def _normalize_text(text: str) -> str:
+    """Normalize text for term comparison (lowercase, collapse whitespace)."""
+    return re.sub(r"\s+", " ", str(text).lower()).strip()
+
+
+def _is_auth_or_env_category(system_error_category: str | None) -> bool:
+    """Check if the structured error category indicates auth/environment."""
+    if not system_error_category:
+        return False
+    return system_error_category.startswith(
+        "auth_"
+    ) or system_error_category.startswith("env_")
+
+
+def _supported_numbers(
+    label: EvaluationLabel, prediction: EvaluationPrediction
+) -> set[Any]:
+    """Return the set of numbers supported by expected evidence.
+
+    Includes expected numbers, expected calculation values, and actual
+    calculation values produced by the model (so that a wrong but
+    model-generated calculation is a CALCULATION_ERROR, not an
+    UNSUPPORTED_NUMERIC_RELEASE).
+    """
+    supported: set[Any] = set()
+    for n in label.expected_numbers:
+        dec = _to_decimal(_normalize_number(n))
+        if dec is not None:
+            supported.add(dec)
+    for calc in label.expected_calculations:
+        dec = _to_decimal(_normalize_number(calc.expected_value))
+        if dec is not None:
+            supported.add(dec)
+    for calc in prediction.calculations:
+        val = calc.get("value") or calc.get("expected_value")
+        if val is not None:
+            dec = _to_decimal(_normalize_number(str(val)))
+            if dec is not None:
+                supported.add(dec)
+    return supported
 
 
 def _detect_failures(
@@ -103,8 +180,13 @@ def _detect_failures(
     failures: list[str] = []
 
     # --- SYSTEM_ERROR / AUTH_OR_ENVIRONMENT ---
-    if prediction.error_code is not None:
-        if _has_auth_error(prediction.error_code):
+    # Classify by the structured ``system_error_category`` field rather
+    # than matching exception class name prefixes.
+    if (
+        prediction.error_code is not None
+        or prediction.system_error_category is not None
+    ):
+        if _is_auth_or_env_category(prediction.system_error_category):
             failures.append(AUTH_OR_ENVIRONMENT)
         else:
             failures.append(SYSTEM_ERROR)
@@ -147,20 +229,30 @@ def _detect_failures(
         failures.append(RETRIEVAL_MISS)
 
     # --- CONTEXT_BUILD_ERROR ---
+    # Context insufficiency is correct behaviour for no-answer cases,
+    # not an error.
     if prediction.context_sufficient is False:
-        failures.append(CONTEXT_BUILD_ERROR)
+        is_no_answer_case = (
+            label.expected_no_answer
+            or label.expected_answerability in _NO_ANSWER_ANSWERABILITY
+        )
+        if not is_no_answer_case:
+            failures.append(CONTEXT_BUILD_ERROR)
 
     # --- ANSWERABILITY_FALSE_POSITIVE / ANSWERABILITY_FALSE_NEGATIVE ---
+    # Uses ``not_answerable`` (production status) in addition to
+    # ``no_answer``.
     if label.expected_answerability:
         pred_status = _get_answerability_status(prediction.answerability)
         if (
-            label.expected_answerability == "no_answer"
+            label.expected_answerability in _NO_ANSWER_ANSWERABILITY
             and pred_status == "answerable"
         ):
             failures.append(ANSWERABILITY_FALSE_POSITIVE)
-        elif (
-            label.expected_answerability == "answerable"
-            and pred_status in ("no_answer", "not_answerable", "insufficient_context")
+        elif label.expected_answerability == "answerable" and pred_status in (
+            "no_answer",
+            "not_answerable",
+            "insufficient_context",
         ):
             failures.append(ANSWERABILITY_FALSE_NEGATIVE)
 
@@ -169,8 +261,13 @@ def _detect_failures(
         failures.append(GENERATION_ERROR)
 
     # --- UNSUPPORTED_NUMERIC_RELEASE ---
-    if label.expected_no_answer and _numbers_in_text(prediction.answer):
-        failures.append(UNSUPPORTED_NUMERIC_RELEASE)
+    # Applies to ALL cases: any number in the answer that is not
+    # supported by expected evidence is an unsupported numeric release.
+    answer_numbers = _numbers_in_text(prediction.answer)
+    if answer_numbers:
+        supported = _supported_numbers(label, prediction)
+        if any(n not in supported for n in answer_numbers):
+            failures.append(UNSUPPORTED_NUMERIC_RELEASE)
 
     # --- UNIT_PERIOD_ERROR ---
     if label.expected_calculations:
@@ -207,7 +304,28 @@ def _detect_failures(
         ):
             failures.append(VALIDATION_FALSE_BLOCK)
 
+    # --- ANSWER_QUALITY_TERM_VIOLATION ---
+    # Required/Forbidden Terms failures must never become unclassified.
+    answer_norm = _normalize_text(prediction.answer)
+    if label.required_answer_terms:
+        missing = [
+            t
+            for t in label.required_answer_terms
+            if _normalize_text(t) not in answer_norm
+        ]
+        if missing:
+            failures.append(ANSWER_QUALITY_TERM_VIOLATION)
+    if label.forbidden_answer_terms:
+        found = [
+            t for t in label.forbidden_answer_terms if _normalize_text(t) in answer_norm
+        ]
+        if found:
+            failures.append(ANSWER_QUALITY_TERM_VIOLATION)
+
     # --- STREAMING_CONTRACT_ERROR ---
+    # NOTE: Streaming Contract errors should be tested via a dedicated
+    # SSE test suite, NOT inferred from the blind runner. The blind
+    # runner is non-streaming and can only surface indirect warnings.
     if any("stream" in w.lower() for w in prediction.warnings):
         failures.append(STREAMING_CONTRACT_ERROR)
 
@@ -229,7 +347,10 @@ def classify_failure(
     > ANSWERABILITY_FALSE_NEGATIVE > GENERATION_ERROR >
     UNSUPPORTED_NUMERIC_RELEASE > UNIT_PERIOD_ERROR > CITATION_ERROR >
     CALCULATION_ERROR > VALIDATION_FALSE_PASS > VALIDATION_FALSE_BLOCK >
-    STREAMING_CONTRACT_ERROR.
+    ANSWER_QUALITY_TERM_VIOLATION > STREAMING_CONTRACT_ERROR.
+
+    Note: Streaming Contract errors should be verified via a dedicated
+    SSE test suite rather than inferred from blind runner output.
     """
     if strict_case_pass(label, prediction):
         return None, []

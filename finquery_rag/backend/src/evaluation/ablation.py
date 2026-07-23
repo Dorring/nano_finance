@@ -4,6 +4,11 @@ Defines the ablation variants A0–A9 from the pre-registered protocol,
 generates per-variant configs from a base config, validates that each
 variant changes exactly one component, and produces a comparison report.
 
+v2 extends each variant with an :class:`EvaluationFeatureFlags` object
+that drives runtime flag injection into the RAGEngine. The legacy
+``config_diff`` (dict-based, one component per variant) is preserved for
+backward compatibility with existing tooling and tests.
+
 Safety guarantees:
     - The production default config is NEVER modified by any ablation.
       ``get_ablation_config`` returns a deep copy.
@@ -11,14 +16,18 @@ Safety guarantees:
       ``production_safe = False`` and must never become the production
       default.
 """
+
 from __future__ import annotations
 
 import copy
 from typing import Any
 
+from src.evaluation.schemas import EvaluationFeatureFlags
+
 __all__ = [
     "ABLATION_VARIANTS",
     "get_ablation_config",
+    "get_variant_feature_flags",
     "validate_ablation_config",
     "ablation_report",
     "is_production_safe",
@@ -87,8 +96,136 @@ ABLATION_VARIANTS: list[dict[str, Any]] = [
     },
 ]
 
-_VARIANT_BY_ID: dict[str, dict[str, Any]] = {
-    v["id"]: v for v in ABLATION_VARIANTS
+_VARIANT_BY_ID: dict[str, dict[str, Any]] = {v["id"]: v for v in ABLATION_VARIANTS}
+
+# v2: per-variant EvaluationFeatureFlags that drive runtime injection into
+# the RAGEngine. These flags describe the *compositional* ablation scheme
+# (each variant toggles a cumulative set of capabilities), distinct from
+# the legacy single-component ``config_diff`` which is retained for
+# backward compatibility. The mapping follows the Phase 5 v2 ablation
+# protocol:
+#   A0  Dense only
+#   A1  BM25 only
+#   A2  Dense + BM25
+#   A3  Dense + BM25 + RRF (query rewrite engaged; RRF fusion is implicit
+#       in hybrid retrieval, so ``reranker_enabled`` stays False)
+#   A4  Hybrid + Reranker
+#   A5  Hybrid + Reranker + Calculator
+#   A6  Full without Validation
+#   A7  Full without Citation Validation
+#   A8  Full without Answerability
+#   A9  Full System
+_VARIANT_FEATURE_FLAGS: dict[str, EvaluationFeatureFlags] = {
+    "A0": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=False,
+        reranker_enabled=False,
+        query_rewrite_enabled=False,
+        hierarchical_context_enabled=False,
+        calculator_enabled=False,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A1": EvaluationFeatureFlags(
+        dense_enabled=False,
+        bm25_enabled=True,
+        reranker_enabled=False,
+        query_rewrite_enabled=False,
+        hierarchical_context_enabled=False,
+        calculator_enabled=False,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A2": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=False,
+        query_rewrite_enabled=False,
+        hierarchical_context_enabled=False,
+        calculator_enabled=False,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A3": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=False,
+        query_rewrite_enabled=True,
+        hierarchical_context_enabled=False,
+        calculator_enabled=False,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A4": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=False,
+        hierarchical_context_enabled=False,
+        calculator_enabled=False,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A5": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=False,
+        hierarchical_context_enabled=False,
+        calculator_enabled=True,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A6": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=True,
+        hierarchical_context_enabled=True,
+        calculator_enabled=True,
+        answerability_enabled=False,
+        post_validation_enabled=False,
+        citation_validation_enabled=False,
+    ),
+    "A7": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=True,
+        hierarchical_context_enabled=True,
+        calculator_enabled=True,
+        answerability_enabled=True,
+        post_validation_enabled=True,
+        citation_validation_enabled=False,
+    ),
+    "A8": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=True,
+        hierarchical_context_enabled=True,
+        calculator_enabled=True,
+        answerability_enabled=False,
+        post_validation_enabled=True,
+        citation_validation_enabled=True,
+    ),
+    "A9": EvaluationFeatureFlags(
+        dense_enabled=True,
+        bm25_enabled=True,
+        reranker_enabled=True,
+        query_rewrite_enabled=True,
+        hierarchical_context_enabled=True,
+        calculator_enabled=True,
+        answerability_enabled=True,
+        post_validation_enabled=True,
+        citation_validation_enabled=True,
+    ),
 }
 
 
@@ -99,44 +236,81 @@ def _get_variant(variant_id: str) -> dict[str, Any]:
     return _VARIANT_BY_ID[variant_id]
 
 
-def get_ablation_config(
-    base_config: dict[str, Any], variant_id: str
-) -> dict[str, Any]:
-    """Return a new config with the variant's ``config_diff`` applied.
-
-    The ``base_config`` is deep-copied so the caller's production default
-    is never modified.
+def get_variant_feature_flags(variant_id: str) -> EvaluationFeatureFlags:
+    """Return the :class:`EvaluationFeatureFlags` for ``variant_id``.
 
     Args:
-        base_config: The production default configuration.
-        variant_id: One of ``"A0"`` … ``"A9"``.
-
-    Returns:
-        A new dict with the variant's overrides applied on top of a deep
-        copy of ``base_config``.
+        variant_id: One of ``"A0"`` ... ``"A9"``.
 
     Raises:
         KeyError: If ``variant_id`` is not a known ablation variant.
     """
+    _get_variant(variant_id)
+    return _VARIANT_FEATURE_FLAGS[variant_id]
+
+
+def get_ablation_config(
+    base_config: dict[str, Any] | None = None,
+    variant_id: str | None = None,
+) -> dict[str, Any]:
+    """Return an ablation config for ``variant_id``.
+
+    Supports two calling conventions for backward compatibility:
+
+    - **Old-style** ``get_ablation_config(base_config, variant_id)``:
+      deep-copies ``base_config`` and applies the variant's legacy
+      ``config_diff`` on top. The production default is never mutated.
+      Returns the merged dict (no ``feature_flags`` key) so existing
+      callers and assertions -- including ``config == base_config`` for
+      A0 -- continue to hold.
+    - **New-style** ``get_ablation_config(variant_id)``: returns a dict
+      carrying the variant metadata (``id``, ``name``, ``config_diff``,
+      ``production_safe``) plus a ``feature_flags`` key holding the
+      :class:`EvaluationFeatureFlags` for runtime injection.
+
+    Args:
+        base_config: The production default configuration (old-style), or
+            the ``variant_id`` when called new-style.
+        variant_id: One of ``"A0"`` ... ``"A9"``. ``None`` in new-style calls.
+
+    Raises:
+        KeyError: If ``variant_id`` is not a known ablation variant.
+    """
+    if variant_id is None:
+        # New-style call: get_ablation_config(variant_id)
+        variant_id = base_config  # type: ignore[assignment]
+        base_config = None
+
     variant = _get_variant(variant_id)
-    new_config = copy.deepcopy(base_config)
-    new_config.update(copy.deepcopy(variant["config_diff"]))
-    return new_config
+    feature_flags = _VARIANT_FEATURE_FLAGS[variant_id]
+
+    if base_config is not None:
+        # Old-style: merge legacy config_diff onto a deep copy of base_config.
+        new_config = copy.deepcopy(base_config)
+        new_config.update(copy.deepcopy(variant["config_diff"]))
+        return new_config
+
+    # New-style: return metadata dict with feature_flags.
+    return {
+        "id": variant["id"],
+        "name": variant["name"],
+        "config_diff": copy.deepcopy(variant["config_diff"]),
+        "production_safe": variant["production_safe"],
+        "feature_flags": feature_flags,
+    }
 
 
-def validate_ablation_config(
-    variant_id: str, config: dict[str, Any]
-) -> list[str]:
+def validate_ablation_config(variant_id: str, config: dict[str, Any]) -> list[str]:
     """Validate that ``config`` matches the expected variant diff.
 
     Checks:
         - ``variant_id`` is a known variant.
         - For A0 (Full System): ``config`` must be empty.
-        - For A1–A9: ``config`` must contain exactly one key (only one
+        - For A1-A9: ``config`` must contain exactly one key (only one
           component changed).
 
     Args:
-        variant_id: The variant identifier (``"A0"`` … ``"A9"``).
+        variant_id: The variant identifier (``"A0"`` ... ``"A9"``).
         config: The config diff to validate.
 
     Returns:
@@ -173,7 +347,7 @@ def ablation_report(results: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Generate a comparison report across ablation variants.
 
     Args:
-        results: A dict mapping variant IDs (``"A0"`` … ``"A9"``) to
+        results: A dict mapping variant IDs (``"A0"`` ... ``"A9"``) to
             their metric dicts.
 
     Returns:

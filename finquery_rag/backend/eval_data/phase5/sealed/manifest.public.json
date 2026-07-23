@@ -1,8 +1,13 @@
 {
   "partition": "sealed",
-  "case_count": 5,
-  "questions_sha256": "placeholder",
+  "case_count": 54,
+  "questions_sha256": null,
   "labels_sha256": null,
-  "created_at": "2026-07-23T00:00:00Z",
-  "slices": ["document_qa", "financial_calculation", "expected_no_answer"]
+  "slice_counts": {
+    "front_matter": 12,
+    "document_qa": 24,
+    "financial_calculation": 18
+  },
+  "sealed_v2": true,
+  "note": "Questions and labels are held by an independent custodian. Hashes are published only after RC freeze (questions) and before blind run (labels)."
 }

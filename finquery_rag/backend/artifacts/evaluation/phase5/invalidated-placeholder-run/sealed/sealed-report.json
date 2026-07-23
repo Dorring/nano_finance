@@ -1,7 +1,7 @@
 {
   "blind_info": {
     "prediction_count": 5,
-    "predictions_path": "/mnt/disk/mxf/projects/Qhhhhhhaaa/nanochat/finquery_rag/backend/artifacts/evaluation/phase5/sealed/sealed-predictions.jsonl",
+    "predictions_path": "<REDACTED_PROJECT_PATH>/artifacts/evaluation/phase5/sealed/sealed-predictions.jsonl",
     "predictions_sha256": "38a887d4520fe3de109648905b04d9c17bcac70beda2ec22a1e60bee05c64b4f",
     "questions_sha256": "261804def0a9d388f4ab6c552848a455526b33f1bab43c9c5d6398a3ac7a6a09"
   },

@@ -31,13 +31,23 @@ class FakeEngine:
         self._result = result or {}
         self._raises = raises
 
-    async def query(self, question, doc_names=None, user_id=None, n_results=5):
+    async def query(
+        self,
+        question,
+        doc_names=None,
+        user_id=None,
+        n_results=5,
+        conversation_history=None,
+        memory_profile=None,
+    ):
         self.calls.append(
             {
                 "question": question,
                 "doc_names": doc_names,
                 "user_id": user_id,
                 "n_results": n_results,
+                "conversation_history": conversation_history,
+                "memory_profile": memory_profile,
             }
         )
         if self._raises is not None:
@@ -72,7 +82,8 @@ def test_blind_query_extracts_phase3_4_fields() -> None:
 
 
 def test_blind_query_passes_correct_params() -> None:
-    """query() must be called with only question/doc_names/user_id/n_results."""
+    """query() must be called with question/doc_names/user_id/n_results
+    plus explicit cross-case isolation params."""
     engine = FakeEngine()
     asyncio.run(
         run_blind_query(
@@ -85,11 +96,20 @@ def test_blind_query_passes_correct_params() -> None:
 
     assert len(engine.calls) == 1
     call = engine.calls[0]
-    assert set(call.keys()) == {"question", "doc_names", "user_id", "n_results"}
+    assert set(call.keys()) == {
+        "question",
+        "doc_names",
+        "user_id",
+        "n_results",
+        "conversation_history",
+        "memory_profile",
+    }
     assert call["question"] == "What is revenue?"
     assert call["doc_names"] == ["a.pdf", "b.pdf"]
     assert call["user_id"] == 7
     assert call["n_results"] == 4
+    assert call["conversation_history"] == []
+    assert call["memory_profile"] is None
 
 
 def test_blind_query_measures_latency() -> None:

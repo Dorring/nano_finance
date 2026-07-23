@@ -96,6 +96,48 @@ def _doc_page_metric_period_key(case: dict) -> tuple | None:
     return (str(document), str(page), str(metric), str(period))
 
 
+def _document_names(case: dict) -> set[str]:
+    """Return the set of document names associated with a case.
+
+    Handles both ``document_names`` (list) and ``document`` (string) fields.
+    """
+    out: set[str] = set()
+    doc_names = case.get("document_names")
+    if isinstance(doc_names, list):
+        for d in doc_names:
+            if isinstance(d, str) and d.strip():
+                out.add(d.strip())
+    elif isinstance(doc_names, str) and doc_names.strip():
+        out.add(doc_names.strip())
+    document = case.get("document") or case.get("doc")
+    if isinstance(document, str) and document.strip():
+        out.add(document.strip())
+    return out
+
+
+def check_document_name_overlap(
+    cases_a: list[dict], cases_b: list[dict],
+    name_a: str, name_b: str,
+) -> list[str]:
+    """Check for document filename overlap between partitions.
+
+    No document should appear in more than one partition — this is a hard
+    data leakage violation.
+    """
+    docs_a: set[str] = set()
+    for c in cases_a:
+        docs_a |= _document_names(c)
+    docs_b: set[str] = set()
+    for c in cases_b:
+        docs_b |= _document_names(c)
+    common = docs_a & docs_b
+    if not common:
+        return []
+    return [
+        f"document name overlap {name_a} vs {name_b}: {sorted(common)}"
+    ]
+
+
 def _expected_numbers_key(case: dict) -> tuple | None:
     """Return a sorted tuple of expected numbers, or None."""
     nums = case.get("expected_numbers") or case.get("expected_number")
@@ -322,6 +364,7 @@ def main() -> int:
         cases_b = partitions[b]
         errors.extend(check_case_id_overlap(cases_a, cases_b, a, b))
         errors.extend(check_question_overlap(cases_a, cases_b, a, b))
+        errors.extend(check_document_name_overlap(cases_a, cases_b, a, b))
         warnings.extend(check_high_similarity(cases_a, cases_b, a, b))
         errors.extend(check_doc_page_metric_period(cases_a, cases_b, a, b))
         errors.extend(check_expected_numbers(cases_a, cases_b, a, b))

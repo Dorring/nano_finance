@@ -10,6 +10,7 @@ All helpers are offline and deterministic: ``compute_file_sha256`` and
 ``compute_jsonl_sha256`` only read bytes, and ``compute_git_state`` shells
 out to git but never raises.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -183,6 +184,36 @@ def compute_jsonl_sha256(path: str | Path) -> str:
     return hasher.hexdigest()
 
 
+def compute_raw_file_sha256(path: str | Path) -> str:
+    """Return SHA256 of raw file bytes (alias for compute_file_sha256)."""
+    return compute_file_sha256(path)
+
+
+def compute_dual_hashes(path: str | Path) -> dict[str, str]:
+    """Compute both raw and canonical SHA256 hashes.
+
+    Returns ``{"raw_sha256": ..., "canonical_sha256": ...}``. The raw hash
+    is over the exact file bytes and changes with any byte-level change
+    (including key reordering). The canonical hash is order-independent
+    and stable across re-serialization of the same logical JSONL content.
+    """
+    return {
+        "raw_sha256": compute_file_sha256(path),
+        "canonical_sha256": compute_jsonl_sha256(path),
+    }
+
+
+def verify_dual_hashes(
+    path: str | Path, expected_raw: str, expected_canonical: str
+) -> bool:
+    """Verify both raw and canonical hashes match the expected values."""
+    actual = compute_dual_hashes(path)
+    return (
+        actual["raw_sha256"] == expected_raw
+        and actual["canonical_sha256"] == expected_canonical
+    )
+
+
 def _safe_cpu_info() -> str | None:
     """Best-effort offline CPU description; never raises."""
     try:
@@ -249,9 +280,7 @@ def create_manifest(
         embedding_model=embedding_model,
         reranker_model=reranker_model,
         corpus_manifest_hash=(
-            compute_file_sha256(corpus_manifest_path)
-            if corpus_manifest_path
-            else None
+            compute_file_sha256(corpus_manifest_path) if corpus_manifest_path else None
         ),
         vector_index_hash=(
             compute_file_sha256(vector_index_path) if vector_index_path else None
@@ -260,9 +289,7 @@ def create_manifest(
         config_hash=compute_file_sha256(config_path) if config_path else None,
         python_version=sys.version,
         dependency_lock_hash=(
-            compute_file_sha256(dependency_lock_path)
-            if dependency_lock_path
-            else None
+            compute_file_sha256(dependency_lock_path) if dependency_lock_path else None
         ),
         cpu_info=_safe_cpu_info(),
         gpu_info=_safe_gpu_info(),

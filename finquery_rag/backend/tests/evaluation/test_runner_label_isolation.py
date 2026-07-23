@@ -49,7 +49,9 @@ class _SpyEngine:
 
 
 def test_rag_engine_call_has_no_expected_fields() -> None:
-    """The engine query() call must only pass question/doc_names/user_id/n_results."""
+    """The engine query() call must only pass question/doc_names/user_id/
+    n_results plus explicit cross-case isolation params (conversation_history
+    and memory_profile). No expected_* fields may leak."""
     spy = _SpyEngine()
     query = EvaluationQuery.from_dict(
         {"case_id": "c1", "question": "Q", "document_names": ["d.pdf"]}
@@ -63,8 +65,14 @@ def test_rag_engine_call_has_no_expected_fields() -> None:
         "doc_names",
         "user_id",
         "n_results",
+        "conversation_history",
+        "memory_profile",
     }
     assert spy.kwargs["question"] == "Q"
     assert spy.kwargs["doc_names"] == ["d.pdf"]
     assert spy.kwargs["user_id"] == 1
     assert spy.kwargs["n_results"] == 2
+    assert spy.kwargs["conversation_history"] == []
+    assert spy.kwargs["memory_profile"] is None
+    # No expected_* fields may be passed to the engine.
+    assert not any(k.startswith("expected_") for k in spy.kwargs)

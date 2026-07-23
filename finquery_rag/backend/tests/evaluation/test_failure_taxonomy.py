@@ -54,6 +54,7 @@ def _pred(
     answerability: dict | None = None,
     validation: dict | None = None,
     error_code: str | None = None,
+    system_error_category: str | None = None,
 ) -> EvaluationPrediction:
     return EvaluationPrediction(
         case_id=case_id,
@@ -71,6 +72,7 @@ def _pred(
         trace_id=None,
         latency_ms=100.0,
         error_code=error_code,
+        system_error_category=system_error_category,
     )
 
 
@@ -116,7 +118,12 @@ class TestSystemError:
 
     def test_auth_error_classification(self) -> None:
         label = _label("c1")
-        pred = _pred("c1", answer="", error_code="auth_token_expired")
+        pred = _pred(
+            "c1",
+            answer="",
+            error_code="AuthError",
+            system_error_category="auth_token_expired",
+        )
         primary, _ = classify_failure(label, pred)
         from src.evaluation.failure_taxonomy import AUTH_OR_ENVIRONMENT
 
