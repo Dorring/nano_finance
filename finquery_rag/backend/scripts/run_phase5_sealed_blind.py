@@ -175,7 +175,7 @@ def _run_rc_freeze_checks(skip: bool = False) -> RCFreezeReport | None:
         BACKEND_DIR / "eval_corpus" / "phase5" / "corpus-manifest.json"
     )
     sealed_chroma_path = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "chroma"
-    sealed_bm25_path = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "rag_bm25.db"
+    sealed_bm25_path = Path("indexes") / "phase5" / "sealed" / "rag_bm25.db"
     dependency_lock_path = BACKEND_DIR / "uv.lock"
 
     # Model checkpoint and tokenizer paths (resolve from manifest)
@@ -334,7 +334,7 @@ async def _run_blind(
     )
     sealed_vector_index = BACKEND_DIR / "indexes" / "phase5" / "sealed" / "chroma"
     sealed_bm25_manifest = str(
-        BACKEND_DIR / "indexes" / "phase5" / "sealed" / "rag_bm25.db"
+        Path("indexes") / "phase5" / "sealed" / "rag_bm25.db"
     )
     dependency_lock_path = BACKEND_DIR / "uv.lock"
 

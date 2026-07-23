@@ -1,14 +1,22 @@
 {
   "passed": true,
-  "git_head": "917a3e2938214744609022c8778110b2463d47fc",
+  "git_head": "6f4c9b555dc5c79b031888bee6074bf4e165de8b",
   "git_dirty": false,
-  "expected_commit": "917a3e2938214744609022c8778110b2463d47fc",
+  "preflight_git_clean": true,
+  "expected_commit": "6f4c9b555dc5c79b031888bee6074bf4e165de8b",
   "checks": {
-    "git_head": "OK: 917a3e2938214744609022c8778110b2463d47fc",
+    "git_head": "OK: 6f4c9b555dc5c79b031888bee6074bf4e165de8b",
     "git_clean": "OK: clean",
-    "selected_config": "OK: loaded 4 keys, sha256=90f91bc60738059e...",
+    "selected_config_hash": "OK: 90f91bc60738059e...",
     "questions_hash": "OK: 1cfaa358966aed62...",
-    "protocol_hash": "OK: d968a50abd31676f..."
+    "protocol_hash": "OK: d968a50abd31676f...",
+    "corpus_manifest_hash": "OK: 6dca28c9f70fa563...",
+    "sealed_chroma_hash": "OK: c66e2efe368d4fca...",
+    "sealed_bm25_hash": "OK: 8406554a3ceb4aea...",
+    "model_checkpoint_hash": "OK: 961c1b60d0402ecb...",
+    "tokenizer_hash": "OK: 388319b6be8f0e56...",
+    "dependency_lock_hash": "OK: c9850206e9e4cb81...",
+    "model_server_name": "OK: finquery-finance-v2-lr010-150"
   },
   "violations": []
 }

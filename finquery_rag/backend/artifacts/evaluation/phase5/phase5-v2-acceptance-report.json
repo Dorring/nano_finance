@@ -1,14 +1,14 @@
 {
   "report_type": "phase5_v2_acceptance_report",
-  "generated_at": "2026-07-23T15:41:05.529230+00:00",
+  "generated_at": "2026-07-23T17:25:44.444258+00:00",
   "branch": "feat/nf-05-sealed-evaluation",
-  "rc_commit": "917a3e2938214744609022c8778110b2463d47fc",
+  "rc_commit": "6f4c9b555dc5c79b031888bee6074bf4e165de8b",
   "protocol_version": "2.1",
   "model_name": "finquery-finance-v2-lr010-150",
   "model_note": "Temporary smoke model used for evaluation pipeline validation. Not for production quality estimation.",
   "summary": {
-    "total_criteria": 73,
-    "passed": 73,
+    "total_criteria": 80,
+    "passed": 80,
     "failed": 0,
     "pass_rate": 1.0,
     "evaluation_results": {
@@ -238,7 +238,7 @@
       "section": "rc_freeze",
       "description": "RC freeze manifest has non-empty rc_commit",
       "passed": true,
-      "evidence": "rc_commit=917a3e293821"
+      "evidence": "rc_commit=6f4c9b555dc5"
     },
     {
       "id": "AC-27",
@@ -250,16 +250,65 @@
     {
       "id": "AC-70",
       "section": "post_freeze_lock",
-      "description": "RC freeze manifest has protocol_sha256",
+      "description": "selected_config_hash_matches: runtime hash == frozen hash",
       "passed": true,
-      "evidence": "protocol_sha256=d968a50abd31676f..."
+      "evidence": "rc_report check: OK: 90f91bc60738059e..."
     },
     {
       "id": "AC-71",
       "section": "post_freeze_lock",
-      "description": "RC freeze manifest has selected_config_sha256",
+      "description": "corpus_manifest_hash_matches: runtime hash == frozen hash",
       "passed": true,
-      "evidence": "selected_config_sha256=90f91bc60738059e..."
+      "evidence": "rc_report check: OK: 6dca28c9f70fa563..."
+    },
+    {
+      "id": "AC-74",
+      "section": "post_freeze_lock",
+      "description": "sealed_chroma_hash_matches: runtime dir hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: c66e2efe368d4fca..."
+    },
+    {
+      "id": "AC-75",
+      "section": "post_freeze_lock",
+      "description": "sealed_bm25_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 8406554a3ceb4aea..."
+    },
+    {
+      "id": "AC-76",
+      "section": "post_freeze_lock",
+      "description": "model_checkpoint_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 961c1b60d0402ecb..."
+    },
+    {
+      "id": "AC-77",
+      "section": "post_freeze_lock",
+      "description": "tokenizer_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 388319b6be8f0e56..."
+    },
+    {
+      "id": "AC-78",
+      "section": "post_freeze_lock",
+      "description": "dependency_lock_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: c9850206e9e4cb81..."
+    },
+    {
+      "id": "AC-79",
+      "section": "post_freeze_lock",
+      "description": "effective_model_name_matches: runtime model == frozen model",
+      "passed": true,
+      "evidence": "rc_report check: OK: finquery-finance-v2-lr010-150"
+    },
+    {
+      "id": "AC-80",
+      "section": "post_freeze_lock",
+      "description": "preflight_git_clean == True (worktree clean before blind run)",
+      "passed": true,
+      "evidence": "preflight_git_clean=True"
     },
     {
       "id": "AC-28",
@@ -322,14 +371,14 @@
       "section": "atomic_prediction_write",
       "description": "Complete marker has raw_sha256 and completed == True",
       "passed": true,
-      "evidence": "raw_sha256=66090fbd29c4427d..., completed=True"
+      "evidence": "raw_sha256=f06e61e8792c03c6..., completed=True"
     },
     {
       "id": "AC-35",
       "section": "scoring_ledger",
       "description": "scoring-ledger.json exists and has entries",
       "passed": true,
-      "evidence": "exists=True, entries=4"
+      "evidence": "exists=True, entries=5"
     },
     {
       "id": "AC-36",
@@ -378,7 +427,7 @@
       "section": "final_pass_criteria",
       "description": "predictions_sha256 matches between run-manifest and scoring-report",
       "passed": true,
-      "evidence": "manifest=2047af38198dbfa1..., scoring=2047af38198dbfa1..., match=True"
+      "evidence": "manifest=ead3721673d9d5fc..., scoring=ead3721673d9d5fc..., match=True"
     },
     {
       "id": "AC-43",
@@ -448,7 +497,7 @@
       "section": "seal_questions_labels",
       "description": "Blind/scoring isolation: blind manifest has questions_sha256 (non-empty) and labels_sha256 (null); scoring ledger has labels_sha256 and predictions_sha256 (both non-empty, bound)",
       "passed": true,
-      "evidence": "blind_manifest: questions_sha256=96b9f73c08bcf525..., labels_sha256=None; scoring_ledger: labels_sha256=c1012ce2d790f7b8..., predictions_sha256=2047af38198dbfa1..."
+      "evidence": "blind_manifest: questions_sha256=96b9f73c08bcf525..., labels_sha256=None; scoring_ledger: labels_sha256=c1012ce2d790f7b8..., predictions_sha256=ead3721673d9d5fc..."
     },
     {
       "id": "AC-55",
@@ -462,7 +511,7 @@
       "section": "deterministic_runtime",
       "description": "git_commit is not empty",
       "passed": true,
-      "evidence": "git_commit=917a3e293821"
+      "evidence": "git_commit=6f4c9b555dc5"
     },
     {
       "id": "AC-59",
@@ -518,7 +567,7 @@
       "section": "dual_hash",
       "description": "Scoring report has predictions_sha256",
       "passed": true,
-      "evidence": "predictions_sha256=2047af38198dbfa1..."
+      "evidence": "predictions_sha256=ead3721673d9d5fc..."
     },
     {
       "id": "AC-67",

@@ -724,13 +724,13 @@ def main() -> int:
 
     # --- Summary ---
     print("=" * 60)
-    print(f"Phase 5 evaluation corpus generated successfully.")
+    print("Phase 5 evaluation corpus generated successfully.")
     print(f"  total documents : {total_written}")
     for partition in PARTITIONS:
         count = len(COMPANY_DATA[partition])
         print(f"    {partition:<14s}: {count} document(s)")
     print(f"  manifest        : {manifest_path.relative_to(ROOT_DIR)}")
-    print(f"  uniqueness      : verified (no cross-partition overlap)")
+    print("  uniqueness      : verified (no cross-partition overlap)")
     print("=" * 60)
     return 0
 

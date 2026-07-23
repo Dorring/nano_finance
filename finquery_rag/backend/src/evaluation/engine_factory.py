@@ -36,16 +36,16 @@ import nest_asyncio
 
 nest_asyncio.apply()
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from dataclasses import dataclass, field  # noqa: E402
+from pathlib import Path  # noqa: E402
+from typing import Any  # noqa: E402
 
-from src.evaluation.feature_flag_injection import (
+from src.evaluation.feature_flag_injection import (  # noqa: E402
     FeatureFlagApplicationRecord,
     apply_feature_flags_runtime,
     apply_feature_flags_to_engine_kwargs,
 )
-from src.evaluation.schemas import EvaluationFeatureFlags
+from src.evaluation.schemas import EvaluationFeatureFlags  # noqa: E402
 
 __all__ = [
     "CalibrationParamRecord",
@@ -134,7 +134,7 @@ def setup_partition_index(partition: str, backend_dir: Path | None = None) -> in
     os.environ["BM25_DB_PATH"] = str(bm25_path)
 
     # Reset ChromaDB client singleton so the new path takes effect
-    import src.services.vector_store as vs
+    import src.services.vector_store as vs  # noqa: E402
 
     vs._chroma_client = None
     vs.CHROMA_PATH = str(chroma_path)
@@ -275,7 +275,7 @@ def build_evaluation_engine(
     Returns ``(engine, application_record)``. The record documents every
     param and flag application for auditability.
     """
-    from src.services.rag_engine import RAGEngine
+    from src.services.rag_engine import RAGEngine  # noqa: E402
 
     if not model_name:
         model_name = os.getenv("LLM_MODEL_NAME", "finquery-finance-sft1147")
@@ -349,7 +349,7 @@ def verify_sentinel_query(
     query returns 0 results, indicating an index wiring failure.
     """
     try:
-        import asyncio
+        import asyncio  # noqa: E402
 
         async def _run() -> list:
             raw = engine.query(
