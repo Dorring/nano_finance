@@ -53,7 +53,8 @@ class RunManifest:
     run_started_at: str
     run_ended_at: str | None
     predictions_sha256: str | None
-    questions_sha256: str | None
+    questions_sha256: str | None  # canonical (JSON-parsed, sorted keys)
+    questions_raw_sha256: str | None  # raw file bytes hash (matches RC manifest)
     labels_sha256: str | None
     case_count: int
 
@@ -88,6 +89,7 @@ class RunManifest:
             run_ended_at=data.get("run_ended_at"),
             predictions_sha256=data.get("predictions_sha256"),
             questions_sha256=data.get("questions_sha256"),
+            questions_raw_sha256=data.get("questions_raw_sha256"),
             labels_sha256=data.get("labels_sha256"),
             case_count=int(data.get("case_count", 0)),
         )
@@ -123,6 +125,7 @@ class RunManifest:
             "run_ended_at": self.run_ended_at,
             "predictions_sha256": self.predictions_sha256,
             "questions_sha256": self.questions_sha256,
+            "questions_raw_sha256": self.questions_raw_sha256,
             "labels_sha256": self.labels_sha256,
             "case_count": self.case_count,
         }
@@ -333,6 +336,9 @@ def create_manifest(
         ),
         questions_sha256=(
             compute_jsonl_sha256(questions_path) if questions_path else None
+        ),
+        questions_raw_sha256=(
+            compute_file_sha256(questions_path) if questions_path else None
         ),
         labels_sha256=compute_jsonl_sha256(labels_path) if labels_path else None,
         case_count=case_count,

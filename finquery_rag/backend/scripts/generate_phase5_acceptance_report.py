@@ -1015,9 +1015,20 @@ def build_report(criteria):
             "evaluation_results": evaluation_results
         },
         "test_suite": {
-            "evaluation_tests_passed": 1694,
-            "evaluation_tests_skipped": 53,
-            "evaluation_tests_failed": 0
+            "full_suite": {
+                "passed": 1691,
+                "skipped": 56,
+                "failed": 0,
+                "errors": 0,
+                "command": "pytest -q"
+            },
+            "evaluation_only": {
+                "passed": 266,
+                "skipped": 6,
+                "failed": 0,
+                "errors": 0,
+                "command": "pytest -q tests/evaluation"
+            }
         },
         "criteria": criteria
     }

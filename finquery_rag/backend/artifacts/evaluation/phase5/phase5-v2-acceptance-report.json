@@ -1,8 +1,8 @@
 {
   "report_type": "phase5_v2_acceptance_report",
-  "generated_at": "2026-07-23T17:25:44.444258+00:00",
+  "generated_at": "2026-07-23T17:43:48.077963+00:00",
   "branch": "feat/nf-05-sealed-evaluation",
-  "rc_commit": "6f4c9b555dc5c79b031888bee6074bf4e165de8b",
+  "rc_commit": "777dedb34401794f6ecbdefeb36a996ca06c3b74",
   "protocol_version": "2.1",
   "model_name": "finquery-finance-v2-lr010-150",
   "model_note": "Temporary smoke model used for evaluation pipeline validation. Not for production quality estimation.",
@@ -39,9 +39,20 @@
     }
   },
   "test_suite": {
-    "evaluation_tests_passed": 1694,
-    "evaluation_tests_skipped": 53,
-    "evaluation_tests_failed": 0
+    "full_suite": {
+      "passed": 1691,
+      "skipped": 56,
+      "failed": 0,
+      "errors": 0,
+      "command": "pytest -q"
+    },
+    "evaluation_only": {
+      "passed": 266,
+      "skipped": 6,
+      "failed": 0,
+      "errors": 0,
+      "command": "pytest -q tests/evaluation"
+    }
   },
   "criteria": [
     {
