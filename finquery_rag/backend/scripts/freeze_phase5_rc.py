@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import hashlib
+import os
 import json
 import subprocess
 import sys
@@ -125,11 +126,11 @@ def main():
         "config_sha256": compute_sha256(BACKEND_DIR / "pyproject.toml"),
         "bm25_db_sha256": compute_sha256(BACKEND_DIR / "rag_bm25.db"),
         "chroma_db_sha256": compute_dir_sha256(BACKEND_DIR / "chroma_db"),
-        "model_checkpoint_path": "/mnt/disk/mxf/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
+        "model_checkpoint_path": "chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
         "model_checkpoint_sha256": compute_sha256(
-            Path("/mnt/disk/mxf/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt")
+            Path(os.path.expanduser("~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt"))
         ),
-        "tokenizer_path": "/mnt/disk/mxf/.cache/nanochat/tokenizer/tokenizer.pkl",
+        "tokenizer_path": "tokenizer/tokenizer.pkl",
         "tokenizer_sha256": compute_sha256(
             Path("/mnt/disk/mxf/.cache/nanochat/tokenizer/tokenizer.pkl")
         ),
