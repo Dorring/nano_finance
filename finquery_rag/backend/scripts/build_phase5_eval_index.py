@@ -161,6 +161,11 @@ def build_partition_index(partition: str) -> dict:
     os.environ["CHROMA_PATH"] = str(chroma_path)
     os.environ["BM25_DB_PATH"] = bm25_path
 
+    # Reset vector_store module-level vars + singleton
+    import src.services.vector_store as vs
+    vs.CHROMA_PATH = str(chroma_path)
+    vs._chroma_client = None
+
     # Reset ChromaDB client cache (module-level singleton)
     import src.services.vector_store as vs
     vs._chroma_client = None
