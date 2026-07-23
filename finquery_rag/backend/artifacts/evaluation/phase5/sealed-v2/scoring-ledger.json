@@ -9,5 +9,16 @@
     "run_id": "sealed-v2-2026-07-23T07:13:16Z",
     "scored_at": "2026-07-23T07:19:06Z",
     "scorer_version": "1.0.0"
+  },
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "439b692a4cc1f06425c82116c4fc6d18392cc6aa801fdddde5ca8d93102e2d47",
+    "run_id": "sealed-v2-2026-07-23T12:39:21Z",
+    "scored_at": "2026-07-23T12:43:21Z",
+    "scorer_version": "1.0.0"
   }
 ]

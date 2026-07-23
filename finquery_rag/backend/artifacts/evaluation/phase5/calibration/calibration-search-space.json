@@ -1,0 +1,64 @@
+{
+  "calibration_search_space": {
+    "dense_sufficiency_threshold": [
+      0.15,
+      0.2,
+      0.25
+    ],
+    "max_context_tokens": [
+      2048,
+      4096,
+      6144
+    ],
+    "min_score_threshold": [
+      0.0,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "n_results": [
+      3,
+      5,
+      7,
+      10
+    ],
+    "numeric_dense_floor": [
+      0.0,
+      0.1,
+      0.2
+    ],
+    "numeric_rrf_floor": [
+      0.0,
+      0.05,
+      0.1
+    ],
+    "rrf_sufficiency_threshold": [
+      0.025,
+      0.05,
+      0.075
+    ]
+  },
+  "candidate_selection_rule": {
+    "safe_zero_rule": "when safe_candidates == 0, return baseline (never select from unsafe)",
+    "steps": [
+      "eliminate candidates with any safety_release_metric worse than baseline",
+      "eliminate candidates with new unsupported_numeric_release",
+      "eliminate candidates with new calculation_mismatch_release",
+      "eliminate candidates with invalid_citation_release higher than baseline",
+      "eliminate candidates with unsafe_content_release higher than baseline",
+      "eliminate candidates with system_error_rate worse than baseline",
+      "maximize macro_strict_pass_rate among remaining safe candidates",
+      "tiebreak: higher citation_recall",
+      "tiebreak: lower p95_latency",
+      "tiebreak: smallest diff from baseline",
+      "false_block_rate is a utility metric, NOT a safety gate"
+    ],
+    "version": "v2"
+  },
+  "generated_at": "2026-07-23T00:00:00Z",
+  "generated_by": "scripts/generate_phase5_artifacts.py",
+  "generated_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
+  "run_type": "calibration",
+  "schema_version": "1.0",
+  "source_protocol": "artifacts/evaluation/phase5/protocol/phase5-evaluation-protocol.json"
+}

@@ -1,7 +1,18 @@
 {
-  "canonical_sha256": "0c0fa203132d4e3355c22cc30ec01a0d4838b138f54665eb2af192a0a43cabe6",
+  "calibration_params_applied": {
+    "dense_sufficiency_threshold": "patched engine._sufficiency_evaluator._dense_threshold=0.15",
+    "max_context_tokens": "set engine.max_context_tokens=2048",
+    "min_score_threshold": "set engine.min_score_threshold=0.0",
+    "n_results": "extracted for per-call query() usage",
+    "numeric_dense_floor": "patched engine._orchestrator._numeric_dense_floor=0.0",
+    "numeric_rrf_floor": "patched engine._orchestrator._numeric_rrf_floor=0.0",
+    "rrf_sufficiency_threshold": "patched engine._sufficiency_evaluator._rrf_threshold=0.025"
+  },
+  "canonical_sha256": "439b692a4cc1f06425c82116c4fc6d18392cc6aa801fdddde5ca8d93102e2d47",
   "case_count": 54,
   "completed": true,
-  "completed_at": "2026-07-23T07:14:02Z",
-  "raw_sha256": "9f1013d7900cd84a46e8ce24044feda475e8a54c93f90dc3631ca0eed30e18ff"
+  "completed_at": "2026-07-23T12:40:42Z",
+  "raw_sha256": "444460b9f5469775b2d5708b486641d099c3c95280f85c0e4c48cc8fe54cad97",
+  "sentinel_query_passed": true,
+  "sentinel_query_result_count": 3
 }

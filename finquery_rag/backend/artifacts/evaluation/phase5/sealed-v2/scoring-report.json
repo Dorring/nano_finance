@@ -2544,6 +2544,11 @@
           "passed": false
         },
         {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
           "detail": "missing=['50.00']",
           "name": "expected_numbers_correct",
           "passed": false
@@ -2584,6 +2589,7 @@
       "secondary_failures": [
         "retrieval_at_fixed_k",
         "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "calculation_operation_correct",
         "calculation_value_correct",
@@ -2606,13 +2612,18 @@
           "passed": true
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2652,9 +2663,9 @@
         }
       ],
       "passed": false,
-      "primary_failure": "retrieval_at_fixed_k",
+      "primary_failure": "citation_recall_satisfied",
       "secondary_failures": [
-        "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "calculation_operation_correct",
         "calculation_value_correct",
@@ -2677,13 +2688,18 @@
           "passed": true
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2723,9 +2739,9 @@
         }
       ],
       "passed": false,
-      "primary_failure": "retrieval_at_fixed_k",
+      "primary_failure": "citation_recall_satisfied",
       "secondary_failures": [
-        "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "calculation_operation_correct",
         "calculation_value_correct",
@@ -2748,13 +2764,18 @@
           "passed": false
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2776,8 +2797,8 @@
       "passed": false,
       "primary_failure": "intent_correct",
       "secondary_failures": [
-        "retrieval_at_fixed_k",
         "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "required_terms_present",
         "answerability_correct",
         "validation_status_correct"
@@ -2796,13 +2817,18 @@
           "passed": false
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2829,8 +2855,8 @@
       "passed": false,
       "primary_failure": "intent_correct",
       "secondary_failures": [
-        "retrieval_at_fixed_k",
         "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "required_terms_present",
         "expected_numbers_correct",
         "answerability_correct",
@@ -2850,13 +2876,18 @@
           "passed": true
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2876,9 +2907,9 @@
         }
       ],
       "passed": false,
-      "primary_failure": "retrieval_at_fixed_k",
+      "primary_failure": "citation_recall_satisfied",
       "secondary_failures": [
-        "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "answerability_correct",
         "validation_status_correct"
@@ -2897,13 +2928,18 @@
           "passed": true
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2923,9 +2959,9 @@
         }
       ],
       "passed": false,
-      "primary_failure": "retrieval_at_fixed_k",
+      "primary_failure": "citation_recall_satisfied",
       "secondary_failures": [
-        "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "answerability_correct",
         "validation_status_correct"
@@ -2944,13 +2980,18 @@
           "passed": true
         },
         {
-          "detail": "recall@5=0.0000",
+          "detail": "recall@5=1.0000",
           "name": "retrieval_at_fixed_k",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "recall=0.0000",
           "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
           "passed": false
         },
         {
@@ -2970,9 +3011,9 @@
         }
       ],
       "passed": false,
-      "primary_failure": "retrieval_at_fixed_k",
+      "primary_failure": "citation_recall_satisfied",
       "secondary_failures": [
-        "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "answerability_correct",
         "validation_status_correct"
@@ -3001,6 +3042,11 @@
           "passed": false
         },
         {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
           "detail": "missing=['30,000,000,000']",
           "name": "expected_numbers_correct",
           "passed": false
@@ -3020,6 +3066,7 @@
       "primary_failure": "retrieval_at_fixed_k",
       "secondary_failures": [
         "citation_recall_satisfied",
+        "citation_precision_satisfied",
         "expected_numbers_correct",
         "answerability_correct",
         "validation_status_correct"
@@ -3027,8 +3074,8 @@
     }
   ],
   "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
-  "predictions_sha256": "0c0fa203132d4e3355c22cc30ec01a0d4838b138f54665eb2af192a0a43cabe6",
-  "run_id": "sealed-v2-2026-07-23T07:13:16Z",
+  "predictions_sha256": "439b692a4cc1f06425c82116c4fc6d18392cc6aa801fdddde5ca8d93102e2d47",
+  "run_id": "sealed-v2-2026-07-23T12:39:21Z",
   "summary": {
     "failed": 54,
     "pass_rate": 0.0,
