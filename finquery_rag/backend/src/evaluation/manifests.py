@@ -150,10 +150,13 @@ def compute_git_state(repo_path: str | Path = ".") -> tuple[str, bool]:
     return commit, bool(status.strip())
 
 
-def compute_file_sha256(path: str | Path) -> str:
+def compute_file_sha256(path: str | Path) -> str | None:
     """Return the SHA256 hex digest of a file's raw bytes."""
     hasher = hashlib.sha256()
-    with Path(path).open("rb") as fh:
+    p = Path(path)
+    if not p.is_file():
+        return None
+    with p.open("rb") as fh:
         for block in iter(lambda: fh.read(65536), b""):
             hasher.update(block)
     return hasher.hexdigest()
@@ -169,7 +172,10 @@ def compute_jsonl_sha256(path: str | Path) -> str:
     are hashed as-is so a corrupt file still produces a stable digest.
     """
     hasher = hashlib.sha256()
-    with Path(path).open("r", encoding="utf-8") as fh:
+    p = Path(path)
+    if not p.is_file():
+        return None
+    with p.open("r", encoding="utf-8") as fh:
         for line in fh:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
