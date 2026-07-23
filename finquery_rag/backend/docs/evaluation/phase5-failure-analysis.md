@@ -267,3 +267,55 @@ which failure types (e.g. A8/No Validation should show a spike in
 The comparison should highlight categories where the count changed by more
 than 2 cases relative to A0, as these indicate a meaningful shift attributable
 to the ablated component.
+
+---
+
+## Phase 5 Actual Results
+
+### Baseline (Dev Set, 10 cases)
+
+All 10 cases failed `strict_case_pass` (0/10, 0.0%, 95% CI [0.0000, 0.2775]).
+
+Primary failure distribution:
+
+| Primary Failure | Count |
+|-----------------|-------|
+| `retrieval_miss` | 5 |
+| `intent_error` | 5 |
+
+Secondary failure distribution (most common):
+
+| Secondary Failure | Count |
+|-------------------|-------|
+| `context_build_error` | 10 |
+| `citation_error` | 10 |
+| `answerability_false_negative` | 6 |
+| `calculation_error` | 2 |
+| `validation_false_block` | 1 |
+
+**Root cause:** The dev set uses placeholder document names (e.g.
+`annual_report_2025.pdf`, `balance_sheet.pdf`) that do not exist in the
+ChromaDB index. All retrieval returns empty results, cascading into
+context build errors, citation errors, and answerability false negatives.
+
+### Sealed Test (5 cases)
+
+All 5 cases failed `strict_case_pass` (0/5, 0.0%, 95% CI [0.0000, 0.4345]).
+
+The sealed set uses different placeholder document names (e.g.
+`filing_2025.pdf`, `report_2025.pdf`) that also do not exist in the
+ChromaDB index, producing the same failure pattern as the baseline.
+
+### Ablation (10 variants, 10 cases each)
+
+All 10 ablation variants scored 0.0 `macro_strict_pass_rate`, consistent
+with the baseline. Since all failures stem from missing documents in the
+index (not from component differences), disabling individual components
+does not change the outcome.
+
+### Failure Separation: System Error vs Quality Failure
+
+All failures in this evaluation are **quality failures** (retrieval miss,
+intent error, citation error), not system errors. No `system_error`
+or `auth_or_environment` failures were recorded. The RAG engine
+initialized and processed all queries without crashes.

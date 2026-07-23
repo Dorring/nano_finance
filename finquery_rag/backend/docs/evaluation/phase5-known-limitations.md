@@ -10,24 +10,23 @@ truth: the evaluation modules in `src/evaluation/` and the protocol in
 
 ## 1. Sealed Sample Size Limitations
 
-The sealed partition contains 120+ cases. While this meets the minimum
-threshold for per-slice reporting (each slice >= 20 items), it is a small
-sample for drawing high-confidence statistical conclusions.
+The sealed partition contains 5 cases (placeholder scale). This is well
+below the target of 120+ cases and does not meet the minimum threshold
+for per-slice reporting (each slice >= 20 items).
 
-- Per-slice metrics on slices with exactly 20 cases have wide confidence
-  intervals. A single case flip changes the slice pass rate by 5 percentage
-  points.
-- The `macro_strict_pass_rate` averages over slices, which reduces variance
-  compared to a flat average, but the per-slice variance remains high.
-- Rare failure modes (e.g. `wrong_unit_trap`) may be under-represented. A
-  failure that occurs in 1 of 20 cases may or may not reflect a real
-  systematic issue.
+- The small sample size means confidence intervals are extremely wide
+  (e.g. 0/5 strict pass has a 95% CI of [0.0000, 0.4345]).
+- Per-slice metrics are not meaningful with 1-2 cases per slice.
+- The `macro_strict_pass_rate` averages over slices, but with only 5
+  cases the variance is very high.
+- Rare failure modes may be completely absent from a 5-case sample.
 - Bootstrap confidence intervals are reported, but they reflect sampling
   variance only — they do not account for label noise or model
   non-determinism.
 
 The results should be interpreted as directional, not as precise point
-estimates of production performance.
+estimates of production performance. A future evaluation with 120+ sealed
+cases is needed for higher-confidence conclusions.
 
 ## 2. Document Domain Coverage Limitations
 
