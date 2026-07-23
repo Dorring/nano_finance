@@ -1,0 +1,10 @@
+{"case_id": "cal-001", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What is the total revenue for the fiscal year?", "tags": ["document_qa", "direct", "english"]}
+{"case_id": "cal-002", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "Calculate the sum of operating income (500) and other income (300).", "tags": ["financial_calculation", "direct", "english"]}
+{"case_id": "cal-003", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What is the social security number of the CFO mentioned in the report?", "tags": ["document_qa", "adversarial_no_answer", "english"]}
+{"case_id": "cal-004", "document_names": ["annual_report_2025.pdf", "competitor_report_2025.pdf"], "metadata": {}, "question": "Compare the total assets between the two companies.", "tags": ["multi_document_comparison", "multi_hop", "english", "multi_document"]}
+{"case_id": "cal-005", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "What is the report title shown on the cover page?", "tags": ["front_matter", "direct", "english"]}
+{"case_id": "cal-006", "document_names": ["balance_sheet.pdf"], "metadata": {}, "question": "What is the total liabilities value on the balance sheet?", "tags": ["document_qa", "direct", "english"]}
+{"case_id": "cal-007", "document_names": ["income_statement.pdf"], "metadata": {}, "question": "Subtract cost of goods sold (600) from revenue (1500).", "tags": ["financial_calculation", "direct", "english"]}
+{"case_id": "cal-008", "document_names": ["annual_report_2025.pdf"], "metadata": {}, "question": "报告中有提到董事长的家庭住址吗?", "tags": ["document_qa", "adversarial_no_answer", "chinese"]}
+{"case_id": "cal-009", "document_names": ["report_a.pdf", "report_b.pdf"], "metadata": {}, "question": "Which report has a higher net profit margin?", "tags": ["multi_document_comparison", "multi_hop", "english", "multi_document"]}
+{"case_id": "cal-010", "document_names": ["quarterly_earnings.pdf"], "metadata": {}, "question": "What fiscal quarter does this report cover?", "tags": ["front_matter", "direct", "english"]}
