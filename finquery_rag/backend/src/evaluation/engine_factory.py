@@ -31,6 +31,11 @@ evaluation scripts. It handles:
 from __future__ import annotations
 
 import os
+
+import nest_asyncio
+
+nest_asyncio.apply()
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
