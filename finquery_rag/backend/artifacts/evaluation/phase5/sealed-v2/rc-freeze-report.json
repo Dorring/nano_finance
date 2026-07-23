@@ -1,13 +1,13 @@
 {
   "passed": true,
-  "git_head": "0f62a8cdd3c675b0f1d40be511cca89f139b0eef",
+  "git_head": "202ac4aaa2905e75cf4778feef074c261c27860d",
   "git_dirty": false,
-  "expected_commit": "",
+  "expected_commit": "202ac4aaa2905e75cf4778feef074c261c27860d",
   "checks": {
-    "git_head": "SKIPPED: no expected_commit provided",
+    "git_head": "OK: 202ac4aaa2905e75cf4778feef074c261c27860d",
     "git_clean": "OK: clean",
     "selected_config": "OK: loaded 4 keys, sha256=90f91bc60738059e...",
-    "questions_hash": "SKIPPED: no path or expected hash",
+    "questions_hash": "OK: 1cfaa358966aed62...",
     "protocol_hash": "OK: d968a50abd31676f..."
   },
   "violations": []
