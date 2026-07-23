@@ -1,22 +1,39 @@
 {
-  "protocol_version": "1.0",
+  "protocol_version": "2.0",
   "baseline_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
   "primary_metric": "macro_strict_pass_rate",
-  "safety_metrics": [
+  "safety_release_metrics": [
     "unsupported_numeric_release_rate",
     "invalid_citation_release_rate",
     "calculation_mismatch_release_rate",
-    "false_block_rate",
-    "unsafe_answer_rate",
-    "validator_fail_closed_rate"
+    "unsafe_content_release_rate"
   ],
   "utility_metrics": [
     "strict_case_pass_rate",
     "macro_strict_pass_rate",
     "supported_answer_coverage",
     "correct_refusal_rate",
-    "answered_case_rate"
+    "answered_case_rate",
+    "false_block_rate",
+    "partial_answer_utility"
   ],
+  "validator_fail_closed_metrics": [
+    "validator_internal_failure_count",
+    "validator_internal_failure_blocked_count",
+    "validator_fail_closed_rate"
+  ],
+  "two_stage_calibration": {
+    "stage_1_replay": {
+      "description": "Apply params via apply_params_to_prediction() on existing calibration predictions. Fast, no RAG engine required.",
+      "requires_rag_engine": false
+    },
+    "stage_2_end_to_end_rerun": {
+      "description": "Run RAG engine with winner config from Stage 1 to verify replay matches reality.",
+      "requires_rag_engine": true,
+      "parity_check": "macro_strict_pass_rate difference within 0.05"
+    },
+    "safe_zero_rule": "When safe_candidates == 0, select baseline (never select from unsafe candidates)"
+  },
   "retrieval_metrics": [
     "recall_at_1",
     "recall_at_3",
@@ -45,16 +62,21 @@
     "document_coverage_threshold": [0.0, 0.5, 1.0]
   },
   "candidate_selection_rule": {
+    "version": "v2",
     "steps": [
-      "eliminate candidates with any safety metric worse than baseline",
+      "eliminate candidates with any safety_release_metric worse than baseline",
       "eliminate candidates with new unsupported_numeric_release",
       "eliminate candidates with new calculation_mismatch_release",
       "eliminate candidates with invalid_citation_release higher than baseline",
-      "maximize macro_strict_pass_rate among remaining",
+      "eliminate candidates with unsafe_content_release higher than baseline",
+      "eliminate candidates with system_error_rate worse than baseline",
+      "maximize macro_strict_pass_rate among remaining safe candidates",
       "tiebreak: higher citation_recall",
       "tiebreak: lower p95_latency",
-      "tiebreak: smallest diff from baseline"
-    ]
+      "tiebreak: smallest diff from baseline",
+      "false_block_rate is a utility metric, NOT a safety gate"
+    ],
+    "safe_zero_rule": "when safe_candidates == 0, return baseline (never select from unsafe)"
   },
   "ablation_variants": [
     {"id": "A0", "name": "Full System", "config_diff": {}},

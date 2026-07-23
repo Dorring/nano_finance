@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Run Phase 5 threshold calibration search on the calibration set.
+"""[DEPRECATED] Run Phase 5 threshold calibration search on the calibration set.
+
+.. deprecated:: Phase 5 v2
+    This single-stage calibration script is deprecated. Use
+    ``scripts/run_phase5_calibration_v2.py`` instead, which implements
+    the two-stage protocol (Stage 1: Replay + Stage 2: End-to-End Rerun)
+    with the v2 safe-candidate selection rule.
+
+    The v2 script separates replay calibration (fast, no RAG engine)
+    from end-to-end rerun (verifies parity), and enforces the safe=0
+    → baseline rule strictly.
 
 This script:
 1. Loads calibration queries and labels.
@@ -174,8 +184,17 @@ async def run_calibration_evaluation():
 
 def main():
     print("=" * 60)
-    print("Phase 5 Threshold Calibration Search")
+    print("[DEPRECATED] Phase 5 Threshold Calibration Search (single-stage)")
+    print("  -> Use scripts/run_phase5_calibration_v2.py for v2 two-stage protocol")
     print("=" * 60)
+    import warnings
+
+    warnings.warn(
+        "run_phase5_calibration.py is deprecated; use "
+        "run_phase5_calibration_v2.py for the v2 two-stage protocol.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     result = asyncio.run(run_calibration_evaluation())
 
