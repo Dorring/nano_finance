@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://finquery/eval/phase5/evaluation-query.schema.json",
+  "title": "EvaluationQuery",
+  "description": "What the blind runner sees. Must NOT contain any expected_* fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "question"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Unique identifier for the evaluation case.",
+      "minLength": 1
+    },
+    "question": {
+      "type": "string",
+      "description": "The natural-language question to ask the RAG engine.",
+      "minLength": 1
+    },
+    "document_names": {
+      "type": "array",
+      "description": "Document filenames the query is scoped to.",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "tags": {
+      "type": "array",
+      "description": "Slice tags attached to this case (intent, language, source_type, difficulty, safety).",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form metadata that does not leak label information.",
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "not": {
+    "description": "Reject any expected_* field to enforce label isolation.",
+    "patternProperties": {
+      "^expected_": {}
+    }
+  }
+}

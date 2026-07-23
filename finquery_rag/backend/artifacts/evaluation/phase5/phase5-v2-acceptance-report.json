@@ -1,0 +1,619 @@
+{
+  "report_type": "phase5_v2_acceptance_report",
+  "generated_at": "2026-07-23T17:43:48.077963+00:00",
+  "branch": "feat/nf-05-sealed-evaluation",
+  "rc_commit": "777dedb34401794f6ecbdefeb36a996ca06c3b74",
+  "protocol_version": "2.1",
+  "model_name": "finquery-finance-v2-lr010-150",
+  "model_note": "Temporary smoke model used for evaluation pipeline validation. Not for production quality estimation.",
+  "summary": {
+    "total_criteria": 80,
+    "passed": 80,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "evaluation_results": {
+      "dev": {
+        "strict_pass_rate": 0.0,
+        "total_queries": 48,
+        "total_cases": 48,
+        "scored_cases": 48,
+        "p50_latency_ms": 509.7519375,
+        "p95_latency_ms": 913.4483924999998
+      },
+      "calibration": {
+        "strict_pass_rate": 0.0,
+        "total_queries": 48,
+        "total_cases": 48,
+        "scored_cases": 48
+      },
+      "sealed": {
+        "pass_rate": 0.0,
+        "total": 54,
+        "passed": 0,
+        "failed": 54
+      },
+      "selected_config": {
+        "source": "calibration_v2_two_stage",
+        "status": "confirmed"
+      }
+    }
+  },
+  "test_suite": {
+    "full_suite": {
+      "passed": 1691,
+      "skipped": 56,
+      "failed": 0,
+      "errors": 0,
+      "command": "pytest -q"
+    },
+    "evaluation_only": {
+      "passed": 266,
+      "skipped": 6,
+      "failed": 0,
+      "errors": 0,
+      "command": "pytest -q tests/evaluation"
+    }
+  },
+  "criteria": [
+    {
+      "id": "AC-01",
+      "section": "invalidate_placeholder_results",
+      "description": "Placeholder run status is 'invalidated'",
+      "passed": true,
+      "evidence": "status=invalidated"
+    },
+    {
+      "id": "AC-02",
+      "section": "invalidate_placeholder_results",
+      "description": "not_for_resume_metrics and not_for_model_selection are both True",
+      "passed": true,
+      "evidence": "not_for_resume_metrics=True, not_for_model_selection=True"
+    },
+    {
+      "id": "AC-03",
+      "section": "build_real_eval_corpus",
+      "description": "All 3 partition index directories exist (dev, calibration, sealed)",
+      "passed": true,
+      "evidence": "dev=True, calibration=True, sealed=True"
+    },
+    {
+      "id": "AC-04",
+      "section": "build_real_eval_corpus",
+      "description": "index-manifest.json exists",
+      "passed": true,
+      "evidence": "index-manifest.json exists=True"
+    },
+    {
+      "id": "AC-05",
+      "section": "build_real_eval_corpus",
+      "description": "3 distinct user_ids across partitions",
+      "passed": true,
+      "evidence": "user_ids=[9001, 9002, 9003], count=3"
+    },
+    {
+      "id": "AC-06",
+      "section": "repartition_data",
+      "description": "Dev questions count >= 30",
+      "passed": true,
+      "evidence": "dev_questions_count=48"
+    },
+    {
+      "id": "AC-07",
+      "section": "repartition_data",
+      "description": "Calibration questions count >= 40",
+      "passed": true,
+      "evidence": "cal_questions_count=48"
+    },
+    {
+      "id": "AC-08",
+      "section": "repartition_data",
+      "description": "Sealed questions count >= 50",
+      "passed": true,
+      "evidence": "sealed_questions_count=54"
+    },
+    {
+      "id": "AC-09",
+      "section": "reannotate_labels",
+      "description": "Label files exist for all 3 splits and have > 0 entries",
+      "passed": true,
+      "evidence": "dev_labels=48, cal_labels=48, sealed_labels=54"
+    },
+    {
+      "id": "AC-10",
+      "section": "reannotate_labels",
+      "description": "Dev questions count == dev labels count",
+      "passed": true,
+      "evidence": "questions=48, labels=48"
+    },
+    {
+      "id": "AC-11",
+      "section": "reannotate_labels",
+      "description": "Calibration questions count == calibration labels count",
+      "passed": true,
+      "evidence": "questions=48, labels=48"
+    },
+    {
+      "id": "AC-12",
+      "section": "reannotate_labels",
+      "description": "Sealed questions count == sealed labels count",
+      "passed": true,
+      "evidence": "questions=54, labels=54"
+    },
+    {
+      "id": "AC-13",
+      "section": "two_stage_calibration",
+      "description": "Stage 1 replay total_candidates > 0",
+      "passed": true,
+      "evidence": "total_candidates=3888"
+    },
+    {
+      "id": "AC-14",
+      "section": "two_stage_calibration",
+      "description": "Stage 1 safe_candidates == total_candidates or safe > 0",
+      "passed": true,
+      "evidence": "safe_candidates=3888, total_candidates=3888"
+    },
+    {
+      "id": "AC-15",
+      "section": "two_stage_calibration",
+      "description": "Safe candidates > 0, selection rule did not fall back to baseline",
+      "passed": true,
+      "evidence": "safe_candidates=3888, winner={'metrics': {'answer_calculation_consistency': 0.0, 'answerability_macro_f1': 0.1111111111111111, 'answered_case_rate': 0.0, 'avg_context_tokens': 0.0, 'avg_retrieved_chunks': 0.5, 'avg_sources': 0, 'calculation_accuracy': 0.0, 'calculation_bypass_rate': 1.0, 'calculation_mismatch_release_rate': 0.0, 'citation_f1': 0.0, 'citation_precision': 0.0, 'citation_recall': 0.0, 'correct_refusal_rate': 1.0, 'document_coverage': 0.16666666666666666, 'expected_page_recall': 0.14285714285714285, 'false_block_rate': 1.0, 'formula_version_accuracy': 0.0, 'invalid_citation_release_rate': 0.0, 'llm_call_rate': 0.0, 'macro_strict_pass_rate': 0.0, 'metric_value_accuracy': 0.0, 'mrr': 0.09523809523809523, 'ndcg_at_5': 0.12272973256803066, 'no_answer_f1': 0.2222222222222222, 'no_answer_precision': 0.125, 'no_answer_recall': 1.0, 'numeric_accuracy': 0.0, 'p50_latency_ms': 779.645687, 'p95_latency_ms': 1053.8728294, 'partial_answer_utility': 0.375, 'period_value_accuracy': 1.0, 'precision_at_5': 0.05555555555555555, 'recall_at_1': 0.047619047619047616, 'recall_at_3': 0.14285714285714285, 'recall_at_5': 0.14285714285714285, 'scored_cases': 48, 'strict_pass_rate': 0.0, 'supported_answer_coverage': 0.0, 'system_error_rate': 0.0, 'total_cases': 48, 'unit_scale_accuracy': 0.0, 'unsafe_content_release_rate': 0.0, 'unsupported_numeric_release_rate': 0.0, 'validation_block_rate': 1.0, 'validator_fail_closed_rate': 0.0}, 'params': {'dense_sufficiency_threshold': 0.15, 'max_context_tokens': 2048, 'min_score_threshold': 0.0, 'n_results': 3, 'numeric_dense_floor': 0.0, 'numeric_rrf_floor': 0.0, 'rrf_sufficiency_threshold': 0.025}, 'safe': True, 'status': 'selected', 'strict_pass_ci_high': 0.0741026511527422, 'strict_pass_ci_low': 0.0, 'violations': []}"
+    },
+    {
+      "id": "AC-16",
+      "section": "two_stage_calibration",
+      "description": "Stage 2 parity_passed=True and requires_rag_engine=True",
+      "passed": true,
+      "evidence": "parity_passed=True, requires_rag_engine=True"
+    },
+    {
+      "id": "AC-17",
+      "section": "two_stage_calibration",
+      "description": "Stage 2 parity threshold == 0.05",
+      "passed": true,
+      "evidence": "threshold=0.05"
+    },
+    {
+      "id": "AC-57",
+      "section": "cross_case_isolation",
+      "description": "Stage 2 sentinel_query.passed == True",
+      "passed": true,
+      "evidence": "sentinel_query.passed=True, result_count=3"
+    },
+    {
+      "id": "AC-58",
+      "section": "cross_case_isolation",
+      "description": "Stage 2 calibration_param_injection has applied params",
+      "passed": true,
+      "evidence": "applied_params=['dense_sufficiency_threshold', 'max_context_tokens', 'min_score_threshold', 'n_results', 'numeric_dense_floor', 'numeric_rrf_floor', 'rrf_sufficiency_threshold']"
+    },
+    {
+      "id": "AC-18",
+      "section": "two_stage_calibration",
+      "description": "Selected config status == 'confirmed'",
+      "passed": true,
+      "evidence": "status=confirmed"
+    },
+    {
+      "id": "AC-19",
+      "section": "two_stage_calibration",
+      "description": "Selected config has 'params' key",
+      "passed": true,
+      "evidence": "has_params=True, param_count=7"
+    },
+    {
+      "id": "AC-20",
+      "section": "candidate_selection",
+      "description": "selected_config source == 'calibration_v2_two_stage'",
+      "passed": true,
+      "evidence": "source=calibration_v2_two_stage"
+    },
+    {
+      "id": "AC-21",
+      "section": "candidate_selection",
+      "description": "Selected config matches stage1 winner and safe_candidates consistent",
+      "passed": true,
+      "evidence": "config=stage1_winner, stage1_effective_config=stage1_winner, safe_candidates_s1=3888"
+    },
+    {
+      "id": "AC-22",
+      "section": "evaluation_feature_flags",
+      "description": "Protocol defines feature_flag_injection with all_nine_flags_must_reach_components=True",
+      "passed": true,
+      "evidence": "feature_flag_injection={\"required\": true, \"enforcer\": \"src/evaluation/feature_flag_injection.py:apply_feature_flags_runtime()\", \"all_nine_flags_must_reach_components\": true, \"rationale\": \"Each ablation variant A0-A9 must actually toggle the targeted component at runtime. Flags that are declared but not wired produce identical engine behavior to A0, making ablation deltas meaningless.\"}"
+    },
+    {
+      "id": "AC-23",
+      "section": "runtime_ablation_proof",
+      "description": "total_variants == 10 and successful_variants == 10",
+      "passed": true,
+      "evidence": "total_variants=10, successful_variants=10"
+    },
+    {
+      "id": "AC-24",
+      "section": "runtime_ablation_proof",
+      "description": "All 10 variants have sentinel_query_passed == True",
+      "passed": true,
+      "evidence": "all_sentinel_passed=True, variant_count=10"
+    },
+    {
+      "id": "AC-25",
+      "section": "runtime_ablation_proof",
+      "description": "Ablation report has feature_flag_injection record",
+      "passed": true,
+      "evidence": "feature_flag_injection=all_9_flags_reach_components_via_engine_factory"
+    },
+    {
+      "id": "AC-26",
+      "section": "rc_freeze",
+      "description": "RC freeze manifest has non-empty rc_commit",
+      "passed": true,
+      "evidence": "rc_commit=6f4c9b555dc5"
+    },
+    {
+      "id": "AC-27",
+      "section": "rc_freeze",
+      "description": "RC freeze manifest has worktree_clean == True",
+      "passed": true,
+      "evidence": "worktree_clean=True"
+    },
+    {
+      "id": "AC-70",
+      "section": "post_freeze_lock",
+      "description": "selected_config_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 90f91bc60738059e..."
+    },
+    {
+      "id": "AC-71",
+      "section": "post_freeze_lock",
+      "description": "corpus_manifest_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 6dca28c9f70fa563..."
+    },
+    {
+      "id": "AC-74",
+      "section": "post_freeze_lock",
+      "description": "sealed_chroma_hash_matches: runtime dir hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: c66e2efe368d4fca..."
+    },
+    {
+      "id": "AC-75",
+      "section": "post_freeze_lock",
+      "description": "sealed_bm25_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 8406554a3ceb4aea..."
+    },
+    {
+      "id": "AC-76",
+      "section": "post_freeze_lock",
+      "description": "model_checkpoint_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 961c1b60d0402ecb..."
+    },
+    {
+      "id": "AC-77",
+      "section": "post_freeze_lock",
+      "description": "tokenizer_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: 388319b6be8f0e56..."
+    },
+    {
+      "id": "AC-78",
+      "section": "post_freeze_lock",
+      "description": "dependency_lock_hash_matches: runtime hash == frozen hash",
+      "passed": true,
+      "evidence": "rc_report check: OK: c9850206e9e4cb81..."
+    },
+    {
+      "id": "AC-79",
+      "section": "post_freeze_lock",
+      "description": "effective_model_name_matches: runtime model == frozen model",
+      "passed": true,
+      "evidence": "rc_report check: OK: finquery-finance-v2-lr010-150"
+    },
+    {
+      "id": "AC-80",
+      "section": "post_freeze_lock",
+      "description": "preflight_git_clean == True (worktree clean before blind run)",
+      "passed": true,
+      "evidence": "preflight_git_clean=True"
+    },
+    {
+      "id": "AC-28",
+      "section": "blind_runner",
+      "description": "held_out_run_policy.max_reruns_for_infrastructure == True",
+      "passed": true,
+      "evidence": "max_reruns_for_infrastructure=True"
+    },
+    {
+      "id": "AC-29",
+      "section": "blind_runner",
+      "description": "held_out_run_policy.predictions_must_be_sha256_sealed == True",
+      "passed": true,
+      "evidence": "predictions_must_be_sha256_sealed=True"
+    },
+    {
+      "id": "AC-30",
+      "section": "blind_runner",
+      "description": "held_out_run_policy.scorer_must_not_call_rag == True",
+      "passed": true,
+      "evidence": "scorer_must_not_call_rag=True"
+    },
+    {
+      "id": "AC-31",
+      "section": "blind_runner",
+      "description": "rc_freeze_enforcement.required == True and fail_closed == True",
+      "passed": true,
+      "evidence": "required=True, fail_closed=True"
+    },
+    {
+      "id": "AC-52",
+      "section": "seal_questions_labels",
+      "description": "Protocol sentinel_query_verification.required == True",
+      "passed": true,
+      "evidence": "required=True"
+    },
+    {
+      "id": "AC-53",
+      "section": "seal_questions_labels",
+      "description": "Protocol calibration_param_injection.required == True",
+      "passed": true,
+      "evidence": "required=True"
+    },
+    {
+      "id": "AC-32",
+      "section": "cli_split",
+      "description": "Sealed run-manifest and scoring-report are separate files (CLI split)",
+      "passed": true,
+      "evidence": "run_manifest_exists=True, scoring_report_exists=True"
+    },
+    {
+      "id": "AC-33",
+      "section": "atomic_prediction_write",
+      "description": "predictions.jsonl.complete.json exists",
+      "passed": true,
+      "evidence": "exists=True"
+    },
+    {
+      "id": "AC-34",
+      "section": "atomic_prediction_write",
+      "description": "Complete marker has raw_sha256 and completed == True",
+      "passed": true,
+      "evidence": "raw_sha256=f06e61e8792c03c6..., completed=True"
+    },
+    {
+      "id": "AC-35",
+      "section": "scoring_ledger",
+      "description": "scoring-ledger.json exists and has entries",
+      "passed": true,
+      "evidence": "exists=True, entries=5"
+    },
+    {
+      "id": "AC-36",
+      "section": "reexecute_evaluations",
+      "description": "Dev report has total_queries > 0",
+      "passed": true,
+      "evidence": "total_queries=48, total_cases=48"
+    },
+    {
+      "id": "AC-38",
+      "section": "reexecute_evaluations",
+      "description": "Dev report has scored_cases > 0",
+      "passed": true,
+      "evidence": "scored_cases=48"
+    },
+    {
+      "id": "AC-37",
+      "section": "reexecute_evaluations",
+      "description": "Calibration report has total_queries > 0",
+      "passed": true,
+      "evidence": "total_queries=48, total_cases=48"
+    },
+    {
+      "id": "AC-39",
+      "section": "reexecute_evaluations",
+      "description": "Calibration report has scored_cases > 0",
+      "passed": true,
+      "evidence": "scored_cases=48"
+    },
+    {
+      "id": "AC-40",
+      "section": "final_pass_criteria",
+      "description": "All 3 partitions have pass_rate >= 0 (real values present)",
+      "passed": true,
+      "evidence": "dev=0.0, cal=0.0, sealed=0.0"
+    },
+    {
+      "id": "AC-41",
+      "section": "final_pass_criteria",
+      "description": "Selected config safe_candidates matches stage1 and status confirmed",
+      "passed": true,
+      "evidence": "config_status=confirmed, stage1_safe=3888"
+    },
+    {
+      "id": "AC-42",
+      "section": "final_pass_criteria",
+      "description": "predictions_sha256 matches between run-manifest and scoring-report",
+      "passed": true,
+      "evidence": "manifest=ead3721673d9d5fc..., scoring=ead3721673d9d5fc..., match=True"
+    },
+    {
+      "id": "AC-43",
+      "section": "unify_case_scorer",
+      "description": "Scoring protocol exists with case-level checks",
+      "passed": true,
+      "evidence": "scoring_protocol_exists=True"
+    },
+    {
+      "id": "AC-44",
+      "section": "metric_semantics",
+      "description": "Protocol defines safety_release_metrics",
+      "passed": true,
+      "evidence": "count=4, metrics=['unsupported_numeric_release_rate', 'invalid_citation_release_rate', 'calculation_mismatch_release_rate']..."
+    },
+    {
+      "id": "AC-45",
+      "section": "metric_semantics",
+      "description": "Protocol defines utility_metrics",
+      "passed": true,
+      "evidence": "count=7, metrics=['strict_case_pass_rate', 'macro_strict_pass_rate', 'supported_answer_coverage']..."
+    },
+    {
+      "id": "AC-46",
+      "section": "metric_semantics",
+      "description": "Protocol defines retrieval_metrics",
+      "passed": true,
+      "evidence": "count=8"
+    },
+    {
+      "id": "AC-47",
+      "section": "metric_semantics",
+      "description": "Protocol defines validator_fail_closed_metrics",
+      "passed": true,
+      "evidence": "count=3, metrics=['validator_internal_failure_count', 'validator_internal_failure_blocked_count', 'validator_fail_closed_rate']"
+    },
+    {
+      "id": "AC-48",
+      "section": "label_schema",
+      "description": "Labels have expected_answer/label/expected_intent/expected_answerability field",
+      "passed": true,
+      "evidence": "label_keys=['annotation_evidence', 'case_id', 'expected_answerability', 'expected_calculations', 'expected_intent', 'expected_no_answer', 'expected_numbers', 'expected_sources', 'expected_validation_status', 'forbidden_answer_terms']"
+    },
+    {
+      "id": "AC-49",
+      "section": "label_schema",
+      "description": "Labels have case_id or question_id field",
+      "passed": true,
+      "evidence": "label_keys=['annotation_evidence', 'case_id', 'expected_answerability', 'expected_calculations', 'expected_intent', 'expected_no_answer', 'expected_numbers', 'expected_sources', 'expected_validation_status', 'forbidden_answer_terms']"
+    },
+    {
+      "id": "AC-50",
+      "section": "label_schema",
+      "description": "Labels are valid JSON and parseable",
+      "passed": true,
+      "evidence": "first_label_keys=['annotation_evidence', 'case_id', 'expected_answerability', 'expected_calculations', 'expected_intent', 'expected_no_answer', 'expected_numbers', 'expected_sources', 'expected_validation_status', 'forbidden_answer_terms']"
+    },
+    {
+      "id": "AC-51",
+      "section": "restore_phase4_baseline",
+      "description": "Baseline baseline-config.json exists with content",
+      "passed": true,
+      "evidence": "exists=True, keys=['ablation_variants', 'baseline_commit', 'generated_at', 'generated_by', 'generated_commit', 'primary_metric', 'random_seed', 'run_type', 'schema_version', 'source_protocol']"
+    },
+    {
+      "id": "AC-54",
+      "section": "seal_questions_labels",
+      "description": "Blind/scoring isolation: blind manifest has questions_sha256 (non-empty) and labels_sha256 (null); scoring ledger has labels_sha256 and predictions_sha256 (both non-empty, bound)",
+      "passed": true,
+      "evidence": "blind_manifest: questions_sha256=96b9f73c08bcf525..., labels_sha256=None; scoring_ledger: labels_sha256=c1012ce2d790f7b8..., predictions_sha256=ead3721673d9d5fc..."
+    },
+    {
+      "id": "AC-55",
+      "section": "deterministic_runtime",
+      "description": "random_seed == 0",
+      "passed": true,
+      "evidence": "random_seed=0"
+    },
+    {
+      "id": "AC-56",
+      "section": "deterministic_runtime",
+      "description": "git_commit is not empty",
+      "passed": true,
+      "evidence": "git_commit=6f4c9b555dc5"
+    },
+    {
+      "id": "AC-59",
+      "section": "failure_taxonomy",
+      "description": "At least one case has primary_failure",
+      "passed": true,
+      "evidence": "cases_with_primary_failure=54"
+    },
+    {
+      "id": "AC-60",
+      "section": "failure_taxonomy",
+      "description": "Cases have secondary_failures recorded",
+      "passed": true,
+      "evidence": "cases_with_secondary=54"
+    },
+    {
+      "id": "AC-61",
+      "section": "statistics",
+      "description": "Dev summary has strict_pass_ci_low or ci_low",
+      "passed": true,
+      "evidence": "strict_pass_ci_low=0.0, strict_pass_ci_high=0.0741026511527422"
+    },
+    {
+      "id": "AC-62",
+      "section": "latency_redefinition",
+      "description": "Dev summary has p50_latency_ms",
+      "passed": true,
+      "evidence": "p50_latency_ms=509.7519375"
+    },
+    {
+      "id": "AC-63",
+      "section": "latency_redefinition",
+      "description": "Dev summary has p95_latency_ms",
+      "passed": true,
+      "evidence": "p95_latency_ms=913.4483924999998"
+    },
+    {
+      "id": "AC-64",
+      "section": "dual_hash",
+      "description": "predictions.jsonl.sha256 exists and has content",
+      "passed": true,
+      "evidence": "exists=True, content_len=64"
+    },
+    {
+      "id": "AC-65",
+      "section": "dual_hash",
+      "description": "predictions.jsonl.canonical.sha256 exists and has content",
+      "passed": true,
+      "evidence": "exists=True, content_len=64"
+    },
+    {
+      "id": "AC-66",
+      "section": "dual_hash",
+      "description": "Scoring report has predictions_sha256",
+      "passed": true,
+      "evidence": "predictions_sha256=ead3721673d9d5fc..."
+    },
+    {
+      "id": "AC-67",
+      "section": "artifact_privacy",
+      "description": "Selected config params do not contain raw credentials",
+      "passed": true,
+      "evidence": "param_keys=['dense_sufficiency_threshold', 'max_context_tokens', 'min_score_threshold', 'n_results', 'numeric_dense_floor', 'numeric_rrf_floor', 'rrf_sufficiency_threshold']"
+    },
+    {
+      "id": "AC-68",
+      "section": "artifact_privacy",
+      "description": "Scoring report cases do not contain raw credentials",
+      "passed": true,
+      "evidence": "checked_first_5_cases, sensitive_found=False"
+    },
+    {
+      "id": "AC-69",
+      "section": "unicode_scanning",
+      "description": "Eval data and scoring report contain non-ASCII (Chinese) characters, Unicode handled correctly",
+      "passed": true,
+      "evidence": "questions_has_unicode=True, scoring_report_has_unicode=True"
+    },
+    {
+      "id": "AC-72",
+      "section": "production_isolation",
+      "description": "Dataset is classified as synthetic_held_out (not production data)",
+      "passed": true,
+      "evidence": "type=synthetic_held_out, not_true_sealed=True"
+    },
+    {
+      "id": "AC-73",
+      "section": "release_gate",
+      "description": "All required release artifacts are present (dev, cal, scoring, rc_freeze, config, protocol, ledger, complete)",
+      "passed": true,
+      "evidence": "all_present=True, missing_count=0"
+    }
+  ]
+}

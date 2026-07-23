@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://finquery/eval/phase5/evaluation-manifest.schema.json",
+  "title": "DatasetManifest",
+  "description": "Manifest describing a dataset partition (dev, calibration, or sealed).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["partition", "case_count", "questions_sha256", "labels_sha256", "created_at", "slices"],
+  "properties": {
+    "partition": {
+      "type": "string",
+      "description": "Which partition this manifest describes.",
+      "enum": ["dev", "calibration", "sealed"]
+    },
+    "case_count": {
+      "type": "integer",
+      "description": "Number of cases in the partition.",
+      "minimum": 0
+    },
+    "questions_sha256": {
+      "type": "string",
+      "description": "SHA256 of the canonical questions JSONL content. Placeholder until computed by scripts."
+    },
+    "labels_sha256": {
+      "type": ["string", "null"],
+      "description": "SHA256 of the canonical labels JSONL content. Null for the sealed public manifest."
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 creation timestamp."
+    },
+    "slices": {
+      "type": "array",
+      "description": "Slice tags covered by this partition.",
+      "items": {"type": "string"},
+      "default": []
+    }
+  }
+}

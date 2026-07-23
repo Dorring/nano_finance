@@ -212,10 +212,10 @@ class Prediction:
         if not case_id:
             raise ValueError("prediction missing id/case_id")
         _ensure_list_fields(data, ("sources", "retrieved_chunks", "calculations"), f"prediction {case_id!r}")
-        for field in ("sources", "retrieved_chunks", "calculations"):
-            for idx, item in enumerate(data.get(field, []) or []):
+        for field_name in ("sources", "retrieved_chunks", "calculations"):
+            for idx, item in enumerate(data.get(field_name, []) or []):
                 if not isinstance(item, dict):
-                    raise ValueError(f"prediction {case_id!r} field {field}[{idx}] must be an object")
+                    raise ValueError(f"prediction {case_id!r} field {field_name}[{idx}] must be an object")
         return cls(
             case_id=str(case_id),
             answer=str(data.get("answer", "")),
@@ -1289,9 +1289,9 @@ def _ensure_mapping(value: Any, label: str) -> None:
 
 
 def _ensure_list_fields(data: dict[str, Any], fields: tuple[str, ...], label: str) -> None:
-    for field in fields:
-        if data.get(field) is not None and not isinstance(data.get(field), list):
-            raise ValueError(f"{label} field {field} must be a list")
+    for field_name in fields:
+        if data.get(field_name) is not None and not isinstance(data.get(field_name), list):
+            raise ValueError(f"{label} field {field_name} must be a list")
 
 
 def _intent_score(expected_intent: str | None, predicted_intent: str | None) -> float:

@@ -1,0 +1,602 @@
+{
+  "ablation_status": "completed",
+  "ablation_version": "v2",
+  "failed_variants": 0,
+  "feature_flag_injection": "all_9_flags_reach_components_via_engine_factory",
+  "report": {
+    "baseline_id": "A0",
+    "deltas": {
+      "A0": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A1": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A2": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A3": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A4": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A5": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A6": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A7": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A8": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A9": {
+        "delta_macro_strict_pass_rate": 0.0
+      }
+    },
+    "production_safe": {
+      "A0": true,
+      "A1": true,
+      "A2": true,
+      "A3": true,
+      "A4": true,
+      "A5": true,
+      "A6": true,
+      "A7": true,
+      "A8": false,
+      "A9": false
+    },
+    "variants": [
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A0",
+        "macro_strict_pass_rate": 0.0,
+        "name": "Full System"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A1",
+        "macro_strict_pass_rate": 0.0,
+        "name": "Dense Only"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A2",
+        "macro_strict_pass_rate": 0.0,
+        "name": "BM25 Only"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A3",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Reranker"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A4",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Query Rewrite"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A5",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Hierarchical Context"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A6",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Calculator"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A7",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Answerability Gate"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A8",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Post-generation Validation"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A9",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Citation Validation"
+      }
+    ]
+  },
+  "successful_variants": 10,
+  "total_variants": 10,
+  "variants": {
+    "A0": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {},
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {}
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1739.1293226999999,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A0",
+      "variant_name": "Full System"
+    },
+    "A1": {
+      "calculation_mismatch_release_rate": 0.16666666666666666,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable_bm25": true
+      },
+      "false_block_rate": 0.16666666666666666,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": false
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {}
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": false,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 2024.1028361999997,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A1",
+      "variant_name": "Dense Only"
+    },
+    "A2": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-dense": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {
+          "dense_enabled": "patched _retrieval_pipeline._dense_query_fn -> _PatchedDenseQueryFn"
+        }
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": false,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.0,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 5.492997849999997,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 1,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.0,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A2",
+      "variant_name": "BM25 Only"
+    },
+    "A3": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-reranker": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": null,
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {}
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": false
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1782.8999906,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A3",
+      "variant_name": "No Reranker"
+    },
+    "A4": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-query-rewrite": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {
+          "query_rewrite_enabled": "patched _llm_gateway.rewrite_query -> _no_rewrite (belt-and-suspenders; blind runner passes empty history)"
+        }
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": false,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1124.7279556499998,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A4",
+      "variant_name": "No Query Rewrite"
+    },
+    "A5": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-hierarchical-context": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {
+          "hierarchical_context_enabled": "patched _context_builder._merge_parent_context_chunks -> identity"
+        }
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": false,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1162.7035603,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A5",
+      "variant_name": "No Hierarchical Context"
+    },
+    "A6": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-calculation-pipeline": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": false,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {}
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": false,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1105.64269105,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A6",
+      "variant_name": "No Calculator"
+    },
+    "A7": {
+      "calculation_mismatch_release_rate": 0.16666666666666666,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-answerability": true
+      },
+      "false_block_rate": 0.16666666666666666,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "citation_validation_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {
+          "answerability_enabled": "stubbed _validation_pipeline._answerability -> _AlwaysAnswerable"
+        }
+      },
+      "feature_flags": {
+        "answerability_enabled": false,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": true,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1133.5949827499999,
+      "production_safe": true,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A7",
+      "variant_name": "No Answerability Gate"
+    },
+    "A8": {
+      "calculation_mismatch_release_rate": 0.16666666666666666,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-validation-pipeline": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": false,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "entire validation pipeline is None (constructor disabled)",
+          "citation_validation_enabled": "entire validation pipeline is None (constructor disabled)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {}
+      },
+      "feature_flags": {
+        "answerability_enabled": false,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": false,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": false,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 923.3997729500002,
+      "production_safe": false,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.16666666666666666,
+      "unsupported_numeric_release_rate": 0.16666666666666666,
+      "variant_id": "A8",
+      "variant_name": "No Post-generation Validation"
+    },
+    "A9": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-citation-validation": true
+      },
+      "false_block_rate": 0.0,
+      "feature_flag_application": {
+        "constructor_kwargs": {
+          "enable_calculation_pipeline": true,
+          "enable_validation_pipeline": true,
+          "reranker_name": "heuristic",
+          "use_hybrid": true
+        },
+        "noops": {
+          "answerability_enabled": "enabled (constructor default)",
+          "dense_enabled": "enabled (constructor default)",
+          "hierarchical_context_enabled": "enabled (constructor default)",
+          "query_rewrite_enabled": "enabled (constructor default)"
+        },
+        "runtime_patches": {
+          "citation_validation_enabled": "stubbed _validation_pipeline._response_validator._citation_validator -> _NoOpCitationValidator"
+        }
+      },
+      "feature_flags": {
+        "answerability_enabled": true,
+        "bm25_enabled": true,
+        "calculator_enabled": true,
+        "citation_validation_enabled": false,
+        "dense_enabled": true,
+        "hierarchical_context_enabled": true,
+        "post_validation_enabled": true,
+        "query_rewrite_enabled": true,
+        "reranker_enabled": true
+      },
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1393.2570240999999,
+      "production_safe": false,
+      "sentinel_query_passed": true,
+      "sentinel_query_result_count": 3,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A9",
+      "variant_name": "No Citation Validation"
+    }
+  }
+}

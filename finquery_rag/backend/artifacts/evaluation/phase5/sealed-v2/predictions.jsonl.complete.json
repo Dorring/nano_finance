@@ -1,0 +1,18 @@
+{
+  "calibration_params_applied": {
+    "dense_sufficiency_threshold": "patched engine._sufficiency_evaluator._dense_threshold=0.15",
+    "max_context_tokens": "set engine.max_context_tokens=2048",
+    "min_score_threshold": "set engine.min_score_threshold=0.0",
+    "n_results": "extracted for per-call query() usage",
+    "numeric_dense_floor": "patched engine._orchestrator._numeric_dense_floor=0.0",
+    "numeric_rrf_floor": "patched engine._orchestrator._numeric_rrf_floor=0.0",
+    "rrf_sufficiency_threshold": "patched engine._sufficiency_evaluator._rrf_threshold=0.025"
+  },
+  "canonical_sha256": "ead3721673d9d5fcc30839fc534553ef42542005308ae2e51fe9725d03bbefc0",
+  "case_count": 54,
+  "completed": true,
+  "completed_at": "2026-07-23T17:10:09Z",
+  "raw_sha256": "f06e61e8792c03c63e96f302f66d078fe069aeceb11be1f35b59baa799a08438",
+  "sentinel_query_passed": true,
+  "sentinel_query_result_count": 3
+}

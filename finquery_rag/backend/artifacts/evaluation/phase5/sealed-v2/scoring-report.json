@@ -1,0 +1,3085 @@
+{
+  "case_count": 54,
+  "cases": [
+    {
+      "case_id": "sealed_M_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['50.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_M: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_M: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_M: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_M: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['30.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_M: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_M: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_M: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_M: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['3.61']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_M: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_M: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_M: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_M: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['新世纪电子']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000201']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000201']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,400,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,540,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['13,456,789,012']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_M_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['22,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['52.08']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_N: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_N: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_N: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_N: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['29.98']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_N: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_N: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_N: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_N: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['3.33']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_N: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_N: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_N: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_N: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['海洋食品']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000202']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000202']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,580,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,700,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['14,567,890,123']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_N_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['24,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['62.86']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_O: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_O: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_O: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_O: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['24.99']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_O: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_O: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_O: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_O: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['4.53']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_O: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_O: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_O: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_O: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['天宇航空']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000203']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000203']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,250,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,900,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['15,678,901,234']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_O_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['35,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['50.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_P: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_P: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_P: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_P: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['24.95']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_P: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_P: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_P: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_P: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['3.42']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_P: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_P: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_P: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_P: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['大地农业']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000204']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000204']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,600,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['1,750,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['16,789,012,345']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_P_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['26,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['40.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_Q: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_Q: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_Q: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_Q: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['40.02']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_Q: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_Q: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_Q: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_Q: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['3.80']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_Q: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_Q: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_Q: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_Q: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['星光教育']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000205']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000205']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['2,150,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['2,300,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['17,890,123,456']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_Q_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['28,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_calc_debt_ratio",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['50.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_R: expected=debt_ratio",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_R: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_R: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "dr_R: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "retrieval_at_fixed_k",
+        "citation_recall_satisfied",
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_calc_gross_margin",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['40.00']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_R: expected=gross_margin",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_R: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_R: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "gm_R: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "citation_recall_satisfied",
+      "secondary_failures": [
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_calc_revenue_growth",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=financial_calculation got=financial_calculation",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['3.66']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_R: expected=growth_rate",
+          "name": "calculation_operation_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_R: no matching prediction",
+          "name": "calculation_value_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_R: no prediction",
+          "name": "calculation_unit_correct",
+          "passed": false
+        },
+        {
+          "detail": "rg_R: no prediction",
+          "name": "formula_version_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "citation_recall_satisfied",
+      "secondary_failures": [
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "calculation_operation_correct",
+        "calculation_value_correct",
+        "calculation_unit_correct",
+        "formula_version_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_front_matter_name",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['万通通讯']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "citation_precision_satisfied",
+        "required_terms_present",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_front_matter_stock",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=front_matter got=document_qa",
+          "name": "intent_correct",
+          "passed": false
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000206']",
+          "name": "required_terms_present",
+          "passed": false
+        },
+        {
+          "detail": "missing=['000206']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "intent_correct",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "citation_precision_satisfied",
+        "required_terms_present",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_qa_net_profit",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['2,460,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "citation_recall_satisfied",
+      "secondary_failures": [
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_qa_operating_cash_flow",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['2,660,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "citation_recall_satisfied",
+      "secondary_failures": [
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_qa_revenue",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=1.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": true
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['18,901,234,567']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "citation_recall_satisfied",
+      "secondary_failures": [
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    },
+    {
+      "case_id": "sealed_R_make_qa_total_assets",
+      "checks": [
+        {
+          "name": "no_system_error",
+          "passed": true
+        },
+        {
+          "detail": "expected=document_qa got=document_qa",
+          "name": "intent_correct",
+          "passed": true
+        },
+        {
+          "detail": "recall@5=0.0000",
+          "name": "retrieval_at_fixed_k",
+          "passed": false
+        },
+        {
+          "detail": "recall=0.0000",
+          "name": "citation_recall_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "precision=0.0000",
+          "name": "citation_precision_satisfied",
+          "passed": false
+        },
+        {
+          "detail": "missing=['30,000,000,000']",
+          "name": "expected_numbers_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=answerable got=not_answerable",
+          "name": "answerability_correct",
+          "passed": false
+        },
+        {
+          "detail": "expected=passed got=None",
+          "name": "validation_status_correct",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "primary_failure": "retrieval_at_fixed_k",
+      "secondary_failures": [
+        "citation_recall_satisfied",
+        "citation_precision_satisfied",
+        "expected_numbers_correct",
+        "answerability_correct",
+        "validation_status_correct"
+      ]
+    }
+  ],
+  "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+  "predictions_sha256": "ead3721673d9d5fcc30839fc534553ef42542005308ae2e51fe9725d03bbefc0",
+  "run_id": "sealed-v2-2026-07-23T17:09:28Z",
+  "summary": {
+    "failed": 54,
+    "pass_rate": 0.0,
+    "passed": 0,
+    "total": 54
+  }
+}

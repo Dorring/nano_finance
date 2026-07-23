@@ -17,7 +17,6 @@ Exit codes: 0 = no leakage, 1 = leakage detected, 2 = config error
 from __future__ import annotations
 
 import ast
-import os
 import re
 import sys
 from pathlib import Path

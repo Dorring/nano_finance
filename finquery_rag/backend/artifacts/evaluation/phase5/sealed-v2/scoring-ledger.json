@@ -1,0 +1,57 @@
+[
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "0c0fa203132d4e3355c22cc30ec01a0d4838b138f54665eb2af192a0a43cabe6",
+    "run_id": "sealed-v2-2026-07-23T07:13:16Z",
+    "scored_at": "2026-07-23T07:19:06Z",
+    "scorer_version": "1.0.0"
+  },
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "439b692a4cc1f06425c82116c4fc6d18392cc6aa801fdddde5ca8d93102e2d47",
+    "run_id": "sealed-v2-2026-07-23T12:39:21Z",
+    "scored_at": "2026-07-23T12:43:21Z",
+    "scorer_version": "1.0.0"
+  },
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "3404380701a90dc1150bc565b22dbfce64b0996ee6880800e23c59dab2b08e08",
+    "run_id": "sealed-v2-2026-07-23T13:21:04Z",
+    "scored_at": "2026-07-23T13:22:18Z",
+    "scorer_version": "1.0.0"
+  },
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "2047af38198dbfa1350b2be0b2d05cf0b1622cd8459c9d38b0db8298669dbf2a",
+    "run_id": "sealed-v2-2026-07-23T15:40:27Z",
+    "scored_at": "2026-07-23T15:40:45Z",
+    "scorer_version": "1.0.0"
+  },
+  {
+    "case_count": 54,
+    "failed": 54,
+    "labels_sha256": "c1012ce2d790f7b840172e9a77095789f940b1ff7d2f96cb9541628943314cea",
+    "pass_rate": 0.0,
+    "passed": 0,
+    "predictions_sha256": "ead3721673d9d5fcc30839fc534553ef42542005308ae2e51fe9725d03bbefc0",
+    "run_id": "sealed-v2-2026-07-23T17:09:28Z",
+    "scored_at": "2026-07-23T17:10:30Z",
+    "scorer_version": "1.0.0"
+  }
+]

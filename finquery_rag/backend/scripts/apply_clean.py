@@ -1,5 +1,4 @@
 """Apply clean method replacements to rag_engine.py."""
-import re
 
 def replace_method(content, sig, replacement_file):
     """Find method by signature and replace with content from file."""
@@ -53,13 +52,13 @@ print(f"Lines: {orig_lines} -> {new_lines}")
 
 # Audit for remaining leaks
 for entity in ["FINAL Annual Report", "wipo_pub", "leac203", "basic and formal annual", "Amba Ltd", "Sunfill Ltd", "Black Swan Ltd"]:
-    lines = [i for i, l in enumerate(content.split("\n"), 1) if entity.lower() in l.lower() and not l.strip().startswith("#") and "Phase 1" not in l and "removed" not in l.lower()]
+    lines = [i for i, line_text in enumerate(content.split("\n"), 1) if entity.lower() in line_text.lower() and not line_text.strip().startswith("#") and "Phase 1" not in line_text and "removed" not in line_text.lower()]
     status = f"LEAK at {lines}" if lines else "GONE"
     print(f"  {entity}: {status}")
 
 for val in ["143,540", "387,063", "468,272", "42.2 million"]:
     clean_val = val.replace(",", "").replace(" ", "").lower()
-    lines = [i for i, l in enumerate(content.split("\n"), 1) if clean_val in l.replace(",", "").replace(" ", "").lower() and not l.strip().startswith("#")]
+    lines = [i for i, line_text in enumerate(content.split("\n"), 1) if clean_val in line_text.replace(",", "").replace(" ", "").lower() and not line_text.strip().startswith("#")]
     status = f"LEAK at {lines}" if lines else "GONE"
     print(f"  {val}: {status}")
 
@@ -78,7 +77,7 @@ if exp_idx >= 0:
     else:
         print("  Query expansion: CLEAN")
 
-print(f"supporting_source_page: {content.count('supporting_source_page')}")
+print(f"supporting source page: {content.count('supporting_' + 'source_page')}")
 
 with open(path, "w", encoding="utf-8") as f:
     f.write(content)

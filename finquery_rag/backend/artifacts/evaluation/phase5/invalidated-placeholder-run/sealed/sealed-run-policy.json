@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-07-23T00:00:00Z",
+  "generated_by": "scripts/generate_phase5_artifacts.py",
+  "generated_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
+  "public_manifest": "eval_data/phase5/sealed/manifest.public.json",
+  "run_type": "sealed",
+  "schema_version": "1.0",
+  "sealed_labels_local_path": ".sealed/labels.jsonl",
+  "sealed_run_policy": {
+    "commit_must_match_rc": true,
+    "dirty_worktree_blocks_run": true,
+    "max_reruns_for_infrastructure": true,
+    "max_reruns_for_quality": false,
+    "predictions_must_be_sha256_sealed": true,
+    "scorer_must_not_call_rag": true
+  },
+  "source_protocol": "artifacts/evaluation/phase5/protocol/phase5-evaluation-protocol.json"
+}
