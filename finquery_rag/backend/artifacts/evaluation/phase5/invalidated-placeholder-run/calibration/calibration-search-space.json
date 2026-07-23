@@ -1,0 +1,64 @@
+{
+  "calibration_search_space": {
+    "document_coverage_threshold": [
+      0.0,
+      0.5,
+      1.0
+    ],
+    "max_context_tokens": [
+      2048,
+      4096,
+      6144
+    ],
+    "min_score_threshold": [
+      0.0,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "n_results": [
+      3,
+      5,
+      7,
+      10
+    ],
+    "numeric_dense_floor": [
+      0.0,
+      0.1,
+      0.2
+    ],
+    "numeric_rrf_floor": [
+      0.0,
+      0.05,
+      0.1
+    ],
+    "sufficiency_average_score_threshold": [
+      0.2,
+      0.3,
+      0.4
+    ],
+    "sufficiency_best_score_threshold": [
+      0.3,
+      0.4,
+      0.5
+    ]
+  },
+  "candidate_selection_rule": {
+    "steps": [
+      "eliminate candidates with any safety metric worse than baseline",
+      "eliminate candidates with new unsupported_numeric_release",
+      "eliminate candidates with new calculation_mismatch_release",
+      "eliminate candidates with invalid_citation_release higher than baseline",
+      "maximize macro_strict_pass_rate among remaining",
+      "tiebreak: higher citation_recall",
+      "tiebreak: lower p95_latency",
+      "tiebreak: smallest diff from baseline"
+    ]
+  },
+  "generated_at": "2026-07-23T00:00:00Z",
+  "generated_by": "scripts/generate_phase5_artifacts.py",
+  "generated_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
+  "run_type": "calibration",
+  "schema_version": "1.0",
+  "source_protocol": "artifacts/evaluation/phase5/protocol/phase5-evaluation-protocol.json"
+}

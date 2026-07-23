@@ -1,0 +1,27 @@
+{
+  "status": "invalidated",
+  "invalidated_at_commit": "pending",
+  "reason_codes": [
+    "EVALUATION_DOCUMENTS_NOT_INDEXED",
+    "CALIBRATION_NOT_RERUN_PER_CONFIG",
+    "ABLATION_RUNTIME_CONFIG_NOT_APPLIED"
+  ],
+  "not_for_resume_metrics": true,
+  "not_for_model_selection": true,
+  "summary": "该运行只验证了评测框架能够执行，不代表系统质量。",
+  "details": {
+    "EVALUATION_DOCUMENTS_NOT_INDEXED": "Expected source documents referenced by labels were never indexed in the production ChromaDB/BM25 stores; all retrieval-grounded metrics were therefore driven by 'document not found' failures rather than real system behavior.",
+    "CALIBRATION_NOT_RERUN_PER_CONFIG": "Calibration 'winner' was produced by apply_params_to_prediction() post-hoc simulation on existing predictions, not by re-running Retrieval→Context→Calculator→LLM→Validation per candidate config.",
+    "ABLATION_RUNTIME_CONFIG_NOT_APPLIED": "A0-A9 ablation variants only mutated a config dict key without disabling the actual component at runtime, so observed metrics were identical across variants and cannot support component-contribution claims."
+  },
+  "original_head_commit": "ded8a6f21606e0f0ede6b4597e4e5a809ebc4b3d",
+  "original_rc_commit": "82a92d8",
+  "original_selected_config_commit": "c29f4ca",
+  "contents": {
+    "baseline/": "Dev baseline report (0/10 strict pass).",
+    "calibration/": "Calibration search report and selected-config (11,664 combinations, winner=default).",
+    "ablation/": "A0-A9 ablation report (all variants 0.0 macro_strict_pass_rate).",
+    "sealed/": "Sealed v1 predictions, run-manifest, sealed-report, sealed-run-policy (0/5 strict pass).",
+    "rc/": "RC v1 freeze manifest (commit 82a92d8)."
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "invalidated": true,
+  "invalidation_reason": "safe_candidates_count was 0 but a non-baseline config was still 'selected' in violation of the Phase 5 v2 selection rule. apply_params_to_prediction() post-hoc simulation is no longer a valid calibration method for producing a formal winner.",
+  "invalidated_at_commit": "pending",
+  "original_commit": "c29f4ca",
+  "original_payload": {
+    "baseline_macro_strict_pass_rate": 0.0,
+    "config_change_isolated": true,
+    "deterministic_selection_rationale": "Winner selected by protocol selection rule: 1) eliminate candidates with safety regression, 2) eliminate new unsupported_numeric_release, 3) eliminate new calculation_mismatch_release, 4) eliminate invalid_citation_release higher than baseline, 5) maximize macro_strict_pass_rate, 6) tiebreak: higher citation_recall, 7) tiebreak: lower p95_latency, 8) tiebreak: smallest diff from baseline. Since all candidates scored equally (0.0 macro_strict_pass_rate due to placeholder documents), the winner is the first deterministic candidate with default/minimum thresholds.",
+    "no_sealed_data_used": true,
+    "safe_candidates_count": 0,
+    "selected_metrics_summary": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "false_block_rate": 1.0,
+      "invalid_citation_release_rate": 0.0,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1945.268559455872,
+      "strict_pass_rate": 0.0,
+      "unsupported_numeric_release_rate": 0.0
+    },
+    "selected_params": {
+      "document_coverage_threshold": 0.0,
+      "max_context_tokens": 2048,
+      "min_score_threshold": 0.0,
+      "n_results": 3,
+      "numeric_dense_floor": 0.0,
+      "numeric_rrf_floor": 0.0,
+      "sufficiency_average_score_threshold": 0.2,
+      "sufficiency_best_score_threshold": 0.3
+    },
+    "selection_rule": {
+      "steps": [
+        "eliminate candidates with any safety metric worse than baseline",
+        "eliminate candidates with new unsupported_numeric_release",
+        "eliminate candidates with new calculation_mismatch_release",
+        "eliminate candidates with invalid_citation_release higher than baseline",
+        "maximize macro_strict_pass_rate among remaining",
+        "tiebreak: higher citation_recall",
+        "tiebreak: lower p95_latency",
+        "tiebreak: smallest diff from baseline"
+      ]
+    },
+    "total_candidates_evaluated": 11664
+  }
+}

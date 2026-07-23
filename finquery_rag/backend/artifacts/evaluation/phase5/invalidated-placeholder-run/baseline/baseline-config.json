@@ -1,0 +1,53 @@
+{
+  "ablation_variants": [
+    {
+      "id": "A0",
+      "name": "Full System"
+    },
+    {
+      "id": "A1",
+      "name": "Dense Only"
+    },
+    {
+      "id": "A2",
+      "name": "BM25 Only"
+    },
+    {
+      "id": "A3",
+      "name": "No Reranker"
+    },
+    {
+      "id": "A4",
+      "name": "No Query Rewrite"
+    },
+    {
+      "id": "A5",
+      "name": "No Hierarchical Context"
+    },
+    {
+      "id": "A6",
+      "name": "No Calculator"
+    },
+    {
+      "id": "A7",
+      "name": "No Answerability Gate"
+    },
+    {
+      "id": "A8",
+      "name": "No Post-generation Validation"
+    },
+    {
+      "id": "A9",
+      "name": "No Citation Validation"
+    }
+  ],
+  "baseline_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
+  "generated_at": "2026-07-23T00:00:00Z",
+  "generated_by": "scripts/generate_phase5_artifacts.py",
+  "generated_commit": "49eb681a9cff586134136dd720fc2fdbbb71f2fe",
+  "primary_metric": "macro_strict_pass_rate",
+  "random_seed": 20260723,
+  "run_type": "baseline",
+  "schema_version": "1.0",
+  "source_protocol": "artifacts/evaluation/phase5/protocol/phase5-evaluation-protocol.json"
+}
