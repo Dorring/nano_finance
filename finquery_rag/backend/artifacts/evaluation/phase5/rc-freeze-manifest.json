@@ -1,0 +1,17 @@
+{
+  "bm25_db_sha256": "dd8e174081576b4f797340eb8b34bf1d873231e23bd3237a435887b26d59bcbb",
+  "chroma_db_sha256": "f6c0ac842b486dcfbe2459a7164d0bab28028c339698c9b2512247eaf4995bb4",
+  "config_sha256": "58f7dacf4ca7825b8e650ecc0c30f82639044ba17fb7abae0d4c15f86746c02f",
+  "frozen_at": "2026-07-23T00:00:00Z",
+  "model_checkpoint_path": "/mnt/disk/mxf/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
+  "model_checkpoint_sha256": "f6b93771b7d35d33f0dab5449b8568bc8135c176da442a74d12c0cc9941ca604",
+  "model_server_endpoint": "http://localhost:8500",
+  "model_server_name": "finquery-finance-sft1147",
+  "protocol_sha256": "d968a50abd31676ff1777d00ab8b75d9324fc52a2a1b27c895a7af5e035a30d9",
+  "rc_commit": "0f62a8cdd3c675b0f1d40be511cca89f139b0eef",
+  "selected_config_sha256": "90f91bc60738059e55de9afa2df6cb8d4be36dc3ecb3c5ce2b0e302b19fba294",
+  "selected_params": {},
+  "tokenizer_path": "/mnt/disk/mxf/.cache/nanochat/tokenizer/tokenizer.pkl",
+  "tokenizer_sha256": "388319b6be8f0e56a1f1063a2fcaaeae7013f4aec1320de73bd35a63721ade81",
+  "worktree_clean": true
+}

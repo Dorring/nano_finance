@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "git_head": "0f62a8cdd3c675b0f1d40be511cca89f139b0eef",
+  "git_dirty": false,
+  "expected_commit": "",
+  "checks": {
+    "git_head": "SKIPPED: no expected_commit provided",
+    "git_clean": "OK: clean",
+    "selected_config": "OK: loaded 4 keys, sha256=90f91bc60738059e...",
+    "questions_hash": "SKIPPED: no path or expected hash",
+    "protocol_hash": "OK: d968a50abd31676f..."
+  },
+  "violations": []
+}
