@@ -145,7 +145,7 @@ def apply_feature_flags_to_engine_kwargs(
       answerability_enabled OR citation_validation_enabled`` (any validation
       sub-flag being True keeps the pipeline constructed; fine-grained
       disabling is handled by runtime patches)
-    - ``reranker_name`` = ``"default"`` if ``reranker_enabled`` else ``None``
+    - ``reranker_name`` = ``"heuristic"`` if ``reranker_enabled`` else ``None``
     """
     enable_validation = (
         flags.post_validation_enabled
@@ -156,7 +156,7 @@ def apply_feature_flags_to_engine_kwargs(
         "use_hybrid": flags.bm25_enabled,
         "enable_calculation_pipeline": flags.calculator_enabled,
         "enable_validation_pipeline": enable_validation,
-        "reranker_name": "default" if flags.reranker_enabled else None,
+        "reranker_name": "heuristic" if flags.reranker_enabled else None,
     }
 
 

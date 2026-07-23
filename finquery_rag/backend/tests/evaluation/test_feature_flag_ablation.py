@@ -71,7 +71,7 @@ class TestApplyFeatureFlagsToEngineKwargs:
         assert kwargs["use_hybrid"] is True
         assert kwargs["enable_calculation_pipeline"] is True
         assert kwargs["enable_validation_pipeline"] is True
-        assert kwargs["reranker_name"] == "default"
+        assert kwargs["reranker_name"] == "heuristic"
 
     def test_dense_only_disables_hybrid(self) -> None:
         flags = EvaluationFeatureFlags(
