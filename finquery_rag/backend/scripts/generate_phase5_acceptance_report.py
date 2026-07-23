@@ -731,7 +731,6 @@ def evaluate_all():
     if sr:
         cases = sr.get("cases", [])
         has_pf = any(c.get("primary_failure") for c in cases)
-        has_fc = any(c.get("failure_category") for c in cases)
         ac("AC-59", "failure_taxonomy",
            "At least one case has primary_failure",
            has_pf,
