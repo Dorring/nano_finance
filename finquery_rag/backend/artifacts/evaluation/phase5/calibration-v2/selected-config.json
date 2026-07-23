@@ -1,0 +1,15 @@
+{
+  "config": "stage1_winner",
+  "params": {
+    "document_coverage_threshold": 0.0,
+    "max_context_tokens": 2048,
+    "min_score_threshold": 0.0,
+    "n_results": 3,
+    "numeric_dense_floor": 0.0,
+    "numeric_rrf_floor": 0.0,
+    "sufficiency_average_score_threshold": 0.2,
+    "sufficiency_best_score_threshold": 0.3
+  },
+  "source": "calibration_v2_two_stage",
+  "status": "confirmed"
+}

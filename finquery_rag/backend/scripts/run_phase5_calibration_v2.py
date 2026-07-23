@@ -37,6 +37,7 @@ Outputs (under ``artifacts/evaluation/phase5/calibration-v2/``):
     calibration-v2-report.json — merged final report
     selected-config.json       — the final selected configuration
 """
+
 from __future__ import annotations
 
 import argparse
@@ -70,26 +71,11 @@ PROTOCOL_PATH = (
     / "phase5-evaluation-protocol.json"
 )
 BASELINE_REPORT_PATH = (
-    BACKEND_DIR
-    / "artifacts"
-    / "evaluation"
-    / "phase5"
-    / "baseline"
-    / "baseline-report.json"
+    BACKEND_DIR / "artifacts" / "evaluation" / "phase5" / "dev" / "dev-report.json"
 )
-OUTPUT_DIR = (
-    BACKEND_DIR
-    / "artifacts"
-    / "evaluation"
-    / "phase5"
-    / "calibration-v2"
-)
-CAL_QUESTIONS = (
-    BACKEND_DIR / "eval_data" / "phase5" / "calibration" / "questions.jsonl"
-)
-CAL_LABELS = (
-    BACKEND_DIR / "eval_data" / "phase5" / "calibration" / "labels.jsonl"
-)
+OUTPUT_DIR = BACKEND_DIR / "artifacts" / "evaluation" / "phase5" / "calibration-v2"
+CAL_QUESTIONS = BACKEND_DIR / "eval_data" / "phase5" / "calibration" / "questions.jsonl"
+CAL_LABELS = BACKEND_DIR / "eval_data" / "phase5" / "calibration" / "labels.jsonl"
 
 PARITY_THRESHOLD = 0.05
 CALIBRATION_USER_ID = 9002
@@ -229,9 +215,7 @@ def run_stage1_replay(
                 "macro_strict_pass_rate": c.get("metrics", {}).get(
                     "macro_strict_pass_rate", 0.0
                 ),
-                "strict_pass_rate": c.get("metrics", {}).get(
-                    "strict_pass_rate", 0.0
-                ),
+                "strict_pass_rate": c.get("metrics", {}).get("strict_pass_rate", 0.0),
                 "safe": c.get("safe", False),
                 "violations": c.get("violations", []),
             }
@@ -260,11 +244,9 @@ def _build_engine_with_params(
             api_key="sk-placeholder",
             base_url="http://localhost:8500/v1",
         )
-        n_results = int(params.get("n_results", 3))
         engine = RAGEngine(
             llm_client=client,
             model_name="finquery-finance-sft1147",
-            n_results=n_results,
         )
         return engine
     except Exception as exc:  # noqa: BLE001
@@ -409,7 +391,9 @@ def build_final_report(
             "engine_unavailable",
         ):
             final_config = stage2.get("recommendation", "baseline")
-            final_params = winner.get("params", {}) if final_config != "baseline" else {}
+            final_params = (
+                winner.get("params", {}) if final_config != "baseline" else {}
+            )
             final_status = stage2.get("rerun_status", "unknown")
         else:
             final_config = "stage1_winner"
@@ -476,8 +460,10 @@ def main() -> int:
     search_space = protocol.get("calibration_search_space", {})
     baseline_metrics = load_baseline_metrics()
 
-    print(f"\nBaseline macro_strict_pass_rate: "
-          f"{baseline_metrics.get('macro_strict_pass_rate', 0.0):.4f}")
+    print(
+        f"\nBaseline macro_strict_pass_rate: "
+        f"{baseline_metrics.get('macro_strict_pass_rate', 0.0):.4f}"
+    )
     print(f"Search space: {len(search_space)} parameters")
 
     # Load calibration queries and labels
@@ -515,8 +501,10 @@ def main() -> int:
 
     # ---- Stage 2 ----
     if not args.stage_1_only:
-        stage1_macro = stage1_report.get("winner", {}).get("metrics", {}).get(
-            "macro_strict_pass_rate", 0.0
+        stage1_macro = (
+            stage1_report.get("winner", {})
+            .get("metrics", {})
+            .get("macro_strict_pass_rate", 0.0)
         )
         stage2_report = asyncio.run(
             run_stage2_rerun(

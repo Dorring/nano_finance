@@ -1,0 +1,843 @@
+{
+  "evaluation_status": "completed",
+  "failure_taxonomy": {
+    "calibration_G_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_G_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_G_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_G_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_G_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_G_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_G_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_G_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_H_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_H_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_H_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_H_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_H_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_H_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_H_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_H_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_I_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_I_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_I_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_I_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_I_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_I_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_I_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_I_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_J_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_J_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_J_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_J_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_J_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_J_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_J_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_J_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_K_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_K_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_K_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_K_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_K_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_K_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_K_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_K_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_L_make_calc_gross_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_L_make_calc_net_margin": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "unit_period_error",
+        "citation_error",
+        "calculation_error"
+      ]
+    },
+    "calibration_L_make_front_matter_name": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_L_make_front_matter_stock": {
+      "passed": false,
+      "primary_failure": "intent_error",
+      "secondary_failures": [
+        "retrieval_miss",
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error",
+        "answer_quality_term_violation"
+      ]
+    },
+    "calibration_L_make_no_answer_rd": {
+      "passed": false,
+      "primary_failure": "unclassified",
+      "secondary_failures": []
+    },
+    "calibration_L_make_qa_net_profit": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_L_make_qa_revenue": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    },
+    "calibration_L_make_qa_total_assets": {
+      "passed": false,
+      "primary_failure": "retrieval_miss",
+      "secondary_failures": [
+        "context_build_error",
+        "answerability_false_negative",
+        "citation_error"
+      ]
+    }
+  },
+  "manifest": {
+    "baseline_commit": "ed549f16a0e8b0026233614a8327e9294a51747e",
+    "bm25_db_path": "/mnt/disk/mxf/projects/Qhhhhhhaaa/nanochat/finquery_rag/backend/indexes/phase5/calibration/rag_bm25.db",
+    "bm25_db_sha256": "723d3c51c4ff1ff9afa92a3cb524d30b8d76ab65808b9d3344b973f292fbd276",
+    "chroma_db_path": "/mnt/disk/mxf/projects/Qhhhhhhaaa/nanochat/finquery_rag/backend/indexes/phase5/calibration/chroma",
+    "chroma_db_sha256": "0d0aea9e101f67c29e4c13bf3f5a9f0c561dc3b30204b7fcf04ecb961109b946",
+    "chunk_manifest_sha256": "85793e10632c196457356f22684127c3b8b662d99b30b75157d07dd529f2792a",
+    "model_server_endpoint": "http://localhost:8500",
+    "model_server_name": "finquery-finance-sft1147",
+    "partition": "calibration",
+    "user_id": 9002
+  },
+  "predictions_path": "/mnt/disk/mxf/projects/Qhhhhhhaaa/nanochat/finquery_rag/backend/artifacts/evaluation/phase5/calibration/calibration-predictions.jsonl",
+  "slice_metrics": {
+    "Difficulty": {
+      "adversarial_no_answer": {
+        "sample_count": 0
+      },
+      "ambiguous": {
+        "sample_count": 0
+      },
+      "direct": {
+        "sample_count": 0
+      },
+      "multi_hop": {
+        "sample_count": 0
+      },
+      "paraphrased": {
+        "sample_count": 0
+      }
+    },
+    "Intent": {
+      "conversation": {
+        "sample_count": 0
+      },
+      "document_qa": {
+        "answer_calculation_consistency": 0.0,
+        "answerability_macro_f1": 0.0,
+        "answered_case_rate": 0.0,
+        "avg_context_tokens": 0.0,
+        "avg_retrieved_chunks": 0,
+        "avg_sources": 0,
+        "calculation_accuracy": 0.0,
+        "calculation_bypass_rate": 0.0,
+        "calculation_mismatch_release_rate": 0.0,
+        "citation_f1": 0.0,
+        "citation_precision": 0.0,
+        "citation_recall": 0.0,
+        "correct_refusal_rate": 0.0,
+        "document_coverage": 0.0,
+        "expected_page_recall": 0.0,
+        "false_block_rate": 0.0,
+        "formula_version_accuracy": 0.0,
+        "invalid_citation_release_rate": 0.0,
+        "llm_call_rate": 0.0,
+        "macro_strict_pass_rate": 0.0,
+        "metric_value_accuracy": 0.0,
+        "mrr": 0.0,
+        "ndcg_at_5": 0.0,
+        "no_answer_f1": 0.0,
+        "no_answer_precision": 0.0,
+        "no_answer_recall": 0.0,
+        "numeric_accuracy": 0.0,
+        "p50_latency_ms": 950.3668495,
+        "p95_latency_ms": 1100.4231838499998,
+        "partial_answer_utility": 0.3,
+        "period_value_accuracy": 0.0,
+        "precision_at_5": 0.0,
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "sample_count": 18,
+        "scored_cases": 18,
+        "strict_pass_rate": 0.0,
+        "supported_answer_coverage": 0.0,
+        "system_error_rate": 0.0,
+        "total_cases": 18,
+        "unit_scale_accuracy": 0.0,
+        "unsafe_content_release_rate": 0.0,
+        "unsupported_numeric_release_rate": 0.0,
+        "validation_block_rate": 0.0,
+        "validator_fail_closed_rate": 0.0
+      },
+      "document_summary": {
+        "sample_count": 0
+      },
+      "financial_calculation": {
+        "answer_calculation_consistency": 0.0,
+        "answerability_macro_f1": 0.0,
+        "answered_case_rate": 0.0,
+        "avg_context_tokens": 0.0,
+        "avg_retrieved_chunks": 0,
+        "avg_sources": 0,
+        "calculation_accuracy": 0.0,
+        "calculation_bypass_rate": 1.0,
+        "calculation_mismatch_release_rate": 0.0,
+        "citation_f1": 0.0,
+        "citation_precision": 0.0,
+        "citation_recall": 0.0,
+        "correct_refusal_rate": 0.0,
+        "document_coverage": 0.0,
+        "expected_page_recall": 0.0,
+        "false_block_rate": 0.0,
+        "formula_version_accuracy": 0.0,
+        "invalid_citation_release_rate": 0.0,
+        "llm_call_rate": 0.0,
+        "macro_strict_pass_rate": 0.0,
+        "metric_value_accuracy": 0.0,
+        "mrr": 0.0,
+        "ndcg_at_5": 0.0,
+        "no_answer_f1": 0.0,
+        "no_answer_precision": 0.0,
+        "no_answer_recall": 0.0,
+        "numeric_accuracy": 0.0,
+        "p50_latency_ms": 846.8770135,
+        "p95_latency_ms": 1130.0241557,
+        "partial_answer_utility": 0.15000000000000002,
+        "period_value_accuracy": 1.0,
+        "precision_at_5": 0.0,
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "sample_count": 12,
+        "scored_cases": 12,
+        "strict_pass_rate": 0.0,
+        "supported_answer_coverage": 0.0,
+        "system_error_rate": 0.0,
+        "total_cases": 12,
+        "unit_scale_accuracy": 0.0,
+        "unsafe_content_release_rate": 0.0,
+        "unsupported_numeric_release_rate": 0.0,
+        "validation_block_rate": 0.0,
+        "validator_fail_closed_rate": 0.0
+      },
+      "front_matter": {
+        "answer_calculation_consistency": 0.0,
+        "answerability_macro_f1": 0.0,
+        "answered_case_rate": 0.0,
+        "avg_context_tokens": 0.0,
+        "avg_retrieved_chunks": 0,
+        "avg_sources": 0,
+        "calculation_accuracy": 0.0,
+        "calculation_bypass_rate": 0.0,
+        "calculation_mismatch_release_rate": 0.0,
+        "citation_f1": 0.0,
+        "citation_precision": 0.0,
+        "citation_recall": 0.0,
+        "correct_refusal_rate": 0.0,
+        "document_coverage": 0.0,
+        "expected_page_recall": 0.0,
+        "false_block_rate": 0.0,
+        "formula_version_accuracy": 0.0,
+        "invalid_citation_release_rate": 0.0,
+        "llm_call_rate": 0.0,
+        "macro_strict_pass_rate": 0.0,
+        "metric_value_accuracy": 0.0,
+        "mrr": 0.0,
+        "ndcg_at_5": 0.0,
+        "no_answer_f1": 0.0,
+        "no_answer_precision": 0.0,
+        "no_answer_recall": 0.0,
+        "numeric_accuracy": 0.0,
+        "p50_latency_ms": 893.665177,
+        "p95_latency_ms": 1163.1662913999999,
+        "partial_answer_utility": 0.3,
+        "period_value_accuracy": 0.0,
+        "precision_at_5": 0.0,
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "sample_count": 12,
+        "scored_cases": 12,
+        "strict_pass_rate": 0.0,
+        "supported_answer_coverage": 0.0,
+        "system_error_rate": 0.0,
+        "total_cases": 12,
+        "unit_scale_accuracy": 0.0,
+        "unsafe_content_release_rate": 0.0,
+        "unsupported_numeric_release_rate": 0.0,
+        "validation_block_rate": 0.0,
+        "validator_fail_closed_rate": 0.0
+      },
+      "multi_document_comparison": {
+        "sample_count": 0
+      },
+      "unknown": {
+        "sample_count": 0
+      }
+    },
+    "Language": {
+      "chinese": {
+        "sample_count": 0
+      },
+      "english": {
+        "sample_count": 0
+      },
+      "mixed": {
+        "sample_count": 0
+      }
+    },
+    "Safety": {
+      "calculation_blocked": {
+        "sample_count": 0
+      },
+      "expected_answer": {
+        "sample_count": 0
+      },
+      "expected_no_answer": {
+        "answer_calculation_consistency": 0.0,
+        "answerability_macro_f1": 1.0,
+        "answered_case_rate": 0.0,
+        "avg_context_tokens": 0.0,
+        "avg_retrieved_chunks": 0,
+        "avg_sources": 0,
+        "calculation_accuracy": 0.0,
+        "calculation_bypass_rate": 0.0,
+        "calculation_mismatch_release_rate": 0.0,
+        "citation_f1": 0.0,
+        "citation_precision": 0.0,
+        "citation_recall": 0.0,
+        "correct_refusal_rate": 1.0,
+        "document_coverage": 0.0,
+        "expected_page_recall": 0.0,
+        "false_block_rate": 0.0,
+        "formula_version_accuracy": 0.0,
+        "invalid_citation_release_rate": 0.0,
+        "llm_call_rate": 0.0,
+        "macro_strict_pass_rate": 0.0,
+        "metric_value_accuracy": 0.0,
+        "mrr": 0.0,
+        "ndcg_at_5": 0.0,
+        "no_answer_f1": 1.0,
+        "no_answer_precision": 1.0,
+        "no_answer_recall": 1.0,
+        "numeric_accuracy": 0.0,
+        "p50_latency_ms": 856.4820175,
+        "p95_latency_ms": 913.435288,
+        "partial_answer_utility": 1.0,
+        "period_value_accuracy": 0.0,
+        "precision_at_5": 0.0,
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "sample_count": 6,
+        "scored_cases": 6,
+        "strict_pass_rate": 0.0,
+        "supported_answer_coverage": 0.0,
+        "system_error_rate": 0.0,
+        "total_cases": 6,
+        "unit_scale_accuracy": 0.0,
+        "unsafe_content_release_rate": 0.0,
+        "unsupported_numeric_release_rate": 0.0,
+        "validation_block_rate": 0.0,
+        "validator_fail_closed_rate": 0.0
+      },
+      "unsupported_numeric_trap": {
+        "sample_count": 0
+      },
+      "wrong_citation_trap": {
+        "sample_count": 0
+      },
+      "wrong_period_trap": {
+        "sample_count": 0
+      },
+      "wrong_unit_trap": {
+        "sample_count": 0
+      }
+    },
+    "SourceType": {
+      "front_matter": {
+        "answer_calculation_consistency": 0.0,
+        "answerability_macro_f1": 0.0,
+        "answered_case_rate": 0.0,
+        "avg_context_tokens": 0.0,
+        "avg_retrieved_chunks": 0,
+        "avg_sources": 0,
+        "calculation_accuracy": 0.0,
+        "calculation_bypass_rate": 0.0,
+        "calculation_mismatch_release_rate": 0.0,
+        "citation_f1": 0.0,
+        "citation_precision": 0.0,
+        "citation_recall": 0.0,
+        "correct_refusal_rate": 0.0,
+        "document_coverage": 0.0,
+        "expected_page_recall": 0.0,
+        "false_block_rate": 0.0,
+        "formula_version_accuracy": 0.0,
+        "invalid_citation_release_rate": 0.0,
+        "llm_call_rate": 0.0,
+        "macro_strict_pass_rate": 0.0,
+        "metric_value_accuracy": 0.0,
+        "mrr": 0.0,
+        "ndcg_at_5": 0.0,
+        "no_answer_f1": 0.0,
+        "no_answer_precision": 0.0,
+        "no_answer_recall": 0.0,
+        "numeric_accuracy": 0.0,
+        "p50_latency_ms": 893.665177,
+        "p95_latency_ms": 1163.1662913999999,
+        "partial_answer_utility": 0.3,
+        "period_value_accuracy": 0.0,
+        "precision_at_5": 0.0,
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "sample_count": 12,
+        "scored_cases": 12,
+        "strict_pass_rate": 0.0,
+        "supported_answer_coverage": 0.0,
+        "system_error_rate": 0.0,
+        "total_cases": 12,
+        "unit_scale_accuracy": 0.0,
+        "unsafe_content_release_rate": 0.0,
+        "unsupported_numeric_release_rate": 0.0,
+        "validation_block_rate": 0.0,
+        "validator_fail_closed_rate": 0.0
+      },
+      "multi_document": {
+        "sample_count": 0
+      },
+      "multi_page": {
+        "sample_count": 0
+      },
+      "narrative_paragraph": {
+        "sample_count": 0
+      },
+      "table": {
+        "sample_count": 0
+      }
+    }
+  },
+  "summary": {
+    "answer_calculation_consistency": 0.0,
+    "answerability_macro_f1": 0.1111111111111111,
+    "answered_case_rate": 0.0,
+    "avg_context_tokens": 0.0,
+    "avg_retrieved_chunks": 0,
+    "avg_sources": 0,
+    "calculation_accuracy": 0.0,
+    "calculation_bypass_rate": 1.0,
+    "calculation_mismatch_release_rate": 0.0,
+    "citation_f1": 0.0,
+    "citation_precision": 0.0,
+    "citation_recall": 0.0,
+    "correct_refusal_rate": 1.0,
+    "document_coverage": 0.0,
+    "expected_page_recall": 0.0,
+    "false_block_rate": 0.0,
+    "formula_version_accuracy": 0.0,
+    "invalid_citation_release_rate": 0.0,
+    "llm_call_rate": 0.0,
+    "macro_strict_pass_rate": 0.0,
+    "metric_value_accuracy": 0.0,
+    "mrr": 0.0,
+    "ndcg_at_5": 0.0,
+    "no_answer_f1": 0.2222222222222222,
+    "no_answer_precision": 0.125,
+    "no_answer_recall": 1.0,
+    "numeric_accuracy": 0.0,
+    "p50_latency_ms": 894.1981135000001,
+    "p95_latency_ms": 1145.1803848999998,
+    "partial_answer_utility": 0.35,
+    "period_value_accuracy": 1.0,
+    "precision_at_5": 0.0,
+    "recall_at_1": 0.0,
+    "recall_at_3": 0.0,
+    "recall_at_5": 0.0,
+    "scored_cases": 48,
+    "strict_pass_ci_high": 0.0741026511527422,
+    "strict_pass_ci_low": 0.0,
+    "strict_pass_count": 0,
+    "strict_pass_rate": 0.0,
+    "supported_answer_coverage": 0.0,
+    "system_error_rate": 0.0,
+    "total_cases": 48,
+    "total_queries": 48,
+    "unit_scale_accuracy": 0.0,
+    "unsafe_content_release_rate": 0.0,
+    "unsupported_numeric_release_rate": 0.0,
+    "validation_block_rate": 0.0,
+    "validator_fail_closed_rate": 0.0
+  }
+}

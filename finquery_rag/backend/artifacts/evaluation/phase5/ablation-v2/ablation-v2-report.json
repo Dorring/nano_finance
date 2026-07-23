@@ -1,0 +1,307 @@
+{
+  "ablation_status": "completed",
+  "ablation_version": "v2",
+  "failed_variants": 0,
+  "report": {
+    "baseline_id": "A0",
+    "deltas": {
+      "A0": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A1": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A2": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A3": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A4": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A5": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A6": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A7": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A8": {
+        "delta_macro_strict_pass_rate": 0.0
+      },
+      "A9": {
+        "delta_macro_strict_pass_rate": 0.0
+      }
+    },
+    "production_safe": {
+      "A0": true,
+      "A1": true,
+      "A2": true,
+      "A3": true,
+      "A4": true,
+      "A5": true,
+      "A6": true,
+      "A7": true,
+      "A8": false,
+      "A9": false
+    },
+    "variants": [
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A0",
+        "macro_strict_pass_rate": 0.0,
+        "name": "Full System"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A1",
+        "macro_strict_pass_rate": 0.0,
+        "name": "Dense Only"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A2",
+        "macro_strict_pass_rate": 0.0,
+        "name": "BM25 Only"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A3",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Reranker"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A4",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Query Rewrite"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A5",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Hierarchical Context"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A6",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Calculator"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A7",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Answerability Gate"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A8",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Post-generation Validation"
+      },
+      {
+        "delta_from_baseline": 0.0,
+        "id": "A9",
+        "macro_strict_pass_rate": 0.0,
+        "name": "No Citation Validation"
+      }
+    ]
+  },
+  "successful_variants": 10,
+  "total_variants": 10,
+  "user_id": 9001,
+  "variants": {
+    "A0": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {},
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1638.59494605,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A0",
+      "variant_name": "Full System"
+    },
+    "A1": {
+      "calculation_mismatch_release_rate": 0.16666666666666666,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable_bm25": true
+      },
+      "false_block_rate": 0.16666666666666666,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 2188.6937473499993,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A1",
+      "variant_name": "Dense Only"
+    },
+    "A2": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-dense": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1791.3976927500003,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A2",
+      "variant_name": "BM25 Only"
+    },
+    "A3": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-reranker": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1026.03146425,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A3",
+      "variant_name": "No Reranker"
+    },
+    "A4": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-query-rewrite": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 1093.75503695,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A4",
+      "variant_name": "No Query Rewrite"
+    },
+    "A5": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-hierarchical-context": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 919.1582990500001,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A5",
+      "variant_name": "No Hierarchical Context"
+    },
+    "A6": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-calculation-pipeline": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 760.1082693,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A6",
+      "variant_name": "No Calculator"
+    },
+    "A7": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-answerability": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 782.61152675,
+      "production_safe": true,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A7",
+      "variant_name": "No Answerability Gate"
+    },
+    "A8": {
+      "calculation_mismatch_release_rate": 0.16666666666666666,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-validation-pipeline": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 859.25395815,
+      "production_safe": false,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.16666666666666666,
+      "unsupported_numeric_release_rate": 0.16666666666666666,
+      "variant_id": "A8",
+      "variant_name": "No Post-generation Validation"
+    },
+    "A9": {
+      "calculation_mismatch_release_rate": 0.0,
+      "citation_recall": 0.0,
+      "config_diff": {
+        "disable-citation-validation": true
+      },
+      "false_block_rate": 0.0,
+      "invalid_citation_release_rate": 0.14583333333333334,
+      "macro_strict_pass_rate": 0.0,
+      "p95_latency_ms": 795.4153149999999,
+      "production_safe": false,
+      "status": "completed",
+      "strict_pass_rate": 0.0,
+      "total_cases": 48,
+      "unsafe_content_release_rate": 0.14583333333333334,
+      "unsupported_numeric_release_rate": 0.0,
+      "variant_id": "A9",
+      "variant_name": "No Citation Validation"
+    }
+  }
+}

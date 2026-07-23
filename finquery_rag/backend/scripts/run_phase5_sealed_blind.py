@@ -113,12 +113,21 @@ async def _run_blind() -> dict[str, Any]:
     queries = load_queries(str(SEALED_QUESTIONS_PATH))
     print(f"Loaded {len(queries)} sealed questions")
 
+    # Set up sealed partition index (user_id=9003)
+    sealed_index_dir = BACKEND_DIR / "indexes" / "phase5" / "sealed"
+    os.environ["CHROMA_PATH"] = str(sealed_index_dir / "chroma")
+    os.environ["BM25_DB_PATH"] = str(sealed_index_dir / "rag_bm25.db")
+
+    import src.services.vector_store as vs
+
+    vs._chroma_client = None
+
     engine = _init_rag_engine()
-    print("RAG engine initialized successfully")
+    print("RAG engine initialized successfully (user_id=9003, sealed partition)")
 
     print("Running blind evaluation on sealed set...")
     started_at = _now_iso()
-    predictions = await run_blind_queries(queries, engine, user_id=1, n_results=3)
+    predictions = await run_blind_queries(queries, engine, user_id=9003, n_results=3)
     ended_at = _now_iso()
     print(f"Generated {len(predictions)} predictions")
 
