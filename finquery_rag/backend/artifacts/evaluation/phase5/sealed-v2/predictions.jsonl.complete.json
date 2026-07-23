@@ -8,11 +8,11 @@
     "numeric_rrf_floor": "patched engine._orchestrator._numeric_rrf_floor=0.0",
     "rrf_sufficiency_threshold": "patched engine._sufficiency_evaluator._rrf_threshold=0.025"
   },
-  "canonical_sha256": "96424fb49d9ba6824d879fb8dd7316e9bfe20721defdf916165408e5eae040d4",
+  "canonical_sha256": "2047af38198dbfa1350b2be0b2d05cf0b1622cd8459c9d38b0db8298669dbf2a",
   "case_count": 54,
   "completed": true,
-  "completed_at": "2026-07-23T15:37:34Z",
-  "raw_sha256": "3981e0de3d6c05f6a32268179cc2c5572176540426237de57ba7c92ed6b999b4",
+  "completed_at": "2026-07-23T15:40:32Z",
+  "raw_sha256": "66090fbd29c4427d2a3102e2dfa7ca0fce79696ea67470416f842790d80b15fa",
   "sentinel_query_passed": true,
   "sentinel_query_result_count": 3
 }

@@ -1,10 +1,10 @@
 {
   "passed": true,
-  "git_head": "202ac4aaa2905e75cf4778feef074c261c27860d",
+  "git_head": "917a3e2938214744609022c8778110b2463d47fc",
   "git_dirty": false,
-  "expected_commit": "202ac4aaa2905e75cf4778feef074c261c27860d",
+  "expected_commit": "917a3e2938214744609022c8778110b2463d47fc",
   "checks": {
-    "git_head": "OK: 202ac4aaa2905e75cf4778feef074c261c27860d",
+    "git_head": "OK: 917a3e2938214744609022c8778110b2463d47fc",
     "git_clean": "OK: clean",
     "selected_config": "OK: loaded 4 keys, sha256=90f91bc60738059e...",
     "questions_hash": "OK: 1cfaa358966aed62...",
