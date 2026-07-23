@@ -160,9 +160,9 @@ def main():
         "sealed_bm25_sha256": compute_sha256(sealed_bm25_db),
         "sealed_chunk_manifest_sha256": compute_sha256(sealed_chunk_manifest),
         "dependency_lock_sha256": compute_sha256(dependency_lock_path),
-        "model_checkpoint_path": "chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt",
+        "model_checkpoint_path": "chatsft_checkpoints/d24_finance_v2_lr010/model_000150.pt",
         "model_checkpoint_sha256": compute_sha256(
-            Path(os.path.expanduser("~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000275.pt"))
+            Path(os.path.expanduser("~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/model_000150.pt"))
         ),
         "tokenizer_path": "tokenizer/tokenizer.pkl",
         "tokenizer_sha256": compute_sha256(
