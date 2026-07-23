@@ -248,3 +248,11 @@ data-gym-cache/
 pytest-of-*/
 tmp*/
 
+
+# Phase 5 evaluation indexes (large, not tracked)
+indexes/
+
+# Temporary sync directory
+backend_tmp_sync/
+artifacts/calculation/
+../backend_tmp_sync/
