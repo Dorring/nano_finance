@@ -29,7 +29,6 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from src.evaluation.manifests import compute_jsonl_sha256  # noqa: E402
 
 OUTPUT_PATH = (
     BACKEND_DIR
@@ -130,7 +129,7 @@ def main():
     # Compute questions hash for sealed partition
     questions_sha256 = None
     if SEALED_QUESTIONS_PATH.is_file():
-        questions_sha256 = compute_jsonl_sha256(SEALED_QUESTIONS_PATH)
+        questions_sha256 = compute_sha256(SEALED_QUESTIONS_PATH)
 
     # Compute sealed partition index hashes (not default chroma_db)
     sealed_chroma_dir = SEALED_INDEX_DIR / "chroma"
