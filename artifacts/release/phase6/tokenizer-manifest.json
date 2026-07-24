@@ -1,0 +1,109 @@
+{
+  "algorithm": "byte-level-bpe",
+  "benchmarks": {
+    "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": {
+      "compression_ratio": 1.777778,
+      "text": "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。",
+      "token_count": 18
+    },
+    "Financial reports indicate Q3 revenue growth of 15% year over year.": {
+      "compression_ratio": 4.1875,
+      "text": "Financial reports indicate Q3 revenue growth of 15% year over year.",
+      "token_count": 16
+    },
+    "The Federal Reserve announced a 25 basis point rate hike today.": {
+      "compression_ratio": 4.846154,
+      "text": "The Federal Reserve announced a 25 basis point rate hike today.",
+      "token_count": 13
+    },
+    "The quick brown fox jumps over the lazy dog.": {
+      "compression_ratio": 4.4,
+      "text": "The quick brown fox jumps over the lazy dog.",
+      "token_count": 10
+    },
+    "投资者应注意市场风险，合理配置资产组合以应对波动。": {
+      "compression_ratio": 2.083333,
+      "text": "投资者应注意市场风险，合理配置资产组合以应对波动。",
+      "token_count": 12
+    },
+    "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": {
+      "compression_ratio": 2.333333,
+      "text": "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。",
+      "token_count": 15
+    }
+  },
+  "comparisons": {
+    "cl100k_base": {
+      "available": true,
+      "compression_ratios": {
+        "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": 0.820513,
+        "Financial reports indicate Q3 revenue growth of 15% year over year.": 4.466667,
+        "The Federal Reserve announced a 25 basis point rate hike today.": 4.846154,
+        "The quick brown fox jumps over the lazy dog.": 4.4,
+        "投资者应注意市场风险，合理配置资产组合以应对波动。": 0.961538,
+        "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": 1.0
+      }
+    },
+    "gpt2": {
+      "available": true,
+      "compression_ratios": {
+        "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": 0.477612,
+        "Financial reports indicate Q3 revenue growth of 15% year over year.": 4.785714,
+        "The Federal Reserve announced a 25 basis point rate hike today.": 5.25,
+        "The quick brown fox jumps over the lazy dog.": 4.4,
+        "投资者应注意市场风险，合理配置资产组合以应对波动。": 0.446429,
+        "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": 0.472973
+      }
+    }
+  },
+  "manifest_type": "tokenizer",
+  "schema_version": "1.0",
+  "special_tokens": [
+    "<|bos|>",
+    "<|user_start|>",
+    "<|user_end|>",
+    "<|assistant_start|>",
+    "<|assistant_end|>",
+    "<|python_start|>",
+    "<|python_end|>",
+    "<|output_start|>",
+    "<|output_end|>"
+  ],
+  "split_pattern": [
+    "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+"
+  ],
+  "storage": {
+    "base_dir": "~/.cache/nanochat/tokenizer/",
+    "files": {
+      "token_bytes.pt": {
+        "sha256": "1d1e5765e02a518d1e38673c0b8e53a48124fb4003136dd627e4f653c1dd9a54",
+        "size_bytes": 261545
+      },
+      "tokenizer.pkl": {
+        "sha256": "388319b6be8f0e56a1f1063a2fcaaeae7013f4aec1320de73bd35a63721ade81",
+        "size_bytes": 848512
+      }
+    }
+  },
+  "tokenizer_id": "nanochat-bpe-65k",
+  "tokenizer_training_params": {
+    "doc_cap": 10000,
+    "max_chars": "2B",
+    "vocab_size": 65000
+  },
+  "training_data_composition": {
+    "chinese_finance": {
+      "percentage": 20,
+      "source": "Chinese finance corpus"
+    },
+    "chinese_general": {
+      "percentage": 40,
+      "source": "SkyPile/Wiki"
+    },
+    "english_general": {
+      "percentage": 40,
+      "source": "ClimbMix"
+    }
+  },
+  "vocab_size": 65000
+}

@@ -1,0 +1,1932 @@
+{
+  "base_architecture_id": "nanochat-d24-1.4b",
+  "checkpoint_id": "d24_finance_v2_lr010/step_150",
+  "component_manifests": {
+    "checkpoint_manifest": {
+      "available": true,
+      "path": "artifacts/release/phase6/checkpoint-manifest.json"
+    },
+    "claim_evidence_map": {
+      "available": true,
+      "path": "artifacts/release/phase6/claim-evidence-map.json"
+    },
+    "dependency_manifest": {
+      "available": true,
+      "path": "artifacts/release/phase6/dependency-manifest.json"
+    },
+    "evaluation_evidence": {
+      "available": true,
+      "path": "artifacts/release/phase6/evaluation-evidence.json"
+    },
+    "license_inventory": {
+      "available": true,
+      "path": "artifacts/release/phase6/license-inventory.json"
+    },
+    "model_lineage": {
+      "available": true,
+      "path": "artifacts/release/phase6/model-lineage.json"
+    },
+    "pretraining_data_manifest": {
+      "available": true,
+      "path": "artifacts/release/phase6/pretraining-data-manifest.json"
+    },
+    "sft_data_manifest": {
+      "available": true,
+      "path": "artifacts/release/phase6/sft-data-manifest.json"
+    },
+    "tokenizer_manifest": {
+      "available": true,
+      "path": "artifacts/release/phase6/tokenizer-manifest.json"
+    },
+    "training_evidence": {
+      "available": true,
+      "path": "artifacts/release/phase6/training-evidence.json"
+    },
+    "training_runs": {
+      "available": true,
+      "path": "artifacts/release/phase6/training-runs.json"
+    }
+  },
+  "evaluation_release_id": "nano-finance-eval-v1",
+  "evaluation_smoke_checkpoint": "d24_finance_v2_lr010/step_150",
+  "evidence_downgrade_commit": "8ef17aa",
+  "git_commit": "8ef17aaf6a3b5c7ded3e90987c6a387f20684477",
+  "historical_production_checkpoint": "sft1147",
+  "historical_production_checkpoint_status": "unavailable_unverified",
+  "implementation_commit": "92ab3380a447a1cb1f522db1d5a17b911abc600f",
+  "license": "MIT (Copyright 2025 Andrej Karpathy)",
+  "manifest_type": "release",
+  "pretraining_run_id": "d24_final_mixdata",
+  "rag_release_id": "finquery-rag-v1",
+  "release_id": "nano-finance-d24-sft-v1",
+  "release_model_checkpoint": null,
+  "release_type": "documentation_and_evidence",
+  "schema_version": "1.0",
+  "sft_run_id": "d24_finance_v2_lr010",
+  "sub_manifest_data": {
+    "checkpoint_manifest": {
+      "base_architecture": {
+        "approx_params": "1.4B",
+        "aspect_ratio": 64,
+        "depth": 24,
+        "head_dim": 128,
+        "n_embd": 1536,
+        "n_head": 12,
+        "n_kv_head": 12,
+        "n_layer": 24,
+        "sequence_len": 2048,
+        "vocab_size": 65000,
+        "window_pattern": "L"
+      },
+      "base_checkpoints": [
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+          "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_final_mixdata",
+          "step": 28000,
+          "val_bpb": 0.7626,
+          "verification_status": "historical_unavailable"
+        }
+      ],
+      "checkpoints": [
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+          "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_final_mixdata",
+          "step": 28000,
+          "val_bpb": 0.7626,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 125,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 150,
+          "val_bpb": 0.5558,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 200,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 250,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 275,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 300,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 350,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr010",
+          "step": 375,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 125,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 150,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 200,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 250,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 275,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 300,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 350,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        },
+        {
+          "checkpoint_content_sha256": null,
+          "checkpoint_files": [],
+          "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
+          "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+          "meta_file_sha256": null,
+          "model_config": {
+            "approx_params": "1.4B",
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "run_name": "d24_finance_v2_lr005",
+          "step": 375,
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
+        }
+      ],
+      "manifest_type": "checkpoint",
+      "schema_version": "1.0",
+      "sft_checkpoints": {
+        "d24_finance_v2_lr005": [
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 125,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 150,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 200,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 250,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 275,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 300,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 350,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr005",
+            "step": 375,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          }
+        ],
+        "d24_finance_v2_lr010": [
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 125,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 150,
+            "val_bpb": 0.5558,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 200,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 250,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 275,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 300,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 350,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          },
+          {
+            "checkpoint_content_sha256": null,
+            "checkpoint_files": [],
+            "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
+            "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+            "meta_file_sha256": null,
+            "model_config": {
+              "approx_params": "1.4B",
+              "aspect_ratio": 64,
+              "depth": 24,
+              "head_dim": 128,
+              "n_embd": 1536,
+              "n_head": 12,
+              "n_kv_head": 12,
+              "n_layer": 24,
+              "sequence_len": 2048,
+              "vocab_size": 65000,
+              "window_pattern": "L"
+            },
+            "run_name": "d24_finance_v2_lr010",
+            "step": 375,
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
+          }
+        ]
+      }
+    },
+    "claim_evidence_map": null,
+    "dependency_manifest": {
+      "core_dependencies": [
+        {
+          "commercial_use": true,
+          "license": "BSD-3-Clause",
+          "name": "torch",
+          "purpose": "deep learning framework for training and inference",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "BSD-3-Clause",
+          "name": "numpy",
+          "purpose": "numerical computation",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "Apache-2.0",
+          "name": "transformers",
+          "purpose": "model utilities and tokenization",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "Apache-2.0",
+          "name": "chromadb",
+          "purpose": "vector database for RAG dense retrieval",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "rank-bm25",
+          "purpose": "BM25 sparse retrieval for RAG",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "fastapi",
+          "purpose": "HTTP API server for RAG queries",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "BSD-3-Clause",
+          "name": "uvicorn",
+          "purpose": "ASGI server for FastAPI",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "pydantic",
+          "purpose": "data validation and settings management",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "jieba",
+          "purpose": "Chinese word segmentation for BM25",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "pytest",
+          "purpose": "testing framework",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "ruff",
+          "purpose": "code linting and formatting",
+          "redistribution_allowed": true
+        },
+        {
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "mypy",
+          "purpose": "static type checking",
+          "redistribution_allowed": true
+        }
+      ],
+      "data_dependencies": [
+        {
+          "license": "unknown",
+          "name": "ClimbMix",
+          "purpose": "English general pretraining data",
+          "redistribution_allowed": false,
+          "source": "NVIDIA"
+        },
+        {
+          "license": "unknown",
+          "name": "SkyPile",
+          "purpose": "Chinese general pretraining data",
+          "redistribution_allowed": false,
+          "source": "Skywork"
+        },
+        {
+          "license": "unknown",
+          "name": "Chinese finance corpus",
+          "purpose": "Chinese finance pretraining data",
+          "redistribution_allowed": false,
+          "source": "to be confirmed"
+        },
+        {
+          "license": "unknown",
+          "name": "FinQA",
+          "purpose": "SFT financial QA data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "TAT-QA",
+          "purpose": "SFT tabular QA data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "ECTSum",
+          "purpose": "SFT earnings call summary data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "FinER",
+          "purpose": "SFT entity recognition data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "FinRED",
+          "purpose": "SFT relation extraction data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "FinSen",
+          "purpose": "SFT sentiment classification data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "FiQA",
+          "purpose": "SFT financial QA data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "finance_r1",
+          "purpose": "SFT R1-style explicit reasoning data",
+          "redistribution_allowed": false
+        },
+        {
+          "license": "unknown",
+          "name": "SmolTalk",
+          "purpose": "SFT general capability data",
+          "redistribution_allowed": false
+        }
+      ],
+      "manifest_type": "dependency",
+      "model_dependencies": [
+        {
+          "attribution": "Copyright 2025 Andrej Karpathy",
+          "commercial_use": true,
+          "license": "MIT",
+          "name": "nanochat-base",
+          "purpose": "base architecture and training code",
+          "redistribution_allowed": true,
+          "source": "karpathy/nanochat"
+        },
+        {
+          "commercial_use": "unknown",
+          "license": "unknown",
+          "name": "embedding-model",
+          "purpose": "dense retrieval embeddings for RAG",
+          "redistribution_allowed": "unknown",
+          "source": "to be confirmed"
+        },
+        {
+          "commercial_use": "unknown",
+          "license": "unknown",
+          "name": "reranker-model",
+          "purpose": "reranking for RAG retrieval",
+          "redistribution_allowed": "unknown",
+          "source": "to be confirmed"
+        }
+      ],
+      "python_version": "3.12.2",
+      "schema_version": "1.0"
+    },
+    "evaluation_evidence": {
+      "ablation_studies": {
+        "ablations_run": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9"
+        ],
+        "calibration_thresholds": "applied"
+      },
+      "citations_allowed": [
+        "Phase 5 infrastructure (Blind/Scoring isolation, RC Freeze, Calibration, A0-A9 ablations) is functional",
+        "Data classification is synthetic_held_out",
+        "0/54 strict pass result exists as infrastructure test output",
+        "The evaluated model is finquery-finance-v2-lr010-150"
+      ],
+      "citations_prohibited": [
+        "Phase 5 proves strong generalization",
+        "0/54 as a model quality metric",
+        "0/54 for model comparison",
+        "0/54 for resume metrics",
+        "Any claim that the model achieves production-grade accuracy based on this evaluation"
+      ],
+      "data_classification": "synthetic_held_out",
+      "evaluated_model": {
+        "checkpoint": "d24_finance_v2_lr010",
+        "checkpoint_step": 150,
+        "finance_macro": 0.2297,
+        "is_production_baseline": false,
+        "model_identity": "finquery-finance-v2-lr010-150",
+        "model_nature": "SFT V2 lr010 failed experiment checkpoint",
+        "note": "This is a failed experiment checkpoint, NOT the production baseline",
+        "val_bpb": 0.5558
+      },
+      "evaluation_id": "phase5-synthetic-heldout-v2",
+      "evaluation_purpose": "infrastructure_functional_test",
+      "evidence_files": [
+        "artifacts/release/phase6/training-runs.json"
+      ],
+      "is_model_comparison_metric": false,
+      "is_quality_metric": false,
+      "is_real_sealed_evaluation": false,
+      "is_resume_metric": false,
+      "isolation_mechanisms": {
+        "blind_scoring_isolation": true,
+        "calibration_set_separated": true,
+        "evaluation_query_label_isolation": true,
+        "rc_freeze_verified": true,
+        "rc_hash_count": 8
+      },
+      "manifest_type": "evaluation_evidence",
+      "questions_hash": {
+        "questions_canonical_sha256": "JSON-parsed sorted hash",
+        "questions_raw_sha256": "original questions file hash"
+      },
+      "sample_counts": {
+        "cal": 48,
+        "dev": 48,
+        "sealed": 54,
+        "total": 150
+      },
+      "schema_version": "1.0",
+      "status": "completed",
+      "strict_pass_result": {
+        "is_quality_metric": false,
+        "not_for_model_comparison": true,
+        "not_for_quality_estimation": true,
+        "not_for_resume": true,
+        "note": "0/54 strict pass rate is an infrastructure functional test result, NOT a model quality metric",
+        "pass_rate": 0.0,
+        "passed": 0,
+        "total": 54
+      },
+      "verified": true
+    },
+    "license_inventory": {
+      "code_licenses": [
+        {
+          "attribution": "Copyright 2025 Andrej Karpathy",
+          "commercial_use": true,
+          "component": "nanochat base code",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "karpathy/nanochat"
+        },
+        {
+          "attribution": "Based on karpathy/nanochat",
+          "commercial_use": true,
+          "component": "nano_finance application code",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "project-specific"
+        },
+        {
+          "commercial_use": true,
+          "component": "PyTorch",
+          "license": "BSD-3-Clause",
+          "redistribution_allowed": true,
+          "source": "pytorch/pytorch"
+        },
+        {
+          "commercial_use": true,
+          "component": "FastAPI",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "tiangolo/fastapi"
+        },
+        {
+          "commercial_use": true,
+          "component": "ChromaDB",
+          "license": "Apache-2.0",
+          "redistribution_allowed": true,
+          "source": "chroma-core/chroma"
+        },
+        {
+          "commercial_use": true,
+          "component": "rank-bm25",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "dorianbrown/rank_bm25"
+        },
+        {
+          "commercial_use": true,
+          "component": "jieba",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "fxsjy/jieba"
+        },
+        {
+          "commercial_use": true,
+          "component": "pydantic",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "pydantic/pydantic"
+        },
+        {
+          "commercial_use": true,
+          "component": "pytest",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "pytest-dev/pytest"
+        },
+        {
+          "commercial_use": true,
+          "component": "ruff",
+          "license": "MIT",
+          "redistribution_allowed": true,
+          "source": "astral-sh/ruff"
+        }
+      ],
+      "data_licenses": [
+        {
+          "commercial_use": "unknown",
+          "component": "ClimbMix (pretraining)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "NVIDIA"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "SkyPile (pretraining)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "Skywork"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "Chinese finance corpus (pretraining)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "to be confirmed"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "FinQA (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "FinQA dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "TAT-QA (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "TAT-QA dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "ECTSum (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "ECTSum dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "FinER (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "FinER dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "FinRED (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "FinRED dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "FinSen (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "FinSen dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "FiQA (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "FiQA dataset"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "finance_r1 (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "R1-style reasoning data"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "SmolTalk (SFT)",
+          "license": "unknown",
+          "redistribution_allowed": false,
+          "source": "SmolTalk dataset"
+        }
+      ],
+      "manifest_type": "license_inventory",
+      "model_weight_license": {
+        "commercial_use": "unknown",
+        "component": "nano-finance-d24-sft-v1 model weights",
+        "license": "unknown",
+        "note": "Model weights license not explicitly granted; do not redistribute",
+        "redistribution_allowed": false,
+        "source": "project-trained"
+      },
+      "project_license": {
+        "attribution": "Copyright 2025 Andrej Karpathy",
+        "commercial_use": true,
+        "name": "MIT",
+        "redistribution_allowed": true,
+        "source": "karpathy/nanochat"
+      },
+      "schema_version": "1.0",
+      "summary": {
+        "mit_licensed": 8,
+        "note": "Any component with unknown license must not be claimed as freely commercializable",
+        "redistribution_blocked": 15,
+        "total_components": 25,
+        "unknown_license": 15
+      },
+      "third_party_model_licenses": [
+        {
+          "commercial_use": "unknown",
+          "component": "embedding model",
+          "license": "unknown",
+          "redistribution_allowed": "unknown",
+          "source": "to be confirmed"
+        },
+        {
+          "commercial_use": "unknown",
+          "component": "reranker model",
+          "license": "unknown",
+          "redistribution_allowed": "unknown",
+          "source": "to be confirmed"
+        }
+      ],
+      "tokenizer_license": {
+        "commercial_use": true,
+        "component": "nanochat-bpe-65k tokenizer",
+        "license": "MIT",
+        "note": "Tokenizer code is MIT; training data licenses vary",
+        "redistribution_allowed": true,
+        "source": "project-trained on licensed data"
+      }
+    },
+    "model_lineage": {
+      "child": {
+        "checkpoint_id": "d24_finance_v2_lr010/step_150",
+        "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
+        "run_name": "d24_finance_v2_lr010",
+        "step": 150,
+        "val_bpb": 0.5558,
+        "verification_status": "historical_unavailable"
+      },
+      "lineage_type": "pretraining_to_sft",
+      "parent": {
+        "checkpoint_id": "d24_final_mixdata/step_28000",
+        "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+        "run_name": "d24_final_mixdata",
+        "step": 28000,
+        "val_bpb": 0.7626,
+        "verification_status": "historical_unavailable"
+      },
+      "parent_identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+      "schema_version": "1.0",
+      "tokenizer_sha256": "1d1e5765e02a518d1e38673c0b8e53a48124fb4003136dd627e4f653c1dd9a54",
+      "validation": {
+        "child_checkpoint_exists": true,
+        "parent_checkpoint_exists": true
+      }
+    },
+    "pretraining_data_manifest": {
+      "actual_shard_count": null,
+      "data_dir": "~/.cache/nanochat/base_data_climbmix/",
+      "expected_shard_count": 171,
+      "manifest_type": "pretraining_data",
+      "schema_version": "1.0",
+      "shard_format": "parquet",
+      "shards": [],
+      "source_accessible": false,
+      "training_params": {
+        "target_param_data_ratio": 50.0,
+        "total_batch_size": 1048576,
+        "training_time_seconds": 2428705
+      },
+      "training_result": {
+        "checkpoint": "d24_final_mixdata",
+        "final_step": 28000,
+        "val_bpb_final": 0.7626
+      },
+      "verification_status": "historical_self_reported"
+    },
+    "sft_data_manifest": {
+      "data_files": {},
+      "expected_total_samples": 39534,
+      "finance_train_file": "train_v2_balanced.jsonl",
+      "historical_results": {
+        "sft1147": {
+          "finance_macro": 0.4432,
+          "has_checkpoint": false,
+          "note": "production baseline, no checkpoint preserved",
+          "val_bpb": 0.4842
+        },
+        "sft800": {
+          "finance_macro": 0.3736,
+          "has_checkpoint": false,
+          "note": "historical result, no checkpoint preserved",
+          "val_bpb": 0.4783
+        },
+        "v2_lr010_step150": {
+          "finance_macro": 0.2297,
+          "has_checkpoint": true,
+          "note": "failed experiment, finance macro dropped",
+          "val_bpb": 0.5558
+        }
+      },
+      "manifest_type": "sft_data",
+      "metadata": null,
+      "schema_version": "1.0",
+      "smoltalk_size": 30000,
+      "sources": {
+        "ectsum": {
+          "category": null,
+          "count": 2425,
+          "source_id": "ectsum"
+        },
+        "finance_r1": {
+          "category": null,
+          "count": 1225,
+          "source_id": "finance_r1"
+        },
+        "finer": {
+          "category": null,
+          "count": 3034,
+          "source_id": "finer"
+        },
+        "finqa": {
+          "category": null,
+          "count": 8144,
+          "source_id": "finqa"
+        },
+        "finred": {
+          "category": null,
+          "count": 4359,
+          "source_id": "finred"
+        },
+        "finsen": {
+          "category": null,
+          "count": 2982,
+          "source_id": "finsen"
+        },
+        "fiqa": {
+          "category": null,
+          "count": 822,
+          "source_id": "fiqa"
+        },
+        "tatqa": {
+          "category": null,
+          "count": 16543,
+          "source_id": "tatqa"
+        }
+      },
+      "split_manifest": null,
+      "splits": {
+        "cot_train": 979,
+        "effective_train": 31620,
+        "test": 3956,
+        "train": 30641,
+        "val": 3958
+      },
+      "supervised_token_report": null,
+      "total_samples": 39534,
+      "verification_status": "historical_self_reported"
+    },
+    "tokenizer_manifest": {
+      "algorithm": "byte-level-bpe",
+      "benchmarks": {
+        "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": {
+          "compression_ratio": 1.777778,
+          "text": "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。",
+          "token_count": 18
+        },
+        "Financial reports indicate Q3 revenue growth of 15% year over year.": {
+          "compression_ratio": 4.1875,
+          "text": "Financial reports indicate Q3 revenue growth of 15% year over year.",
+          "token_count": 16
+        },
+        "The Federal Reserve announced a 25 basis point rate hike today.": {
+          "compression_ratio": 4.846154,
+          "text": "The Federal Reserve announced a 25 basis point rate hike today.",
+          "token_count": 13
+        },
+        "The quick brown fox jumps over the lazy dog.": {
+          "compression_ratio": 4.4,
+          "text": "The quick brown fox jumps over the lazy dog.",
+          "token_count": 10
+        },
+        "投资者应注意市场风险，合理配置资产组合以应对波动。": {
+          "compression_ratio": 2.083333,
+          "text": "投资者应注意市场风险，合理配置资产组合以应对波动。",
+          "token_count": 12
+        },
+        "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": {
+          "compression_ratio": 2.333333,
+          "text": "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。",
+          "token_count": 15
+        }
+      },
+      "comparisons": {
+        "cl100k_base": {
+          "available": true,
+          "compression_ratios": {
+            "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": 0.820513,
+            "Financial reports indicate Q3 revenue growth of 15% year over year.": 4.466667,
+            "The Federal Reserve announced a 25 basis point rate hike today.": 4.846154,
+            "The quick brown fox jumps over the lazy dog.": 4.4,
+            "投资者应注意市场风险，合理配置资产组合以应对波动。": 0.961538,
+            "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": 1.0
+          }
+        },
+        "gpt2": {
+          "available": true,
+          "compression_ratios": {
+            "A股市场今日收盘上涨，上证指数涨幅达到2.3%，成交额突破万亿。": 0.477612,
+            "Financial reports indicate Q3 revenue growth of 15% year over year.": 4.785714,
+            "The Federal Reserve announced a 25 basis point rate hike today.": 5.25,
+            "The quick brown fox jumps over the lazy dog.": 4.4,
+            "投资者应注意市场风险，合理配置资产组合以应对波动。": 0.446429,
+            "该公司第三季度财报显示，营业收入同比增长15%，净利润达到3.2亿元。": 0.472973
+          }
+        }
+      },
+      "manifest_type": "tokenizer",
+      "schema_version": "1.0",
+      "special_tokens": [
+        "<|bos|>",
+        "<|user_start|>",
+        "<|user_end|>",
+        "<|assistant_start|>",
+        "<|assistant_end|>",
+        "<|python_start|>",
+        "<|python_end|>",
+        "<|output_start|>",
+        "<|output_end|>"
+      ],
+      "split_pattern": [
+        "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+"
+      ],
+      "storage": {
+        "base_dir": "~/.cache/nanochat/tokenizer/",
+        "files": {
+          "token_bytes.pt": {
+            "sha256": "1d1e5765e02a518d1e38673c0b8e53a48124fb4003136dd627e4f653c1dd9a54",
+            "size_bytes": 261545
+          },
+          "tokenizer.pkl": {
+            "sha256": "388319b6be8f0e56a1f1063a2fcaaeae7013f4aec1320de73bd35a63721ade81",
+            "size_bytes": 848512
+          }
+        }
+      },
+      "tokenizer_id": "nanochat-bpe-65k",
+      "tokenizer_training_params": {
+        "doc_cap": 10000,
+        "max_chars": "2B",
+        "vocab_size": 65000
+      },
+      "training_data_composition": {
+        "chinese_finance": {
+          "percentage": 20,
+          "source": "Chinese finance corpus"
+        },
+        "chinese_general": {
+          "percentage": 40,
+          "source": "SkyPile/Wiki"
+        },
+        "english_general": {
+          "percentage": 40,
+          "source": "ClimbMix"
+        }
+      },
+      "vocab_size": 65000
+    },
+    "training_evidence": {
+      "base_checkpoints": {
+        "d24_final_mixdata": []
+      },
+      "checkpoint_evidence": {
+        "base_checkpoints": {
+          "d24_final_mixdata": []
+        },
+        "sft_checkpoints": {
+          "d24_finance_v2_lr005": [],
+          "d24_finance_v2_lr010": []
+        }
+      },
+      "evidence_type": "training",
+      "schema_version": "1.0",
+      "sft_checkpoints": {
+        "d24_finance_v2_lr005": [],
+        "d24_finance_v2_lr010": []
+      },
+      "sft_data": {
+        "metadata.json": null,
+        "split_manifest.json": null,
+        "supervised_token_report.json": null
+      },
+      "sft_data_evidence": {
+        "metadata.json": null,
+        "split_manifest.json": null,
+        "supervised_token_report.json": null
+      },
+      "sft_data_file_hashes": {
+        "cot_train.jsonl": {
+          "path": "cot_train.jsonl",
+          "sha256": "9d045091ddc63a81ebb611426f1894f231086ac43cbeb28e436229ba21fcbc56",
+          "size_bytes": 7257994
+        },
+        "finance_eval_small_val.jsonl": {
+          "path": "finance_eval_small_val.jsonl",
+          "sha256": "f603bd39b02ad95ee40f39f46331be5c5741bfb119aa3ee591ae36d40aa67822",
+          "size_bytes": 588293
+        },
+        "finance_sft_v1.jsonl": {
+          "path": "finance_sft_v1.jsonl",
+          "sha256": "0382599ea807ae65520ee664fd7eb32e67cb57ce5ed1b5014e510fe0fa999334",
+          "size_bytes": 97393442
+        },
+        "test.jsonl": {
+          "path": "test.jsonl",
+          "sha256": "69c3e5445bf322e946873fc032e8307a8c6a0df13be9a18df96fe7b2039bcd73",
+          "size_bytes": 9334104
+        },
+        "train.jsonl": {
+          "path": "train.jsonl",
+          "sha256": "c8c4ba65a7615c30d8328b6235d8dd6b29915a23bce1d96b7b3085de4432c972",
+          "size_bytes": 66003160
+        },
+        "train_v2_balanced.jsonl": {
+          "path": "train_v2_balanced.jsonl",
+          "sha256": "e23600cc928fedfd85b22d27e95c282a6c425450a9bfe8f9ada6dc6fe4656722",
+          "size_bytes": 340062128
+        },
+        "val.jsonl": {
+          "path": "val.jsonl",
+          "sha256": "e4896aab28bf6355ffdda9d9ce1fe1cccaefc27bd1370d4d6847326df84165c3",
+          "size_bytes": 9050685
+        }
+      },
+      "tokenizer_evidence": {
+        "token_bytes.pt": null,
+        "tokenizer.pkl": null
+      }
+    },
+    "training_runs": {
+      "manifest_type": "training_runs",
+      "runs": [
+        {
+          "algorithm": "byte-level-bpe",
+          "evidence_artifact": "artifacts/release/phase6/tokenizer-manifest.json",
+          "output_files": [
+            "~/.cache/nanochat/tokenizer/token_bytes.pt",
+            "~/.cache/nanochat/tokenizer/tokenizer.pkl"
+          ],
+          "run_id": "tokenizer-nanochat-bpe-65k",
+          "stage": "tokenizer_training",
+          "status": "completed",
+          "training_data_composition": {
+            "chinese_finance": {
+              "percentage": 20,
+              "source": "Chinese finance corpus"
+            },
+            "chinese_general": {
+              "percentage": 40,
+              "source": "SkyPile/Wiki"
+            },
+            "english_general": {
+              "percentage": 40,
+              "source": "ClimbMix"
+            }
+          },
+          "training_params": {
+            "doc_cap": 10000,
+            "max_chars": "2B",
+            "vocab_size": 65000
+          },
+          "verification_status": "verified_local",
+          "verified": true,
+          "vocab_size": 65000
+        },
+        {
+          "actual_shard_count": null,
+          "checkpoint_output": "d24_final_mixdata",
+          "data_manifest": "~/.cache/nanochat/base_data_climbmix/",
+          "distributed_backend": "nanochat DDP",
+          "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
+          "expected_shard_count": 171,
+          "final_step": 28000,
+          "git_commit": "historical",
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
+          "metrics": [
+            {
+              "extraction_method": "parsed_meta",
+              "name": "val_bpb",
+              "note": "Meta file currently inaccessible; value from historical training summary",
+              "source": "checkpoint meta_028000.json",
+              "step": 28000,
+              "value": 0.7626,
+              "verification_status": "historical_self_reported",
+              "verified": false
+            },
+            {
+              "name": "val_bpb",
+              "source": "historical training summary",
+              "step": 7060,
+              "value": 0.7698,
+              "verification_status": "historical_self_reported",
+              "verified": false
+            }
+          ],
+          "model_config": {
+            "aspect_ratio": 64,
+            "depth": 24,
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "optimizer_config": {
+            "embedding_lr": 0.3,
+            "optimizer": "Muon",
+            "unembedding_lr": 0.008,
+            "weight_decay": 0.28
+          },
+          "precision": "fp32",
+          "run_id": "d24_final_mixdata",
+          "seed": 0,
+          "shard_format": "parquet",
+          "stage": "pretraining",
+          "status": "completed",
+          "target_param_data_ratio": 50.0,
+          "total_batch_size": 1048576,
+          "training_time_seconds": 2428705,
+          "verification_status": "historical_self_reported",
+          "verified": false
+        },
+        {
+          "best_step": 150,
+          "checkpoint_steps": [
+            125,
+            150,
+            200,
+            250,
+            275,
+            300,
+            350,
+            375
+          ],
+          "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
+          "device_batch_size": 4,
+          "distributed_backend": "nanochat DDP",
+          "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
+          "finance_train_file": "train_v2_balanced.jsonl",
+          "git_commit": "historical",
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
+          "loss_mask": "assistant_only",
+          "max_seq_len": 2048,
+          "metrics": [
+            {
+              "extraction_method": "parsed_meta",
+              "name": "val_bpb",
+              "note": "Meta file currently inaccessible; value from historical training summary",
+              "source": "checkpoint meta_000150.json",
+              "step": 150,
+              "value": 0.5558,
+              "verification_status": "historical_self_reported",
+              "verified": false
+            },
+            {
+              "name": "finance_macro",
+              "note": "failed experiment, finance macro dropped",
+              "source": "historical evaluation summary",
+              "step": 150,
+              "value": 0.2297,
+              "verification_status": "historical_self_reported",
+              "verified": false
+            }
+          ],
+          "model_config": {
+            "head_dim": 128,
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000,
+            "window_pattern": "L"
+          },
+          "note": "SFT V2 lr010 failed experiment; smoke checkpoint only, not production baseline or release model",
+          "optimizer_config": {
+            "embedding_lr": 0.3,
+            "init_lr_frac": 0.1,
+            "matrix_lr": 0.02,
+            "optimizer": "Muon",
+            "unembedding_lr": 0.008,
+            "warmdown_ratio": 0.5,
+            "warmup_ratio": 0.05
+          },
+          "parent_checkpoint_step": 28000,
+          "parent_run_id": "d24_final_mixdata",
+          "precision": "fp32",
+          "release_role": "evaluation_smoke_checkpoint",
+          "run_id": "d24_finance_v2_lr010",
+          "seed": 0,
+          "smoltalk_size": 30000,
+          "stage": "sft",
+          "status": "completed",
+          "total_batch_size": 1048576,
+          "total_samples": 39534,
+          "user_labels": -100,
+          "verification_status": "historical_self_reported",
+          "verified": false
+        },
+        {
+          "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
+          "distributed_backend": "nanochat DDP",
+          "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
+          "git_commit": "historical",
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
+          "model_config": {
+            "n_embd": 1536,
+            "n_head": 12,
+            "n_kv_head": 12,
+            "n_layer": 24,
+            "sequence_len": 2048,
+            "vocab_size": 65000
+          },
+          "parent_checkpoint_step": 28000,
+          "parent_run_id": "d24_final_mixdata",
+          "precision": "fp32",
+          "run_id": "d24_finance_v2_lr005",
+          "seed": 0,
+          "stage": "sft",
+          "status": "completed",
+          "total_samples": 39534,
+          "verification_status": "historical_self_reported",
+          "verified": false
+        },
+        {
+          "cal_samples": 48,
+          "data_classification": "synthetic_held_out",
+          "dev_samples": 48,
+          "eval_checkpoint": "d24_finance_v2_lr010 step 150",
+          "eval_model": "finquery-finance-v2-lr010-150",
+          "evidence_artifact": "artifacts/release/phase6/evaluation-evidence.json",
+          "note": "Infrastructure functional test only; NOT a quality metric",
+          "run_id": "phase5-synthetic-heldout-v2",
+          "sealed_samples": 54,
+          "stage": "evaluation",
+          "status": "completed",
+          "strict_pass": 0,
+          "strict_pass_rate": 0.0,
+          "verification_status": "verified_local",
+          "verified": true
+        }
+      ],
+      "schema_version": "1.0"
+    }
+  },
+  "tokenizer_id": "nanochat-bpe-65k"
+}

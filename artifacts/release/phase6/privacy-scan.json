@@ -1,0 +1,25 @@
+{
+  "files_scanned": 24,
+  "findings": [
+    {
+      "column": 0,
+      "description": "API key leakage",
+      "line": 2,
+      "matched_text": "API_KEY=sk-1234567890abcdef1234567890abcdef",
+      "path": "docs/release/_test_sensitive_temp.md",
+      "pattern": "api_key",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "scan_dirs": [
+    "docs/release",
+    "artifacts/release"
+  ],
+  "schema_version": "1.0",
+  "summary": {
+    "errors": 1,
+    "total_findings": 1,
+    "warnings": 0
+  }
+}

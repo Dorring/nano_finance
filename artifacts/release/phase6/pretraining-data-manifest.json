@@ -1,0 +1,21 @@
+{
+  "actual_shard_count": null,
+  "data_dir": "~/.cache/nanochat/base_data_climbmix/",
+  "expected_shard_count": 171,
+  "manifest_type": "pretraining_data",
+  "schema_version": "1.0",
+  "shard_format": "parquet",
+  "shards": [],
+  "source_accessible": false,
+  "training_params": {
+    "target_param_data_ratio": 50.0,
+    "total_batch_size": 1048576,
+    "training_time_seconds": 2428705
+  },
+  "training_result": {
+    "checkpoint": "d24_final_mixdata",
+    "final_step": 28000,
+    "val_bpb_final": 0.7626
+  },
+  "verification_status": "historical_self_reported"
+}

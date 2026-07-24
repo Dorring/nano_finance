@@ -1,0 +1,71 @@
+{
+  "base_checkpoints": {
+    "d24_final_mixdata": []
+  },
+  "checkpoint_evidence": {
+    "base_checkpoints": {
+      "d24_final_mixdata": []
+    },
+    "sft_checkpoints": {
+      "d24_finance_v2_lr005": [],
+      "d24_finance_v2_lr010": []
+    }
+  },
+  "evidence_type": "training",
+  "schema_version": "1.0",
+  "sft_checkpoints": {
+    "d24_finance_v2_lr005": [],
+    "d24_finance_v2_lr010": []
+  },
+  "sft_data": {
+    "metadata.json": null,
+    "split_manifest.json": null,
+    "supervised_token_report.json": null
+  },
+  "sft_data_evidence": {
+    "metadata.json": null,
+    "split_manifest.json": null,
+    "supervised_token_report.json": null
+  },
+  "sft_data_file_hashes": {
+    "cot_train.jsonl": {
+      "path": "cot_train.jsonl",
+      "sha256": "9d045091ddc63a81ebb611426f1894f231086ac43cbeb28e436229ba21fcbc56",
+      "size_bytes": 7257994
+    },
+    "finance_eval_small_val.jsonl": {
+      "path": "finance_eval_small_val.jsonl",
+      "sha256": "f603bd39b02ad95ee40f39f46331be5c5741bfb119aa3ee591ae36d40aa67822",
+      "size_bytes": 588293
+    },
+    "finance_sft_v1.jsonl": {
+      "path": "finance_sft_v1.jsonl",
+      "sha256": "0382599ea807ae65520ee664fd7eb32e67cb57ce5ed1b5014e510fe0fa999334",
+      "size_bytes": 97393442
+    },
+    "test.jsonl": {
+      "path": "test.jsonl",
+      "sha256": "69c3e5445bf322e946873fc032e8307a8c6a0df13be9a18df96fe7b2039bcd73",
+      "size_bytes": 9334104
+    },
+    "train.jsonl": {
+      "path": "train.jsonl",
+      "sha256": "c8c4ba65a7615c30d8328b6235d8dd6b29915a23bce1d96b7b3085de4432c972",
+      "size_bytes": 66003160
+    },
+    "train_v2_balanced.jsonl": {
+      "path": "train_v2_balanced.jsonl",
+      "sha256": "e23600cc928fedfd85b22d27e95c282a6c425450a9bfe8f9ada6dc6fe4656722",
+      "size_bytes": 340062128
+    },
+    "val.jsonl": {
+      "path": "val.jsonl",
+      "sha256": "e4896aab28bf6355ffdda9d9ce1fe1cccaefc27bd1370d4d6847326df84165c3",
+      "size_bytes": 9050685
+    }
+  },
+  "tokenizer_evidence": {
+    "token_bytes.pt": null,
+    "tokenizer.pkl": null
+  }
+}

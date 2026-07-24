@@ -1,0 +1,26 @@
+{
+  "child": {
+    "checkpoint_id": "d24_finance_v2_lr010/step_150",
+    "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
+    "run_name": "d24_finance_v2_lr010",
+    "step": 150,
+    "val_bpb": 0.5558,
+    "verification_status": "historical_unavailable"
+  },
+  "lineage_type": "pretraining_to_sft",
+  "parent": {
+    "checkpoint_id": "d24_final_mixdata/step_28000",
+    "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+    "run_name": "d24_final_mixdata",
+    "step": 28000,
+    "val_bpb": 0.7626,
+    "verification_status": "historical_unavailable"
+  },
+  "parent_identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+  "schema_version": "1.0",
+  "tokenizer_sha256": "1d1e5765e02a518d1e38673c0b8e53a48124fb4003136dd627e4f653c1dd9a54",
+  "validation": {
+    "child_checkpoint_exists": true,
+    "parent_checkpoint_exists": true
+  }
+}

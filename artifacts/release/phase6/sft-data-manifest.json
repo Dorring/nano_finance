@@ -1,0 +1,82 @@
+{
+  "data_files": {},
+  "expected_total_samples": 39534,
+  "finance_train_file": "train_v2_balanced.jsonl",
+  "historical_results": {
+    "sft1147": {
+      "finance_macro": 0.4432,
+      "has_checkpoint": false,
+      "note": "production baseline, no checkpoint preserved",
+      "val_bpb": 0.4842
+    },
+    "sft800": {
+      "finance_macro": 0.3736,
+      "has_checkpoint": false,
+      "note": "historical result, no checkpoint preserved",
+      "val_bpb": 0.4783
+    },
+    "v2_lr010_step150": {
+      "finance_macro": 0.2297,
+      "has_checkpoint": true,
+      "note": "failed experiment, finance macro dropped",
+      "val_bpb": 0.5558
+    }
+  },
+  "manifest_type": "sft_data",
+  "metadata": null,
+  "schema_version": "1.0",
+  "smoltalk_size": 30000,
+  "sources": {
+    "ectsum": {
+      "category": null,
+      "count": 2425,
+      "source_id": "ectsum"
+    },
+    "finance_r1": {
+      "category": null,
+      "count": 1225,
+      "source_id": "finance_r1"
+    },
+    "finer": {
+      "category": null,
+      "count": 3034,
+      "source_id": "finer"
+    },
+    "finqa": {
+      "category": null,
+      "count": 8144,
+      "source_id": "finqa"
+    },
+    "finred": {
+      "category": null,
+      "count": 4359,
+      "source_id": "finred"
+    },
+    "finsen": {
+      "category": null,
+      "count": 2982,
+      "source_id": "finsen"
+    },
+    "fiqa": {
+      "category": null,
+      "count": 822,
+      "source_id": "fiqa"
+    },
+    "tatqa": {
+      "category": null,
+      "count": 16543,
+      "source_id": "tatqa"
+    }
+  },
+  "split_manifest": null,
+  "splits": {
+    "cot_train": 979,
+    "effective_train": 31620,
+    "test": 3956,
+    "train": 30641,
+    "val": 3958
+  },
+  "supervised_token_report": null,
+  "total_samples": 39534,
+  "verification_status": "historical_self_reported"
+}

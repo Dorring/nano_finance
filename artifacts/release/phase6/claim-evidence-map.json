@@ -1,0 +1,287 @@
+{
+  "manifest_type": "claim_evidence_map",
+  "schema_version": "1.0",
+  "claims": [
+    {
+      "id": "model_architecture",
+      "claim": "The model is a GPT-2 style Transformer with 24 layers, 12 heads, 1536 embedding dimension, and approximately 1.4B parameters.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_architecture", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["model_card", "readme", "resume"]
+    },
+    {
+      "id": "tokenizer_bpe_65k",
+      "claim": "The tokenizer uses byte-level BPE with a vocabulary size of 65000.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/vocab_size", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/algorithm", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["model_card", "tokenizer_card", "readme", "resume"]
+    },
+    {
+      "id": "tokenizer_9_special_tokens",
+      "claim": "The tokenizer has 9 special tokens and pad is not a special token.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/special_tokens", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["tokenizer_card", "model_card"]
+    },
+    {
+      "id": "pretraining_step_28000",
+      "claim": "Pretraining completed at step 28000 with validation BPB of 0.7626.",
+      "status": "unverified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_checkpoints", "verification_status": "historical_unavailable"},
+        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/1/final_step", "verification_status": "historical_self_reported"}
+      ],
+      "allowed_surfaces": [],
+      "note": "Checkpoint content hash not available (historical_unavailable); training-runs.json is self-reported. Step and val_bpb values are historical, not independently verified from current server artifacts."
+    },
+    {
+      "id": "sft_step_150",
+      "claim": "SFT V2 lr010 checkpoint at step 150 has validation BPB of 0.5558.",
+      "status": "unverified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/sft_checkpoints", "verification_status": "historical_unavailable"},
+        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/2/best_step", "verification_status": "historical_self_reported"}
+      ],
+      "allowed_surfaces": [],
+      "note": "Checkpoint content hash not available (historical_unavailable); step 150 is a failed experiment (smoke checkpoint), not a release model."
+    },
+    {
+      "id": "sft_total_samples_39534",
+      "claim": "SFT dataset contains 39534 total samples from 8 data sources.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/total_samples", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["sft_data_card", "model_card"]
+    },
+    {
+      "id": "sft_finance_r1_1225",
+      "claim": "SFT data includes 1225 finance_r1 style explicit reasoning samples.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources/finance_r1/count", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["sft_data_card"]
+    },
+    {
+      "id": "model_lineage_base_to_sft",
+      "claim": "The SFT checkpoint is derived from the base pretraining checkpoint at step 28000.",
+      "status": "unverified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/lineage_type", "verification_status": "historical_self_reported"},
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/parent_identity_digest", "verification_status": "historical_self_reported"}
+      ],
+      "allowed_surfaces": [],
+      "note": "Lineage uses identity_digest (string-based SHA256), not checkpoint content hash. Parent-child weight content lineage is not independently verified."
+    },
+    {
+      "id": "tokenizer_sha256_linked",
+      "claim": "The tokenizer SHA256 is linked in the model lineage.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/tokenizer_sha256", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/storage", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["tokenizer_card", "model_card"]
+    },
+    {
+      "id": "phase5_synthetic_held_out",
+      "claim": "Phase 5 evaluation uses synthetic held-out data classified as synthetic_held_out, not a real sealed evaluation.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/data_classification", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/is_real_sealed_evaluation", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["evaluation_card"],
+      "is_quality_metric": false,
+      "tags": ["not_quality_metric", "infrastructure_test"]
+    },
+    {
+      "id": "phase5_zero_pass_rate",
+      "claim": "Phase 5 synthetic held-out evaluation resulted in 0/54 strict pass rate, which is NOT a quality metric.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/strict_pass_result", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["evaluation_card"],
+      "is_quality_metric": false,
+      "tags": ["not_quality_metric", "not_for_resume", "not_for_model_comparison"]
+    },
+    {
+      "id": "mit_license",
+      "claim": "The base project code is licensed under MIT (Copyright 2025 Andrej Karpathy).",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "artifacts/release/phase6/license-inventory.json", "json_pointer": "/project_license", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["model_card", "readme"]
+    },
+    {
+      "id": "rag_system_pipeline",
+      "claim": "The RAG system uses Dense + BM25 retrieval with RRF fusion, reranker, context builder, calculator, answerability checking, generation, and validation.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "docs/release/rag-system-card.md", "json_pointer": "/", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["rag_system_card", "readme"]
+    },
+    {
+      "id": "no_native_function_calling",
+      "claim": "The model does NOT support native function calling; RAG calculator is system orchestration, not model capability.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "docs/release/model-card.md", "json_pointer": "/", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["model_card", "rag_system_card"]
+    },
+    {
+      "id": "no_hallucination_elimination",
+      "claim": "The validation pipeline reduces but does NOT eliminate hallucinations.",
+      "status": "verified",
+      "evidence": [
+        {"artifact": "docs/release/limitations-and-risks.md", "json_pointer": "/", "verification_status": "verified_local"}
+      ],
+      "allowed_surfaces": ["model_card", "limitations"]
+    },
+    {
+      "id": "historical_pretraining_tokens",
+      "claim": "Historical self-reported total pretraining token pool of 17.68B is not independently verifiable from current server artifacts.",
+      "status": "unverified",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "historical_self_reported; source data no longer fully available for independent verification"
+    },
+    {
+      "id": "historical_core_metric",
+      "claim": "Historical self-reported CORE metric of 0.2201 at step 7060 is not independently verifiable.",
+      "status": "unverified",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "historical_self_reported; original training log not available"
+    },
+    {
+      "id": "prohibited_production_accuracy",
+      "claim": "The model achieves production-grade financial accuracy.",
+      "status": "prohibited",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "This claim is prohibited. 0/54 synthetic held-out pass rate does not support any quality claim."
+    },
+    {
+      "id": "prohibited_eliminate_hallucination",
+      "claim": "The model eliminates hallucinations.",
+      "status": "prohibited",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "This claim is prohibited. The validation pipeline reduces but does not eliminate hallucinations."
+    },
+    {
+      "id": "prohibited_native_tool_calling",
+      "claim": "The model supports native function calling.",
+      "status": "prohibited",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "This claim is prohibited. The model was not trained for native function calling."
+    },
+    {
+      "id": "prohibited_phase5_generalization",
+      "claim": "Phase 5 proves strong generalization.",
+      "status": "prohibited",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "This claim is prohibited. Phase 5 is an infrastructure functional test, not a quality evaluation."
+    },
+    {
+      "id": "prohibited_tokenizer_speed",
+      "claim": "The model is 2x faster due to tokenizer compression.",
+      "status": "prohibited",
+      "evidence": [],
+      "allowed_surfaces": [],
+      "note": "This claim is prohibited. Tokenizer compression does not directly imply inference speedup."
+    }
+  ],
+  "verified_claims": [
+    {
+      "claim": "The model is a GPT-2 style Transformer with 24 layers, 12 heads, 1536 embedding dimension, and approximately 1.4B parameters.",
+      "evidence": "artifacts/release/phase6/checkpoint-manifest.json",
+      "evidence_artifacts": ["artifacts/release/phase6/checkpoint-manifest.json"]
+    },
+    {
+      "claim": "The tokenizer uses byte-level BPE with a vocabulary size of 65000.",
+      "evidence": "artifacts/release/phase6/tokenizer-manifest.json",
+      "evidence_artifacts": ["artifacts/release/phase6/tokenizer-manifest.json"]
+    },
+    {
+      "claim": "SFT dataset contains 39534 total samples from 8 data sources.",
+      "evidence": "artifacts/release/phase6/sft-data-manifest.json",
+      "evidence_artifacts": ["artifacts/release/phase6/sft-data-manifest.json"]
+    },
+    {
+      "claim": "The tokenizer SHA256 is linked in the model lineage.",
+      "evidence": "artifacts/release/phase6/model-lineage.json",
+      "evidence_artifacts": ["artifacts/release/phase6/model-lineage.json", "artifacts/release/phase6/tokenizer-manifest.json"]
+    },
+    {
+      "claim": "Phase 5 evaluation uses synthetic held-out data classified as synthetic_held_out, not a real sealed evaluation.",
+      "evidence": "artifacts/release/phase6/evaluation-evidence.json",
+      "evidence_artifacts": ["artifacts/release/phase6/evaluation-evidence.json"]
+    },
+    {
+      "claim": "The base project code is licensed under MIT (Copyright 2025 Andrej Karpathy).",
+      "evidence": "artifacts/release/phase6/license-inventory.json",
+      "evidence_artifacts": ["artifacts/release/phase6/license-inventory.json"]
+    },
+    {
+      "claim": "The RAG system uses Dense + BM25 retrieval with RRF fusion, reranker, context builder, calculator, answerability checking, generation, and validation.",
+      "evidence": "docs/release/rag-system-card.md",
+      "evidence_artifacts": ["docs/release/rag-system-card.md"]
+    }
+  ],
+  "unverified_claims": [
+    {
+      "claim": "Pretraining completed at step 28000 with validation BPB of 0.7626.",
+      "note": "historical_unavailable; checkpoint content hash not available, training-runs.json is self-reported"
+    },
+    {
+      "claim": "SFT V2 lr010 checkpoint at step 150 has validation BPB of 0.5558.",
+      "note": "historical_unavailable; checkpoint content hash not available, step 150 is a smoke checkpoint (failed experiment)"
+    },
+    {
+      "claim": "The SFT checkpoint is derived from the base pretraining checkpoint at step 28000.",
+      "note": "historical_self_reported; lineage uses identity_digest (string hash), not checkpoint content hash"
+    },
+    {
+      "claim": "Historical self-reported total pretraining token pool of 17.68B is not independently verifiable from current server artifacts.",
+      "note": "historical_self_reported; source data no longer fully available for independent verification"
+    },
+    {
+      "claim": "Historical self-reported CORE metric of 0.2201 at step 7060 is not independently verifiable.",
+      "note": "historical_self_reported; original training log not available"
+    }
+  ],
+  "prohibited_claims": [
+    {"claim": "The model achieves production-grade financial accuracy."},
+    {"claim": "The model eliminates hallucinations."},
+    {"claim": "The model supports native function calling."},
+    {"claim": "Phase 5 proves strong generalization."},
+    {"claim": "The model is 2x faster due to tokenizer compression."}
+  ],
+  "allowed_surfaces": [
+    {"name": "model_card", "path": "docs/release/model-card.md"},
+    {"name": "tokenizer_card", "path": "docs/release/tokenizer-card.md"},
+    {"name": "sft_data_card", "path": "docs/release/sft-data-card.md"},
+    {"name": "evaluation_card", "path": "docs/release/evaluation-card.md"},
+    {"name": "rag_system_card", "path": "docs/release/rag-system-card.md"},
+    {"name": "limitations", "path": "docs/release/limitations-and-risks.md"},
+    {"name": "readme", "path": "README.md"},
+    {"name": "resume", "path": "docs/release/responsible-use.md"}
+  ]
+}
