@@ -1,0 +1,39 @@
+{
+  "generated_at": 1784884240.7001803,
+  "manifest_type": "phase7_performance_report",
+  "measurements": [
+    {
+      "endpoint": "model_health",
+      "latency_ms": null,
+      "status": "unreachable"
+    },
+    {
+      "endpoint": "model_models",
+      "latency_ms": null,
+      "status": "unreachable"
+    },
+    {
+      "endpoint": "backend_healthz",
+      "latency_ms": null,
+      "status": "unreachable"
+    },
+    {
+      "endpoint": "backend_readyz",
+      "latency_ms": null,
+      "status": "unreachable"
+    },
+    {
+      "endpoint": "frontend_root",
+      "latency_ms": null,
+      "status": "unreachable"
+    }
+  ],
+  "schema_version": "1.0",
+  "summary": {
+    "avg_latency_ms": null,
+    "endpoints_measured": 5,
+    "endpoints_reachable": 0,
+    "max_latency_ms": null,
+    "min_latency_ms": null
+  }
+}
