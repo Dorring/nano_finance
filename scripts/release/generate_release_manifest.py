@@ -100,6 +100,13 @@ def get_git_commit() -> str:
     return None
 
 
+# Phase 6 implementation commit (initial release evidence framework)
+IMPLEMENTATION_COMMIT = "92ab3380a447a1cb1f522db1d5a17b911abc600f"
+# Evidence downgrade commit (corrects naming and grades historical assets
+# as unverified; this is the closing commit for Phase 6)
+EVIDENCE_DOWNGRADE_COMMIT = "8ef17aa"
+
+
 def collect_sub_manifests() -> dict:
     """Collect all sub-manifests with existence status."""
     manifest_files = {
@@ -143,6 +150,8 @@ def build_release_manifest() -> dict:
         "evaluation_release_id": EVALUATION_RELEASE_ID,
         "evaluation_smoke_checkpoint": EVALUATION_SMOKE_CHECKPOINT,
         "git_commit": get_git_commit(),
+        "implementation_commit": IMPLEMENTATION_COMMIT,
+        "evidence_downgrade_commit": EVIDENCE_DOWNGRADE_COMMIT,
         "historical_production_checkpoint": HISTORICAL_PRODUCTION_CHECKPOINT,
         "historical_production_checkpoint_status": HISTORICAL_PRODUCTION_CHECKPOINT_STATUS,
         "license": LICENSE,

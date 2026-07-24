@@ -23,16 +23,16 @@
       ],
       "status": "completed",
       "verified": true,
+      "verification_status": "verified_local",
       "evidence_artifact": "artifacts/release/phase6/tokenizer-manifest.json"
     },
     {
       "run_id": "d24_final_mixdata",
       "stage": "pretraining",
       "git_commit": "historical",
-      "hardware": {
-        "gpu_type": "RTX 4090",
-        "gpu_count": 3
-      },
+      "hardware": null,
+      "hardware_status": "historical_conflicting_records",
+      "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
       "distributed_backend": "nanochat DDP",
       "precision": "fp32",
       "seed": 0,
@@ -55,7 +55,8 @@
         "weight_decay": 0.28
       },
       "data_manifest": "~/.cache/nanochat/base_data_climbmix/",
-      "shard_count": 171,
+      "expected_shard_count": 171,
+      "actual_shard_count": null,
       "shard_format": "parquet",
       "total_batch_size": 1048576,
       "target_param_data_ratio": 50.0,
@@ -67,21 +68,24 @@
           "name": "val_bpb",
           "value": 0.7626,
           "step": 28000,
-          "verified": true,
+          "verified": false,
+          "verification_status": "historical_self_reported",
           "source": "checkpoint meta_028000.json",
-          "extraction_method": "parsed_meta"
+          "extraction_method": "parsed_meta",
+          "note": "Meta file currently inaccessible; value from historical training summary"
         },
         {
           "name": "val_bpb",
           "value": 0.7698,
           "step": 7060,
           "verified": false,
-          "status": "historical_self_reported",
+          "verification_status": "historical_self_reported",
           "source": "historical training summary"
         }
       ],
       "status": "completed",
-      "verified": true,
+      "verified": false,
+      "verification_status": "historical_self_reported",
       "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
     },
     {
@@ -90,10 +94,9 @@
       "parent_run_id": "d24_final_mixdata",
       "parent_checkpoint_step": 28000,
       "git_commit": "historical",
-      "hardware": {
-        "gpu_type": "RTX 4090",
-        "gpu_count": 3
-      },
+      "hardware": null,
+      "hardware_status": "historical_conflicting_records",
+      "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
       "distributed_backend": "nanochat DDP",
       "precision": "fp32",
       "seed": 0,
@@ -127,28 +130,32 @@
       "user_labels": -100,
       "checkpoint_steps": [125, 150, 200, 250, 275, 300, 350, 375],
       "best_step": 150,
+      "release_role": "evaluation_smoke_checkpoint",
       "metrics": [
         {
           "name": "val_bpb",
           "value": 0.5558,
           "step": 150,
-          "verified": true,
+          "verified": false,
+          "verification_status": "historical_self_reported",
           "source": "checkpoint meta_000150.json",
-          "extraction_method": "parsed_meta"
+          "extraction_method": "parsed_meta",
+          "note": "Meta file currently inaccessible; value from historical training summary"
         },
         {
           "name": "finance_macro",
           "value": 0.2297,
           "step": 150,
           "verified": false,
-          "status": "historical_self_reported",
+          "verification_status": "historical_self_reported",
           "source": "historical evaluation summary",
           "note": "failed experiment, finance macro dropped"
         }
       ],
       "status": "completed",
-      "verified": true,
-      "note": "SFT V2 lr010 failed experiment; not production baseline",
+      "verified": false,
+      "verification_status": "historical_self_reported",
+      "note": "SFT V2 lr010 failed experiment; smoke checkpoint only, not production baseline or release model",
       "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
     },
     {
@@ -157,10 +164,9 @@
       "parent_run_id": "d24_final_mixdata",
       "parent_checkpoint_step": 28000,
       "git_commit": "historical",
-      "hardware": {
-        "gpu_type": "RTX 4090",
-        "gpu_count": 3
-      },
+      "hardware": null,
+      "hardware_status": "historical_conflicting_records",
+      "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
       "distributed_backend": "nanochat DDP",
       "precision": "fp32",
       "seed": 0,
@@ -175,7 +181,8 @@
       "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
       "total_samples": 39534,
       "status": "completed",
-      "verified": true,
+      "verified": false,
+      "verification_status": "historical_self_reported",
       "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json"
     },
     {
@@ -191,6 +198,7 @@
       "strict_pass_rate": 0.0,
       "status": "completed",
       "verified": true,
+      "verification_status": "verified_local",
       "note": "Infrastructure functional test only; NOT a quality metric",
       "evidence_artifact": "artifacts/release/phase6/evaluation-evidence.json"
     }

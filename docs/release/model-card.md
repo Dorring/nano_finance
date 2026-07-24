@@ -30,13 +30,14 @@
 | window_pattern | "L"（full context，非滑动窗口） | [已验证] |
 | 是否使用 bias | 否 | [已验证] |
 | 优化器 | Muon | [已验证] |
-| 参数量（约） | 1.4B | [已验证]（checkpoint 文件 5.7GB，fp32） |
+| 参数量（约） | 1.4B | [已验证]（架构参数计算） |
 | Tokenizer | Byte-Level BPE (RustBPE, GPT-4 style) | [已验证] |
 | 支持语言 | 中文（主要）、英文 | [已验证] |
 | 训练阶段 | 预训练 → SFT | [已验证] |
 | 模型格式 | nanochat 原生 checkpoint（fp32） | [已验证] |
 | 模型权重许可证 | 未明确授权 | [已验证] |
 | 预训练数据许可证 | ClimbMix (NVIDIA)、SkyPile、中文金融数据（来源待确认） | [待确认] |
+| 训练硬件 | 历史记录冲突（A6000×2 vs RTX 4090×3），未独立验证 | [历史记录冲突] |
 
 ### 训练阶段说明
 
@@ -99,7 +100,7 @@
 | 数据 | 171 parquet shards（ClimbMix + 中文数据混合） | [历史自报]（原始目录不可访问，未重新枚举验证） |
 | total_batch_size | 1,048,576（1M tokens） | [已验证] |
 | target_param_data_ratio | 50.0 | [已验证] |
-| 硬件 | 双 A6000 GPU（48GB each） | [已验证] |
+| 硬件 | 历史记录冲突（A6000×2 vs RTX 4090×3），未独立验证 | [历史记录冲突] |
 
 > 训练数据组成详见 `pretraining-data-card.md`。预训练命令详见 `reproducibility.md`。
 
@@ -135,10 +136,10 @@
 | --- | --- | --- | --- | --- |
 | SFT800 | 0.4783 | 0.3736 | 历史，checkpoint 不在当前服务器 | [不可验证] |
 | SFT1147 | 0.4842 | 0.4432 | 生产基线声明，checkpoint 不在当前服务器 | [不可验证] |
-| V2 lr010 step 150 | 0.5558 | 0.2297 | 失败实验（烟雾测试 checkpoint，非发布模型）；checkpoint 文件存在但内容哈希未验证 | [历史自报] |
-| V2 lr010 step 275 | 0.5527 | 0.2077 | 失败实验；checkpoint 文件存在但内容哈希未验证 | [历史自报] |
+| V2 lr010 step 150 | 0.5558 | 0.2297 | 失败实验（烟雾测试 checkpoint，非发布模型）；历史记录指向该 checkpoint，当前无法访问 | [历史自报] |
+| V2 lr010 step 275 | 0.5527 | 0.2077 | 失败实验；历史记录指向该 checkpoint，当前无法访问 | [历史自报] |
 
-> SFT800 与 SFT1147 的指标因 checkpoint 不在当前服务器、原始日志不可重新获取，标记为 **[不可验证]**，**不作为本发布的质量基线引用**。V2 lr010 系列的 checkpoint 文件虽存在，但 `checkpoint_content_sha256` 为 `null`（内容哈希未验证），相关指标来自历史训练日志，标记为 **[历史自报]**。
+> SFT800 与 SFT1147 的指标因 checkpoint 不在当前服务器、原始日志不可重新获取，标记为 **[不可验证]**，**不作为本发布的质量基线引用**。V2 lr010 系列的 checkpoint 在 Checkpoint Manifest 中 `checkpoint_files=[]`，历史记录指向这些 checkpoint 但当前无法访问，`checkpoint_content_sha256` 为 `null`（内容哈希未验证），相关指标来自历史训练日志，标记为 **[历史自报]**。
 
 ---
 

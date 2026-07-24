@@ -49,9 +49,11 @@
   },
   "evaluation_release_id": "nano-finance-eval-v1",
   "evaluation_smoke_checkpoint": "d24_finance_v2_lr010/step_150",
-  "git_commit": "92ab3380a447a1cb1f522db1d5a17b911abc600f",
+  "evidence_downgrade_commit": "8ef17aa",
+  "git_commit": "8ef17aaf6a3b5c7ded3e90987c6a387f20684477",
   "historical_production_checkpoint": "sft1147",
   "historical_production_checkpoint_status": "unavailable_unverified",
+  "implementation_commit": "92ab3380a447a1cb1f522db1d5a17b911abc600f",
   "license": "MIT (Copyright 2025 Andrej Karpathy)",
   "manifest_type": "release",
   "pretraining_run_id": "d24_final_mixdata",
@@ -1733,35 +1735,39 @@
             "max_chars": "2B",
             "vocab_size": 65000
           },
+          "verification_status": "verified_local",
           "verified": true,
           "vocab_size": 65000
         },
         {
+          "actual_shard_count": null,
           "checkpoint_output": "d24_final_mixdata",
           "data_manifest": "~/.cache/nanochat/base_data_climbmix/",
           "distributed_backend": "nanochat DDP",
           "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
+          "expected_shard_count": 171,
           "final_step": 28000,
           "git_commit": "historical",
-          "hardware": {
-            "gpu_count": 3,
-            "gpu_type": "RTX 4090"
-          },
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
           "metrics": [
             {
               "extraction_method": "parsed_meta",
               "name": "val_bpb",
+              "note": "Meta file currently inaccessible; value from historical training summary",
               "source": "checkpoint meta_028000.json",
               "step": 28000,
               "value": 0.7626,
-              "verified": true
+              "verification_status": "historical_self_reported",
+              "verified": false
             },
             {
               "name": "val_bpb",
               "source": "historical training summary",
-              "status": "historical_self_reported",
               "step": 7060,
               "value": 0.7698,
+              "verification_status": "historical_self_reported",
               "verified": false
             }
           ],
@@ -1786,14 +1792,14 @@
           "precision": "fp32",
           "run_id": "d24_final_mixdata",
           "seed": 0,
-          "shard_count": 171,
           "shard_format": "parquet",
           "stage": "pretraining",
           "status": "completed",
           "target_param_data_ratio": 50.0,
           "total_batch_size": 1048576,
           "training_time_seconds": 2428705,
-          "verified": true
+          "verification_status": "historical_self_reported",
+          "verified": false
         },
         {
           "best_step": 150,
@@ -1813,28 +1819,29 @@
           "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
           "finance_train_file": "train_v2_balanced.jsonl",
           "git_commit": "historical",
-          "hardware": {
-            "gpu_count": 3,
-            "gpu_type": "RTX 4090"
-          },
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
           "loss_mask": "assistant_only",
           "max_seq_len": 2048,
           "metrics": [
             {
               "extraction_method": "parsed_meta",
               "name": "val_bpb",
+              "note": "Meta file currently inaccessible; value from historical training summary",
               "source": "checkpoint meta_000150.json",
               "step": 150,
               "value": 0.5558,
-              "verified": true
+              "verification_status": "historical_self_reported",
+              "verified": false
             },
             {
               "name": "finance_macro",
               "note": "failed experiment, finance macro dropped",
               "source": "historical evaluation summary",
-              "status": "historical_self_reported",
               "step": 150,
               "value": 0.2297,
+              "verification_status": "historical_self_reported",
               "verified": false
             }
           ],
@@ -1848,7 +1855,7 @@
             "vocab_size": 65000,
             "window_pattern": "L"
           },
-          "note": "SFT V2 lr010 failed experiment; not production baseline",
+          "note": "SFT V2 lr010 failed experiment; smoke checkpoint only, not production baseline or release model",
           "optimizer_config": {
             "embedding_lr": 0.3,
             "init_lr_frac": 0.1,
@@ -1861,6 +1868,7 @@
           "parent_checkpoint_step": 28000,
           "parent_run_id": "d24_final_mixdata",
           "precision": "fp32",
+          "release_role": "evaluation_smoke_checkpoint",
           "run_id": "d24_finance_v2_lr010",
           "seed": 0,
           "smoltalk_size": 30000,
@@ -1869,17 +1877,17 @@
           "total_batch_size": 1048576,
           "total_samples": 39534,
           "user_labels": -100,
-          "verified": true
+          "verification_status": "historical_self_reported",
+          "verified": false
         },
         {
           "data_manifest": "artifacts/release/phase6/sft-data-manifest.json",
           "distributed_backend": "nanochat DDP",
           "evidence_artifact": "artifacts/release/phase6/checkpoint-manifest.json",
           "git_commit": "historical",
-          "hardware": {
-            "gpu_count": 3,
-            "gpu_type": "RTX 4090"
-          },
+          "hardware": null,
+          "hardware_note": "Historical records conflict (A6000x2 vs RTX 4090x3); not independently verified",
+          "hardware_status": "historical_conflicting_records",
           "model_config": {
             "n_embd": 1536,
             "n_head": 12,
@@ -1896,7 +1904,8 @@
           "stage": "sft",
           "status": "completed",
           "total_samples": 39534,
-          "verified": true
+          "verification_status": "historical_self_reported",
+          "verified": false
         },
         {
           "cal_samples": 48,
@@ -1912,6 +1921,7 @@
           "status": "completed",
           "strict_pass": 0,
           "strict_pass_rate": 0.0,
+          "verification_status": "verified_local",
           "verified": true
         }
       ],
