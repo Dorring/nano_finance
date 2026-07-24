@@ -68,16 +68,18 @@ def test_sft_checkpoint_step_150_exists(checkpoint_manifest):
     assert sft is not None
 
 
-def test_each_checkpoint_has_sha256(checkpoint_manifest):
+def test_each_checkpoint_has_identity_digest(checkpoint_manifest):
     cks = _get_checkpoints(checkpoint_manifest)
     assert len(cks) > 0, "No checkpoints found"
     for ck in cks:
         if not isinstance(ck, dict):
             continue
-        sha = ck.get("sha256") or ck.get("hash")
+        # identity_digest is the string-based SHA256 for stable identification;
+        # checkpoint_content_sha256 is null (model files not accessible)
+        digest = ck.get("identity_digest") or ck.get("sha256") or ck.get("hash")
         ck_name = ck.get("name", ck.get("step", "unknown"))
-        assert sha is not None, f"Missing sha256: {ck_name}"
-        assert re.fullmatch(r"[0-9a-fA-F]{64}", str(sha)), f"Invalid sha256: {ck_name}"
+        assert digest is not None, f"Missing identity_digest: {ck_name}"
+        assert re.fullmatch(r"[0-9a-fA-F]{64}", str(digest)), f"Invalid identity_digest: {ck_name}"
 
 
 def test_each_checkpoint_has_model_config(checkpoint_manifest):

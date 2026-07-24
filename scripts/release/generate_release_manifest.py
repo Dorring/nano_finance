@@ -18,6 +18,17 @@ SCHEMA_VERSION = "1.0"
 
 RELEASE_ID = "nano-finance-d24-sft-v1"
 
+# This release provides documentation and an evidence classification framework.
+# It does NOT include a verifiable, downloadable model weight package.
+# The step 150 checkpoint is a failed experiment (smoke checkpoint), not a
+# production release model. The historical production checkpoint (sft1147)
+# is not available for verification.
+RELEASE_TYPE = "documentation_and_evidence"
+RELEASE_MODEL_CHECKPOINT = None
+EVALUATION_SMOKE_CHECKPOINT = "d24_finance_v2_lr010/step_150"
+HISTORICAL_PRODUCTION_CHECKPOINT = "sft1147"
+HISTORICAL_PRODUCTION_CHECKPOINT_STATUS = "unavailable_unverified"
+
 # Known identifiers for linking
 BASE_ARCHITECTURE_ID = "nanochat-d24-1.4b"
 TOKENIZER_ID = "nanochat-bpe-65k"
@@ -130,12 +141,17 @@ def build_release_manifest() -> dict:
             for key, info in sorted(sub_manifests.items())
         },
         "evaluation_release_id": EVALUATION_RELEASE_ID,
+        "evaluation_smoke_checkpoint": EVALUATION_SMOKE_CHECKPOINT,
         "git_commit": get_git_commit(),
+        "historical_production_checkpoint": HISTORICAL_PRODUCTION_CHECKPOINT,
+        "historical_production_checkpoint_status": HISTORICAL_PRODUCTION_CHECKPOINT_STATUS,
         "license": LICENSE,
         "manifest_type": "release",
         "pretraining_run_id": PRETRAINING_RUN_ID,
         "rag_release_id": RAG_RELEASE_ID,
         "release_id": RELEASE_ID,
+        "release_model_checkpoint": RELEASE_MODEL_CHECKPOINT,
+        "release_type": RELEASE_TYPE,
         "schema_version": SCHEMA_VERSION,
         "sft_run_id": SFT_RUN_ID,
         "sub_manifest_data": {

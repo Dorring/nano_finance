@@ -1,5 +1,9 @@
 {
   "checks": {
+    "evidence_status_gate": {
+      "issues": [],
+      "passed": true
+    },
     "prohibited_claims": {
       "issues": [],
       "passed": true
@@ -20,7 +24,7 @@
   "summary": {
     "prohibited_claims_count": 5,
     "total_issues": 0,
-    "unverified_claims_count": 2,
-    "verified_claims_count": 9
+    "unverified_claims_count": 5,
+    "verified_claims_count": 7
   }
 }

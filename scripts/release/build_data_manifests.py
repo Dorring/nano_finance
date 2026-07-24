@@ -31,13 +31,17 @@ PRETRAINING_KNOWN = {
     "val_bpb_final": 0.7626,
 }
 
-# Known SFT constants
+# Known SFT constants — real split numbers from original data processing.
+# Do NOT adjust these to satisfy ratio thresholds; tests must validate the
+# real numbers, not fabricated ones.
 SFT_KNOWN = {
     "total_samples": 39534,
     "splits": {
         "test": 3956,
-        "train": 31628,  # 30641 + 979 cot_train, adjusted for >= 0.80 ratio
-        "val": 3950,  # adjusted: 3958 - 8 moved to train for ratio compliance
+        "train": 30641,
+        "cot_train": 979,
+        "effective_train": 31620,
+        "val": 3958,
     },
     "sources": {
         "ectsum": {"count": 2425, "source_id": "ectsum"},
@@ -138,9 +142,10 @@ def build_pretraining_manifest() -> dict:
     """Build pretraining data manifest."""
     data_dir = BASE_DIR / "base_data_climbmix"
     shards = []
-    actual_shard_count = 0
+    actual_shard_count = None
+    source_accessible = data_dir.exists()
 
-    if data_dir.exists():
+    if source_accessible:
         parquet_files = sorted(data_dir.glob("*.parquet"))
         actual_shard_count = len(parquet_files)
         for pf in parquet_files:
@@ -149,13 +154,13 @@ def build_pretraining_manifest() -> dict:
                 "size_bytes": pf.stat().st_size,
             })
 
-    # Fallback to known shard count when data dir is not accessible
+    # When data dir is not accessible, do NOT generate fake shard entries.
+    # Record the expected count from historical records but leave shards empty.
     if not shards:
-        actual_shard_count = PRETRAINING_KNOWN["shard_count"]
-        shards = [
-            {"name": f"shard_{i:04d}.parquet", "size_bytes": 0}
-            for i in range(PRETRAINING_KNOWN["shard_count"])
-        ]
+        actual_shard_count = None
+        verification_status = "historical_self_reported"
+    else:
+        verification_status = "verified_local"
 
     return {
         "actual_shard_count": actual_shard_count,
@@ -165,6 +170,7 @@ def build_pretraining_manifest() -> dict:
         "schema_version": SCHEMA_VERSION,
         "shard_format": PRETRAINING_KNOWN["shard_format"],
         "shards": shards,
+        "source_accessible": source_accessible,
         "training_params": {
             "target_param_data_ratio": PRETRAINING_KNOWN["target_param_data_ratio"],
             "total_batch_size": PRETRAINING_KNOWN["total_batch_size"],
@@ -175,6 +181,7 @@ def build_pretraining_manifest() -> dict:
             "final_step": PRETRAINING_KNOWN["final_step"],
             "val_bpb_final": PRETRAINING_KNOWN["val_bpb_final"],
         },
+        "verification_status": verification_status,
     }
 
 
@@ -216,6 +223,9 @@ def build_sft_manifest() -> dict:
                     if "count" in detail:
                         sources[name]["count"] = detail["count"]
 
+    # Determine verification status: if we have real file hashes, data is locally verified
+    sft_verification_status = "verified_local" if file_hashes else "historical_self_reported"
+
     return {
         "data_files": file_hashes,
         "expected_total_samples": SFT_KNOWN["total_samples"],
@@ -230,6 +240,7 @@ def build_sft_manifest() -> dict:
         "split_manifest": split_manifest,
         "splits": SFT_KNOWN["splits"],
         "supervised_token_report": token_report,
+        "verification_status": sft_verification_status,
     }
 
 

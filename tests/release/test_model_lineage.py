@@ -58,12 +58,15 @@ def test_lineage_chain_base_to_sft(model_lineage):
     assert has_sft, "Lineage missing SFT checkpoint reference"
 
 
-def test_parent_checkpoint_sha256_present(model_lineage):
-    # Verify parent_checkpoint_sha256 exists
-    parent_sha = _find_field(model_lineage, "parent_checkpoint_sha256")
-    assert parent_sha is not None, "parent_checkpoint_sha256 not found in model-lineage.json"
-    assert isinstance(parent_sha, str), f"parent_checkpoint_sha256 should be str, got {type(parent_sha).__name__}"
-    assert len(parent_sha) == 64, f"parent_checkpoint_sha256 should be 64-char hex, got len={len(parent_sha)}"
+def test_parent_identity_digest_present(model_lineage):
+    # Verify parent_identity_digest exists (renamed from parent_checkpoint_sha256)
+    parent_digest = _find_field(model_lineage, "parent_identity_digest")
+    if parent_digest is None:
+        # Fallback for backward compatibility
+        parent_digest = _find_field(model_lineage, "parent_checkpoint_sha256")
+    assert parent_digest is not None, "parent_identity_digest not found in model-lineage.json"
+    assert isinstance(parent_digest, str), f"parent_identity_digest should be str, got {type(parent_digest).__name__}"
+    assert len(parent_digest) == 64, f"parent_identity_digest should be 64-char hex, got len={len(parent_digest)}"
 
 
 def test_tokenizer_sha256_matches_tokenizer_manifest(model_lineage, tokenizer_manifest):

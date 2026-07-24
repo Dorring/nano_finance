@@ -24,6 +24,26 @@ SCHEMA_VERSION = "1.0"
 # Path to the claim-evidence map
 CLAIM_MAP_PATH = REPO_ROOT / "artifacts" / "release" / "phase6" / "claim-evidence-map.json"
 
+# Evidence status → maximum claim status allowed.
+# Only verified_local evidence can support a "verified" claim.
+# placeholder evidence is forbidden entirely.
+EVIDENCE_STATUS_TO_MAX_CLAIM = {
+    "verified_local": "verified",
+    "external_attestation": "partially_verified",
+    "historical_self_reported": "unverified",
+    "historical_unavailable": "unverified",
+    "fallback": "unverified",
+    "placeholder": None,  # forbidden as evidence
+}
+
+# Claim status rank for comparison (higher = stronger)
+_CLAIM_STATUS_RANK = {
+    "verified": 3,
+    "partially_verified": 2,
+    "unverified": 1,
+    "prohibited": 0,
+}
+
 
 def load_json_safe(path: Path):
     """Load JSON file, return None on failure."""
@@ -82,6 +102,95 @@ def check_verified_claims(claim_map: dict) -> list:
                             "issue": f"evidence artifact not found: {art_path}",
                             "severity": "error",
                         })
+
+    return issues
+
+
+def check_evidence_status_gate(claim_map: dict) -> list:
+    """Enforce evidence quality gate: only verified_local evidence can support
+    a 'verified' claim. Claims with weaker evidence must be downgraded.
+
+    Returns a list of issues. An issue with severity 'error' indicates a claim
+    whose status exceeds what its evidence allows.
+    """
+    issues = []
+    claims = claim_map.get("claims", [])
+    if not isinstance(claims, list):
+        return [{"issue": "claims is not a list", "severity": "error"}]
+
+    for i, claim_entry in enumerate(claims):
+        if not isinstance(claim_entry, dict):
+            continue
+
+        claim_status = claim_entry.get("status")
+        if claim_status is None:
+            continue
+
+        claim_text = claim_entry.get("claim", f"<unknown_claim_{i}>")
+        cid = claim_entry.get("id", f"claim_{i}")
+        evidence_list = claim_entry.get("evidence", [])
+
+        if not isinstance(evidence_list, list):
+            continue
+
+        # If claim has no evidence at all, skip (handled by other checks)
+        if not evidence_list:
+            continue
+
+        # Determine the strongest evidence status for this claim
+        strongest_max = None
+        has_placeholder = False
+        for ev in evidence_list:
+            if not isinstance(ev, dict):
+                continue
+            ev_status = ev.get("verification_status")
+            if ev_status == "placeholder":
+                has_placeholder = True
+                continue
+            if ev_status is None:
+                # If no verification_status field, treat as unknown — cannot
+                # support verified status
+                continue
+            max_claim = EVIDENCE_STATUS_TO_MAX_CLAIM.get(ev_status)
+            if max_claim is None:
+                continue
+            if strongest_max is None:
+                strongest_max = max_claim
+            else:
+                if _CLAIM_STATUS_RANK.get(max_claim, 0) > _CLAIM_STATUS_RANK.get(strongest_max, 0):
+                    strongest_max = max_claim
+
+        # placeholder evidence is forbidden
+        if has_placeholder:
+            issues.append({
+                "claim": claim_text,
+                "claim_id": cid,
+                "issue": "placeholder evidence is forbidden",
+                "severity": "error",
+            })
+            continue
+
+        if strongest_max is None:
+            # No recognized evidence status at all
+            if claim_status == "verified":
+                issues.append({
+                    "claim": claim_text,
+                    "claim_id": cid,
+                    "issue": "verified claim has no evidence with recognized verification_status",
+                    "severity": "error",
+                })
+            continue
+
+        # Check if claim status exceeds what evidence allows
+        claim_rank = _CLAIM_STATUS_RANK.get(claim_status, 0)
+        max_rank = _CLAIM_STATUS_RANK.get(strongest_max, 0)
+        if claim_rank > max_rank:
+            issues.append({
+                "claim": claim_text,
+                "claim_id": cid,
+                "issue": f"claim status '{claim_status}' exceeds evidence max '{strongest_max}'",
+                "severity": "error",
+            })
 
     return issues
 
@@ -221,14 +330,21 @@ def validate() -> dict:
     verified_issues = check_verified_claims(claim_map)
     unverified_issues = check_unverified_claims(claim_map)
     prohibited_issues = check_prohibited_claims(claim_map)
+    evidence_gate_issues = check_evidence_status_gate(claim_map)
 
-    all_issues = verified_issues + unverified_issues + prohibited_issues
+    all_issues = verified_issues + unverified_issues + prohibited_issues + evidence_gate_issues
     has_errors = any(
         issue.get("severity") == "error" for issue in all_issues
     )
 
     return {
         "checks": {
+            "evidence_status_gate": {
+                "issues": evidence_gate_issues,
+                "passed": not any(
+                    i.get("severity") == "error" for i in evidence_gate_issues
+                ),
+            },
             "prohibited_claims": {
                 "issues": prohibited_issues,
                 "passed": not any(

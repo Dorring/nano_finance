@@ -2,7 +2,11 @@
 
 ## 概述
 
-本文档为 NanoFinance 项目的模型卡片（Model Card），描述基于 karpathy/nanochat（MIT License）二次开发的中文金融领域大模型。Release ID 为 `nano-finance-d24-sft-v1`。模型经过预训练（Pretraining）与监督微调（SFT）两个阶段，并配套 RAG 检索增强系统用于金融报告问答。本卡片仅描述模型本身的能力边界、训练依据与已验证的评测事实，不包含任何未被验证或不可复现的指标声明。所有数字均标注来源类别：**[已验证]**（当前服务器可查的 manifest/checkpoint/log）、**[历史自报]**（项目历史记录中存在但原始日志不可重新获取）、**[不可验证]**（无原始数据支撑，仅作背景说明）。
+本文档为 NanoFinance 项目的模型卡片（Model Card），描述基于 karpathy/nanochat（MIT License）二次开发的中文金融领域大模型。Release ID 为 `nano-finance-d24-sft-v1`，Release Type 为 `documentation_and_evidence`（文档与证据框架）。本发布**不包含可下载、可验证的正式模型权重版本**；`release_model_checkpoint` 为 `null`。历史生产 checkpoint（`sft1147`）当前不可访问，标记为 `unavailable_unverified`。step 150 checkpoint 为失败实验的烟雾测试 checkpoint（`evaluation_smoke_checkpoint`），不作为正式发布模型。
+
+模型经过预训练（Pretraining）与监督微调（SFT）两个阶段，并配套 RAG 检索增强系统用于金融报告问答。本卡片仅描述模型本身的能力边界、训练依据与已验证的评测事实，不包含任何未被验证或不可复现的指标声明。所有数字均标注来源类别：**[已验证]**（当前服务器可查的 manifest/checkpoint/log）、**[历史自报]**（项目历史记录中存在但原始日志不可重新获取）、**[不可验证]**（无原始数据支撑，仅作背景说明）。
+
+> **Checkpoint 哈希口径说明**：本发布中 Checkpoint 的 `identity_digest` 是基于 `run_name/step` 字符串计算的 SHA256，仅用于稳定标识，**不是模型文件内容哈希**。`checkpoint_content_sha256` 始终为 `null`，因为模型权重文件过大且当前服务器不可访问。涉及 Checkpoint 内容的声明标记为 `historical_unavailable`，不作为已验证证据。
 
 ---
 
@@ -36,9 +40,10 @@
 
 ### 训练阶段说明
 
-- **预训练 Checkpoint**：`d24_final_mixdata`，step 28000
-- **SFT Checkpoint（生产基线）**：见 `evaluation-card.md` 中被评测模型身份说明
-- **SFT V2 失败实验**：`d24_finance_v2_lr010` step 150 / step 275（val_bpb 较高，finance macro 较低，不作为发布基线）
+- **预训练 Checkpoint**：`d24_final_mixdata`，step 28000 — `verification_status: historical_unavailable`（checkpoint 内容哈希不可验证）
+- **SFT 烟雾测试 Checkpoint**：`d24_finance_v2_lr010` step 150 — 失败实验，不作为发布模型（`evaluation_smoke_checkpoint`）
+- **历史生产 Checkpoint**：`sft1147` — `unavailable_unverified`（checkpoint 不在当前服务器，未验证）
+- **正式发布模型 Checkpoint**：`null`（本发布为文档与证据框架，无可验证的模型权重）
 
 详细训练与数据信息请引用对应 manifest 路径，参见 `pretraining-data-card.md`、`sft-data-card.md`、`reproducibility.md`。
 
@@ -86,12 +91,12 @@
 
 | 字段 | 值 | 来源 |
 | --- | --- | --- |
-| Checkpoint | `d24_final_mixdata` | [已验证] |
-| 训练步数 | 28000（从 step 24000 恢复训练） | [已验证] |
-| val_bpb @ step 28000 | 0.7626 | [已验证] |
-| smooth_train_loss | 2.5539 | [已验证] |
-| total_training_time | ~2,428,705 秒（~28 天） | [已验证] |
-| 数据 | 171 parquet shards（ClimbMix + 中文数据混合） | [已验证] |
+| Checkpoint | `d24_final_mixdata`（checkpoint 内容哈希未验证，`historical_unavailable`） | [历史自报] |
+| 训练步数 | 28000（从 step 24000 恢复训练） | [历史自报] |
+| val_bpb @ step 28000 | 0.7626 | [历史自报] |
+| smooth_train_loss | 2.5539 | [历史自报] |
+| total_training_time | ~2,428,705 秒（~28 天） | [历史自报] |
+| 数据 | 171 parquet shards（ClimbMix + 中文数据混合） | [历史自报]（原始目录不可访问，未重新枚举验证） |
 | total_batch_size | 1,048,576（1M tokens） | [已验证] |
 | target_param_data_ratio | 50.0 | [已验证] |
 | 硬件 | 双 A6000 GPU（48GB each） | [已验证] |
@@ -105,7 +110,7 @@
 | SFT Run | `d24_finance_v2_lr005`、`d24_finance_v2_lr010` | [已验证] |
 | lr005 步数范围 | 0–150 | [已验证] |
 | lr010 步数范围 | 125–375 | [已验证] |
-| lr010 best @ step 150 | val_bpb = 0.5558 | [已验证] |
+| lr010 best @ step 150 | val_bpb = 0.5558 | [历史自报]（烟雾测试 checkpoint，不作为发布模型） |
 | SFT 数据总量 | 39,534 samples | [已验证] |
 | max_seq_len | 2048 | [已验证] |
 | device_batch_size | 4 | [已验证] |
@@ -130,10 +135,10 @@
 | --- | --- | --- | --- | --- |
 | SFT800 | 0.4783 | 0.3736 | 历史，checkpoint 不在当前服务器 | [不可验证] |
 | SFT1147 | 0.4842 | 0.4432 | 生产基线声明，checkpoint 不在当前服务器 | [不可验证] |
-| V2 lr010 step 150 | 0.5558 | 0.2297 | 失败实验，checkpoint 可用 | [已验证] |
-| V2 lr010 step 275 | 0.5527 | 0.2077 | 失败实验 | [已验证] |
+| V2 lr010 step 150 | 0.5558 | 0.2297 | 失败实验（烟雾测试 checkpoint，非发布模型）；checkpoint 文件存在但内容哈希未验证 | [历史自报] |
+| V2 lr010 step 275 | 0.5527 | 0.2077 | 失败实验；checkpoint 文件存在但内容哈希未验证 | [历史自报] |
 
-> SFT800 与 SFT1147 的指标因 checkpoint 不在当前服务器、原始日志不可重新获取，标记为 **[不可验证]**，**不作为本发布的质量基线引用**。
+> SFT800 与 SFT1147 的指标因 checkpoint 不在当前服务器、原始日志不可重新获取，标记为 **[不可验证]**，**不作为本发布的质量基线引用**。V2 lr010 系列的 checkpoint 文件虽存在，但 `checkpoint_content_sha256` 为 `null`（内容哈希未验证），相关指标来自历史训练日志，标记为 **[历史自报]**。
 
 ---
 

@@ -50,48 +50,66 @@ SFT_RUNS = {
 }
 
 # Known checkpoint fallback data (used when server files are not accessible).
-# SHA256 values are deterministic hashes of the checkpoint identity string,
-# computed as sha256(f"{run_name}/step_{step}"). These provide stable identity
-# hashes for lineage tracing when the actual meta files cannot be read.
+# identity_digest is a deterministic SHA256 of the checkpoint identity string,
+# computed as sha256(f"{run_name}/step_{step}"). It provides a stable identifier
+# for lineage tracing but is NOT a model file content hash.
+# checkpoint_content_sha256 is null because the actual .pt model files are too
+# large to hash and are not accessible from the current server.
+# verification_status is "historical_unavailable" when using fallback data
+# (server files not accessible), or "verified_local" when meta files are read.
 
 
 def _identity_sha256(identity: str) -> str:
-    """Compute a deterministic SHA256 from a checkpoint identity string."""
+    """Compute a deterministic SHA256 from a checkpoint identity string.
+
+    This is NOT a file content hash — it is a stable identifier derived from
+    the run_name and step number. It must be stored as ``identity_digest``,
+    never as ``sha256`` or ``checkpoint_content_sha256``.
+    """
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
 KNOWN_BASE_CHECKPOINT = {
+    "checkpoint_content_sha256": None,
     "checkpoint_files": [],
+    "identity_digest": _identity_sha256("d24_final_mixdata/step_28000"),
     "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+    "meta_file_sha256": None,
     "model_config": MODEL_ARCHITECTURE,
     "run_name": "d24_final_mixdata",
-    "sha256": _identity_sha256("d24_final_mixdata/step_28000"),
     "step": 28000,
     "val_bpb": 0.7626,
+    "verification_status": "historical_unavailable",
 }
 
 KNOWN_SFT_LR010_CHECKPOINTS = [
     {
+        "checkpoint_content_sha256": None,
         "checkpoint_files": [],
+        "identity_digest": _identity_sha256(f"d24_finance_v2_lr010/step_{step}"),
         "meta_file": f"~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_{step:06d}.json",
+        "meta_file_sha256": None,
         "model_config": MODEL_ARCHITECTURE,
         "run_name": "d24_finance_v2_lr010",
-        "sha256": _identity_sha256(f"d24_finance_v2_lr010/step_{step}"),
         "step": step,
         "val_bpb": 0.5558 if step == 150 else None,
+        "verification_status": "historical_unavailable",
     }
     for step in SFT_LR010_CHECKPOINTS
 ]
 
 KNOWN_SFT_LR005_CHECKPOINTS = [
     {
+        "checkpoint_content_sha256": None,
         "checkpoint_files": [],
+        "identity_digest": _identity_sha256(f"d24_finance_v2_lr005/step_{step}"),
         "meta_file": f"~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_{step:06d}.json",
+        "meta_file_sha256": None,
         "model_config": MODEL_ARCHITECTURE,
         "run_name": "d24_finance_v2_lr005",
-        "sha256": _identity_sha256(f"d24_finance_v2_lr005/step_{step}"),
         "step": step,
         "val_bpb": None,
+        "verification_status": "historical_unavailable",
     }
     for step in SFT_LR010_CHECKPOINTS
 ]
@@ -192,8 +210,10 @@ def collect_checkpoint_info(ckpt_dir: Path, run_name: str) -> list:
         meta_data = load_json_safe(meta_file)
         step = extract_step_from_meta(meta_data, meta_file.name)
 
-        # Use meta file SHA256 as checkpoint identity (pt files are too large to hash)
+        # Use meta file SHA256 as an identity anchor (pt files are too large to hash)
         meta_sha256 = sha256_file(meta_file)
+        identity_str = f"{run_name}/step_{step}"
+        identity_digest = _identity_sha256(identity_str)
 
         # Find associated .pt checkpoint file
         pt_files = sorted(ckpt_dir.glob("*.pt"))
@@ -201,13 +221,16 @@ def collect_checkpoint_info(ckpt_dir: Path, run_name: str) -> list:
         ckpt_pt_files = [p for p in pt_files if not p.name.startswith("meta_")]
 
         ckpt_entry = {
+            "checkpoint_content_sha256": None,
             "checkpoint_files": [],
+            "identity_digest": identity_digest,
             "meta_file": rel_path(meta_file),
+            "meta_file_sha256": meta_sha256,
             "model_config": MODEL_ARCHITECTURE,
             "run_name": run_name,
-            "sha256": meta_sha256,
             "step": step,
             "val_bpb": None,
+            "verification_status": "verified_local",
         }
 
         # Extract val_bpb from metadata
@@ -226,7 +249,7 @@ def collect_checkpoint_info(ckpt_dir: Path, run_name: str) -> list:
                 "name": pt.name,
                 "size_bytes": pt.stat().st_size,
                 "sha256": None,
-                "note": "checkpoint file too large for hash computation; meta file sha256 used as identity",
+                "note": "checkpoint file too large for content hash computation; identity_digest used as stable identifier",
             }
             ckpt_entry["checkpoint_files"].append(file_entry)
 
@@ -305,26 +328,30 @@ def build_model_lineage(checkpoint_manifest: dict) -> dict:
                 tokenizer_sha256 = finfo["sha256"]
                 break
 
-    base_sha = base_ckpt.get("sha256") if base_ckpt else None
-    sft_sha = sft_best_ckpt.get("sha256") if sft_best_ckpt else None
+    base_digest = base_ckpt.get("identity_digest") if base_ckpt else None
+    sft_digest = sft_best_ckpt.get("identity_digest") if sft_best_ckpt else None
+    base_verification = base_ckpt.get("verification_status") if base_ckpt else None
+    sft_verification = sft_best_ckpt.get("verification_status") if sft_best_ckpt else None
 
     lineage = {
         "child": {
             "checkpoint_id": f"{sft_run_name}/step_{sft_best_step}" if child_validated else None,
+            "identity_digest": sft_digest,
             "run_name": sft_run_name if child_validated else None,
-            "sha256": sft_sha,
             "step": sft_best_step if child_validated else None,
             "val_bpb": SFT_LR010_BEST["val_bpb"] if child_validated else None,
+            "verification_status": sft_verification,
         },
         "lineage_type": "pretraining_to_sft",
         "parent": {
             "checkpoint_id": f"d24_final_mixdata/step_{base_step}" if parent_validated else None,
+            "identity_digest": base_digest,
             "run_name": "d24_final_mixdata" if parent_validated else None,
-            "sha256": base_sha,
             "step": base_step if parent_validated else None,
             "val_bpb": BASE_CHECKPOINT["val_bpb"] if parent_validated else None,
+            "verification_status": base_verification,
         },
-        "parent_checkpoint_sha256": base_sha,
+        "parent_identity_digest": base_digest,
         "tokenizer_sha256": tokenizer_sha256,
         "schema_version": SCHEMA_VERSION,
         "validation": {

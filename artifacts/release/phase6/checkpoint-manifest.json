@@ -14,8 +14,11 @@
   },
   "base_checkpoints": [
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
       "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -30,15 +33,18 @@
         "window_pattern": "L"
       },
       "run_name": "d24_final_mixdata",
-      "sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
       "step": 28000,
-      "val_bpb": 0.7626
+      "val_bpb": 0.7626,
+      "verification_status": "historical_unavailable"
     }
   ],
   "checkpoints": [
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
       "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -53,13 +59,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_final_mixdata",
-      "sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
       "step": 28000,
-      "val_bpb": 0.7626
+      "val_bpb": 0.7626,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -74,13 +83,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
       "step": 125,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -95,13 +107,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
       "step": 150,
-      "val_bpb": 0.5558
+      "val_bpb": 0.5558,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -116,13 +131,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
       "step": 200,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -137,13 +155,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
       "step": 250,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -158,13 +179,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
       "step": 275,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -179,13 +203,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
       "step": 300,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -200,13 +227,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
       "step": 350,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -221,13 +251,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr010",
-      "sha256": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
       "step": 375,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -242,13 +275,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
       "step": 125,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -263,13 +299,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
       "step": 150,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -284,13 +323,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
       "step": 200,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -305,13 +347,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
       "step": 250,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -326,13 +371,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
       "step": 275,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -347,13 +395,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
       "step": 300,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -368,13 +419,16 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
       "step": 350,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     },
     {
+      "checkpoint_content_sha256": null,
       "checkpoint_files": [],
+      "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
       "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+      "meta_file_sha256": null,
       "model_config": {
         "approx_params": "1.4B",
         "aspect_ratio": 64,
@@ -389,9 +443,9 @@
         "window_pattern": "L"
       },
       "run_name": "d24_finance_v2_lr005",
-      "sha256": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
       "step": 375,
-      "val_bpb": null
+      "val_bpb": null,
+      "verification_status": "historical_unavailable"
     }
   ],
   "manifest_type": "checkpoint",
@@ -399,8 +453,11 @@
   "sft_checkpoints": {
     "d24_finance_v2_lr005": [
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -415,13 +472,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
         "step": 125,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -436,13 +496,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
         "step": 150,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -457,13 +520,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
         "step": 200,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -478,13 +544,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
         "step": 250,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -499,13 +568,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
         "step": 275,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -520,13 +592,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
         "step": 300,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -541,13 +616,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
         "step": 350,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -562,15 +640,18 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr005",
-        "sha256": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
         "step": 375,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       }
     ],
     "d24_finance_v2_lr010": [
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -585,13 +666,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
         "step": 125,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -606,13 +690,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
         "step": 150,
-        "val_bpb": 0.5558
+        "val_bpb": 0.5558,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -627,13 +714,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
         "step": 200,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -648,13 +738,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
         "step": 250,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -669,13 +762,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
         "step": 275,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -690,13 +786,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
         "step": 300,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -711,13 +810,16 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
         "step": 350,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       },
       {
+        "checkpoint_content_sha256": null,
         "checkpoint_files": [],
+        "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
         "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+        "meta_file_sha256": null,
         "model_config": {
           "approx_params": "1.4B",
           "aspect_ratio": 64,
@@ -732,9 +834,9 @@
           "window_pattern": "L"
         },
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
         "step": 375,
-        "val_bpb": null
+        "val_bpb": null,
+        "verification_status": "historical_unavailable"
       }
     ]
   }

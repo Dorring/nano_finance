@@ -48,12 +48,17 @@
     }
   },
   "evaluation_release_id": "nano-finance-eval-v1",
-  "git_commit": "32aa64f6595218e4356dcaf8f812f8a70e775b2f",
+  "evaluation_smoke_checkpoint": "d24_finance_v2_lr010/step_150",
+  "git_commit": "92ab3380a447a1cb1f522db1d5a17b911abc600f",
+  "historical_production_checkpoint": "sft1147",
+  "historical_production_checkpoint_status": "unavailable_unverified",
   "license": "MIT (Copyright 2025 Andrej Karpathy)",
   "manifest_type": "release",
   "pretraining_run_id": "d24_final_mixdata",
   "rag_release_id": "finquery-rag-v1",
   "release_id": "nano-finance-d24-sft-v1",
+  "release_model_checkpoint": null,
+  "release_type": "documentation_and_evidence",
   "schema_version": "1.0",
   "sft_run_id": "d24_finance_v2_lr010",
   "sub_manifest_data": {
@@ -73,8 +78,11 @@
       },
       "base_checkpoints": [
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
           "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -89,15 +97,18 @@
             "window_pattern": "L"
           },
           "run_name": "d24_final_mixdata",
-          "sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
           "step": 28000,
-          "val_bpb": 0.7626
+          "val_bpb": 0.7626,
+          "verification_status": "historical_unavailable"
         }
       ],
       "checkpoints": [
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
           "meta_file": "~/.cache/nanochat/base_checkpoints/d24_final_mixdata/meta_028000.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -112,13 +123,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_final_mixdata",
-          "sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
           "step": 28000,
-          "val_bpb": 0.7626
+          "val_bpb": 0.7626,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -133,13 +147,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
           "step": 125,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -154,13 +171,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
           "step": 150,
-          "val_bpb": 0.5558
+          "val_bpb": 0.5558,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -175,13 +195,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
           "step": 200,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -196,13 +219,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
           "step": 250,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -217,13 +243,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
           "step": 275,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -238,13 +267,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
           "step": 300,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -259,13 +291,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
           "step": 350,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -280,13 +315,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr010",
-          "sha256": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
           "step": 375,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -301,13 +339,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
           "step": 125,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -322,13 +363,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
           "step": 150,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -343,13 +387,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
           "step": 200,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -364,13 +411,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
           "step": 250,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -385,13 +435,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
           "step": 275,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -406,13 +459,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
           "step": 300,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -427,13 +483,16 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
           "step": 350,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         },
         {
+          "checkpoint_content_sha256": null,
           "checkpoint_files": [],
+          "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
           "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+          "meta_file_sha256": null,
           "model_config": {
             "approx_params": "1.4B",
             "aspect_ratio": 64,
@@ -448,9 +507,9 @@
             "window_pattern": "L"
           },
           "run_name": "d24_finance_v2_lr005",
-          "sha256": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
           "step": 375,
-          "val_bpb": null
+          "val_bpb": null,
+          "verification_status": "historical_unavailable"
         }
       ],
       "manifest_type": "checkpoint",
@@ -458,8 +517,11 @@
       "sft_checkpoints": {
         "d24_finance_v2_lr005": [
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000125.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -474,13 +536,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "8650328c01e2b6f96b991721226b8bc5c2c7baf392fd94d8617540ac46c5473e",
             "step": 125,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000150.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -495,13 +560,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "0e494632f3d1379d52affa36a541e7133e9fbe7fe1140bf04b51af9dfc59a703",
             "step": 150,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000200.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -516,13 +584,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "4e845f63fe0f4cc5f5600c24983cc8b87286eb4972b9f272cf993e909bb5a877",
             "step": 200,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000250.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -537,13 +608,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "c5cbd09586582f34a0d9ff0b885adf955aa41d91d0116859f899199175938a97",
             "step": 250,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000275.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -558,13 +632,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "d9e8e46fe21858eebc6a4a67b14c01aa4c76539b03c302af1ae8ea66eb6c2a0f",
             "step": 275,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000300.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -579,13 +656,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "d516c31855245a2038ff084f16e9806c3a567ad92b2fef5c86acd061d15ae717",
             "step": 300,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000350.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -600,13 +680,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "0bf22bc11a5a0fa395208acb63dab450bef1b7e68c107995931817368797bc59",
             "step": 350,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr005/meta_000375.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -621,15 +704,18 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr005",
-            "sha256": "f7a1a517be86fea4cd003f6e30212a0d8db32559a49376f44f3a83144ca4fe14",
             "step": 375,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           }
         ],
         "d24_finance_v2_lr010": [
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000125.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -644,13 +730,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "1e8f612bc4f649ef9c28ee21223b8dd284268f5541be0eadb8bc4824d081e1e6",
             "step": 125,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000150.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -665,13 +754,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
             "step": 150,
-            "val_bpb": 0.5558
+            "val_bpb": 0.5558,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000200.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -686,13 +778,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "0f31c2f142a752b3ec59226a92ef7116f47a38f381093585949376542cf32b79",
             "step": 200,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000250.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -707,13 +802,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "098fd477aa2826691f06589bb65bdf91912ea20be0ca413480e03361e8f84361",
             "step": 250,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000275.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -728,13 +826,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "d2ac1aa2c1a95a9ba5fc2b06c0bce3d266be575228edef91d9f3dbf536329900",
             "step": 275,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000300.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -749,13 +850,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "f70ed4efe1e6904860039020a07af34ad9ba7c7cfc9eb48567360537c2b286fd",
             "step": 300,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000350.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -770,13 +874,16 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "4d8199cd3fe210e2b5037780cd80cd3ee8767bef10154ea0a840701f626f1aa6",
             "step": 350,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           },
           {
+            "checkpoint_content_sha256": null,
             "checkpoint_files": [],
+            "identity_digest": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
             "meta_file": "~/.cache/nanochat/chatsft_checkpoints/d24_finance_v2_lr010/meta_000375.json",
+            "meta_file_sha256": null,
             "model_config": {
               "approx_params": "1.4B",
               "aspect_ratio": 64,
@@ -791,9 +898,9 @@
               "window_pattern": "L"
             },
             "run_name": "d24_finance_v2_lr010",
-            "sha256": "d3c89d3ff73def73ebfd6091cd310b4e4c225a61f59d6350634fff76e6387b81",
             "step": 375,
-            "val_bpb": null
+            "val_bpb": null,
+            "verification_status": "historical_unavailable"
           }
         ]
       }
@@ -1288,20 +1395,22 @@
     "model_lineage": {
       "child": {
         "checkpoint_id": "d24_finance_v2_lr010/step_150",
+        "identity_digest": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
         "run_name": "d24_finance_v2_lr010",
-        "sha256": "62c601309c3884532fbf017ae7e1d82607e292a5c9ca13a0c035c5e9f5b88d30",
         "step": 150,
-        "val_bpb": 0.5558
+        "val_bpb": 0.5558,
+        "verification_status": "historical_unavailable"
       },
       "lineage_type": "pretraining_to_sft",
       "parent": {
         "checkpoint_id": "d24_final_mixdata/step_28000",
+        "identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
         "run_name": "d24_final_mixdata",
-        "sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
         "step": 28000,
-        "val_bpb": 0.7626
+        "val_bpb": 0.7626,
+        "verification_status": "historical_unavailable"
       },
-      "parent_checkpoint_sha256": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
+      "parent_identity_digest": "3bdd830627ec1222d4f5dd28bc845f6c90d37dda5c08800f9bbbeb9339985c66",
       "schema_version": "1.0",
       "tokenizer_sha256": "1d1e5765e02a518d1e38673c0b8e53a48124fb4003136dd627e4f653c1dd9a54",
       "validation": {
@@ -1310,698 +1419,14 @@
       }
     },
     "pretraining_data_manifest": {
-      "actual_shard_count": 171,
+      "actual_shard_count": null,
       "data_dir": "~/.cache/nanochat/base_data_climbmix/",
       "expected_shard_count": 171,
       "manifest_type": "pretraining_data",
       "schema_version": "1.0",
       "shard_format": "parquet",
-      "shards": [
-        {
-          "name": "shard_0000.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0001.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0002.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0003.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0004.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0005.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0006.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0007.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0008.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0009.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0010.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0011.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0012.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0013.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0014.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0015.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0016.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0017.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0018.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0019.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0020.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0021.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0022.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0023.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0024.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0025.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0026.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0027.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0028.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0029.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0030.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0031.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0032.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0033.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0034.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0035.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0036.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0037.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0038.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0039.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0040.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0041.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0042.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0043.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0044.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0045.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0046.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0047.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0048.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0049.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0050.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0051.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0052.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0053.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0054.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0055.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0056.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0057.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0058.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0059.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0060.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0061.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0062.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0063.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0064.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0065.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0066.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0067.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0068.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0069.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0070.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0071.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0072.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0073.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0074.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0075.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0076.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0077.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0078.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0079.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0080.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0081.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0082.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0083.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0084.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0085.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0086.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0087.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0088.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0089.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0090.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0091.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0092.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0093.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0094.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0095.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0096.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0097.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0098.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0099.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0100.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0101.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0102.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0103.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0104.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0105.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0106.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0107.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0108.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0109.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0110.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0111.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0112.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0113.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0114.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0115.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0116.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0117.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0118.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0119.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0120.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0121.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0122.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0123.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0124.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0125.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0126.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0127.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0128.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0129.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0130.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0131.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0132.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0133.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0134.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0135.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0136.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0137.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0138.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0139.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0140.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0141.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0142.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0143.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0144.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0145.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0146.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0147.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0148.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0149.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0150.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0151.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0152.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0153.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0154.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0155.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0156.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0157.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0158.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0159.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0160.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0161.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0162.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0163.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0164.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0165.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0166.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0167.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0168.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0169.parquet",
-          "size_bytes": 0
-        },
-        {
-          "name": "shard_0170.parquet",
-          "size_bytes": 0
-        }
-      ],
+      "shards": [],
+      "source_accessible": false,
       "training_params": {
         "target_param_data_ratio": 50.0,
         "total_batch_size": 1048576,
@@ -2011,39 +1436,11 @@
         "checkpoint": "d24_final_mixdata",
         "final_step": 28000,
         "val_bpb_final": 0.7626
-      }
+      },
+      "verification_status": "historical_self_reported"
     },
     "sft_data_manifest": {
-      "data_files": {
-        "cot_train.jsonl": {
-          "sha256": "9d045091ddc63a81ebb611426f1894f231086ac43cbeb28e436229ba21fcbc56",
-          "size_bytes": 7257994
-        },
-        "finance_eval_small_val.jsonl": {
-          "sha256": "f603bd39b02ad95ee40f39f46331be5c5741bfb119aa3ee591ae36d40aa67822",
-          "size_bytes": 588293
-        },
-        "finance_sft_v1.jsonl": {
-          "sha256": "0382599ea807ae65520ee664fd7eb32e67cb57ce5ed1b5014e510fe0fa999334",
-          "size_bytes": 97393442
-        },
-        "test.jsonl": {
-          "sha256": "69c3e5445bf322e946873fc032e8307a8c6a0df13be9a18df96fe7b2039bcd73",
-          "size_bytes": 9334104
-        },
-        "train.jsonl": {
-          "sha256": "c8c4ba65a7615c30d8328b6235d8dd6b29915a23bce1d96b7b3085de4432c972",
-          "size_bytes": 66003160
-        },
-        "train_v2_balanced.jsonl": {
-          "sha256": "e23600cc928fedfd85b22d27e95c282a6c425450a9bfe8f9ada6dc6fe4656722",
-          "size_bytes": 340062128
-        },
-        "val.jsonl": {
-          "sha256": "e4896aab28bf6355ffdda9d9ce1fe1cccaefc27bd1370d4d6847326df84165c3",
-          "size_bytes": 9050685
-        }
-      },
+      "data_files": {},
       "expected_total_samples": 39534,
       "finance_train_file": "train_v2_balanced.jsonl",
       "historical_results": {
@@ -2067,61 +1464,7 @@
         }
       },
       "manifest_type": "sft_data",
-      "metadata": {
-        "dataset_stats": {
-          "ectsum": {
-            "duplicates": 0,
-            "skipped": 0,
-            "total": 2425,
-            "valid": 2425
-          },
-          "finance_r1": {
-            "duplicates": 0,
-            "skipped": 0,
-            "total": 1225,
-            "valid": 1225
-          },
-          "finer": {
-            "duplicates": 186,
-            "skipped": 0,
-            "total": 3220,
-            "valid": 3034
-          },
-          "finqa": {
-            "duplicates": 63,
-            "skipped": 0,
-            "total": 8207,
-            "valid": 8144
-          },
-          "finred": {
-            "duplicates": 0,
-            "skipped": 0,
-            "total": 4359,
-            "valid": 4359
-          },
-          "finsen": {
-            "duplicates": 18,
-            "skipped": 0,
-            "total": 3000,
-            "valid": 2982
-          },
-          "fiqa": {
-            "duplicates": 0,
-            "skipped": 0,
-            "total": 822,
-            "valid": 822
-          },
-          "tatqa": {
-            "duplicates": 0,
-            "skipped": 0,
-            "total": 16543,
-            "valid": 16543
-          }
-        },
-        "safe_limit": 2020,
-        "total_samples": 39534,
-        "version": "v2"
-      },
+      "metadata": null,
       "schema_version": "1.0",
       "smoltalk_size": 30000,
       "sources": {
@@ -2166,163 +1509,17 @@
           "source_id": "tatqa"
         }
       },
-      "split_manifest": {
-        "cot_source": "finance_r1",
-        "counts": {
-          "cot_train": 979,
-          "test": 3956,
-          "train": 30641,
-          "val": 3958
-        },
-        "ratios": {
-          "test": 0.1,
-          "train": 0.8,
-          "val": 0.1
-        },
-        "seed": 42,
-        "sources": {
-          "ectsum": {
-            "groups": 2425,
-            "test": 243,
-            "train": 1939,
-            "val": 243
-          },
-          "finance_r1": {
-            "groups": 1225,
-            "test": 123,
-            "train": 979,
-            "val": 123
-          },
-          "finer": {
-            "groups": 3034,
-            "test": 304,
-            "train": 2426,
-            "val": 304
-          },
-          "finqa": {
-            "groups": 3131,
-            "test": 815,
-            "train": 6514,
-            "val": 815
-          },
-          "finred": {
-            "groups": 4359,
-            "test": 436,
-            "train": 3487,
-            "val": 436
-          },
-          "finsen": {
-            "groups": 2982,
-            "test": 298,
-            "train": 2385,
-            "val": 299
-          },
-          "fiqa": {
-            "groups": 822,
-            "test": 82,
-            "train": 657,
-            "val": 83
-          },
-          "tatqa": {
-            "groups": 2808,
-            "test": 1655,
-            "train": 13233,
-            "val": 1655
-          }
-        }
-      },
+      "split_manifest": null,
       "splits": {
+        "cot_train": 979,
+        "effective_train": 31620,
         "test": 3956,
-        "train": 31628,
-        "val": 3950
+        "train": 30641,
+        "val": 3958
       },
-      "supervised_token_report": {
-        "assistant_tokens": 2490537,
-        "count": 39534,
-        "sources": {
-          "ectsum": {
-            "assistant_avg": 76.23,
-            "assistant_max": 400,
-            "assistant_p50": 64,
-            "assistant_p95": 180,
-            "assistant_token_share": 0.07422214566577409,
-            "assistant_tokens": 184853,
-            "count": 2425,
-            "user_tokens": 3345135
-          },
-          "finance_r1": {
-            "assistant_avg": 1505.72,
-            "assistant_max": 1956,
-            "assistant_p50": 1564,
-            "assistant_p95": 1888,
-            "assistant_token_share": 0.7406065438899322,
-            "assistant_tokens": 1844508,
-            "count": 1225,
-            "user_tokens": 40417
-          },
-          "finer": {
-            "assistant_avg": 38.13,
-            "assistant_max": 212,
-            "assistant_p50": 34,
-            "assistant_p95": 94,
-            "assistant_token_share": 0.046455443143386344,
-            "assistant_tokens": 115699,
-            "count": 3034,
-            "user_tokens": 195936
-          },
-          "finqa": {
-            "assistant_avg": 3.32,
-            "assistant_max": 107,
-            "assistant_p50": 3,
-            "assistant_p95": 5,
-            "assistant_token_share": 0.010861914518836701,
-            "assistant_tokens": 27052,
-            "count": 8144,
-            "user_tokens": 6220550
-          },
-          "finred": {
-            "assistant_avg": 37.49,
-            "assistant_max": 270,
-            "assistant_p50": 30,
-            "assistant_p95": 79,
-            "assistant_token_share": 0.06562319692500052,
-            "assistant_tokens": 163437,
-            "count": 4359,
-            "user_tokens": 403779
-          },
-          "finsen": {
-            "assistant_avg": 2.0,
-            "assistant_max": 2,
-            "assistant_p50": 2,
-            "assistant_p95": 2,
-            "assistant_token_share": 0.0023946642832449387,
-            "assistant_tokens": 5964,
-            "count": 2982,
-            "user_tokens": 105745
-          },
-          "fiqa": {
-            "assistant_avg": 26.01,
-            "assistant_max": 41,
-            "assistant_p50": 26,
-            "assistant_p95": 31,
-            "assistant_token_share": 0.008584092506957335,
-            "assistant_tokens": 21379,
-            "count": 822,
-            "user_tokens": 43625
-          },
-          "tatqa": {
-            "assistant_avg": 7.72,
-            "assistant_max": 161,
-            "assistant_p50": 4,
-            "assistant_p95": 29,
-            "assistant_token_share": 0.051251999066867907,
-            "assistant_tokens": 127645,
-            "count": 16543,
-            "user_tokens": 8875948
-          }
-        }
-      },
-      "total_samples": 39534
+      "supervised_token_report": null,
+      "total_samples": 39534,
+      "verification_status": "historical_self_reported"
     },
     "tokenizer_manifest": {
       "algorithm": "byte-level-bpe",
@@ -2453,450 +1650,14 @@
         "d24_finance_v2_lr010": []
       },
       "sft_data": {
-        "metadata.json": {
-          "data": {
-            "dataset_stats": {
-              "ectsum": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 2425,
-                "valid": 2425
-              },
-              "finance_r1": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 1225,
-                "valid": 1225
-              },
-              "finer": {
-                "duplicates": 186,
-                "skipped": 0,
-                "total": 3220,
-                "valid": 3034
-              },
-              "finqa": {
-                "duplicates": 63,
-                "skipped": 0,
-                "total": 8207,
-                "valid": 8144
-              },
-              "finred": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 4359,
-                "valid": 4359
-              },
-              "finsen": {
-                "duplicates": 18,
-                "skipped": 0,
-                "total": 3000,
-                "valid": 2982
-              },
-              "fiqa": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 822,
-                "valid": 822
-              },
-              "tatqa": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 16543,
-                "valid": 16543
-              }
-            },
-            "safe_limit": 2020,
-            "total_samples": 39534,
-            "version": "v2"
-          },
-          "path": "metadata.json",
-          "sha256": "103f885ee219872c054fc0c720a91acca6ac706240aa0a972e3cddb523667aa6",
-          "size_bytes": 953
-        },
-        "split_manifest.json": {
-          "data": {
-            "cot_source": "finance_r1",
-            "counts": {
-              "cot_train": 979,
-              "test": 3956,
-              "train": 30641,
-              "val": 3958
-            },
-            "ratios": {
-              "test": 0.1,
-              "train": 0.8,
-              "val": 0.1
-            },
-            "seed": 42,
-            "sources": {
-              "ectsum": {
-                "groups": 2425,
-                "test": 243,
-                "train": 1939,
-                "val": 243
-              },
-              "finance_r1": {
-                "groups": 1225,
-                "test": 123,
-                "train": 979,
-                "val": 123
-              },
-              "finer": {
-                "groups": 3034,
-                "test": 304,
-                "train": 2426,
-                "val": 304
-              },
-              "finqa": {
-                "groups": 3131,
-                "test": 815,
-                "train": 6514,
-                "val": 815
-              },
-              "finred": {
-                "groups": 4359,
-                "test": 436,
-                "train": 3487,
-                "val": 436
-              },
-              "finsen": {
-                "groups": 2982,
-                "test": 298,
-                "train": 2385,
-                "val": 299
-              },
-              "fiqa": {
-                "groups": 822,
-                "test": 82,
-                "train": 657,
-                "val": 83
-              },
-              "tatqa": {
-                "groups": 2808,
-                "test": 1655,
-                "train": 13233,
-                "val": 1655
-              }
-            }
-          },
-          "path": "split_manifest.json",
-          "sha256": "b70a150a272332af6b826091031733a67cc08c9846421fa831af26464a4cc021",
-          "size_bytes": 1042
-        },
-        "supervised_token_report.json": {
-          "data": {
-            "assistant_tokens": 2490537,
-            "count": 39534,
-            "sources": {
-              "ectsum": {
-                "assistant_avg": 76.23,
-                "assistant_max": 400,
-                "assistant_p50": 64,
-                "assistant_p95": 180,
-                "assistant_token_share": 0.07422214566577409,
-                "assistant_tokens": 184853,
-                "count": 2425,
-                "user_tokens": 3345135
-              },
-              "finance_r1": {
-                "assistant_avg": 1505.72,
-                "assistant_max": 1956,
-                "assistant_p50": 1564,
-                "assistant_p95": 1888,
-                "assistant_token_share": 0.7406065438899322,
-                "assistant_tokens": 1844508,
-                "count": 1225,
-                "user_tokens": 40417
-              },
-              "finer": {
-                "assistant_avg": 38.13,
-                "assistant_max": 212,
-                "assistant_p50": 34,
-                "assistant_p95": 94,
-                "assistant_token_share": 0.046455443143386344,
-                "assistant_tokens": 115699,
-                "count": 3034,
-                "user_tokens": 195936
-              },
-              "finqa": {
-                "assistant_avg": 3.32,
-                "assistant_max": 107,
-                "assistant_p50": 3,
-                "assistant_p95": 5,
-                "assistant_token_share": 0.010861914518836701,
-                "assistant_tokens": 27052,
-                "count": 8144,
-                "user_tokens": 6220550
-              },
-              "finred": {
-                "assistant_avg": 37.49,
-                "assistant_max": 270,
-                "assistant_p50": 30,
-                "assistant_p95": 79,
-                "assistant_token_share": 0.06562319692500052,
-                "assistant_tokens": 163437,
-                "count": 4359,
-                "user_tokens": 403779
-              },
-              "finsen": {
-                "assistant_avg": 2.0,
-                "assistant_max": 2,
-                "assistant_p50": 2,
-                "assistant_p95": 2,
-                "assistant_token_share": 0.0023946642832449387,
-                "assistant_tokens": 5964,
-                "count": 2982,
-                "user_tokens": 105745
-              },
-              "fiqa": {
-                "assistant_avg": 26.01,
-                "assistant_max": 41,
-                "assistant_p50": 26,
-                "assistant_p95": 31,
-                "assistant_token_share": 0.008584092506957335,
-                "assistant_tokens": 21379,
-                "count": 822,
-                "user_tokens": 43625
-              },
-              "tatqa": {
-                "assistant_avg": 7.72,
-                "assistant_max": 161,
-                "assistant_p50": 4,
-                "assistant_p95": 29,
-                "assistant_token_share": 0.051251999066867907,
-                "assistant_tokens": 127645,
-                "count": 16543,
-                "user_tokens": 8875948
-              }
-            }
-          },
-          "path": "supervised_token_report.json",
-          "sha256": "69a0ccc42ff21ca7dd24851f220fd988dbfaa9315494f575c6aad38f31b01d08",
-          "size_bytes": 2229
-        }
+        "metadata.json": null,
+        "split_manifest.json": null,
+        "supervised_token_report.json": null
       },
       "sft_data_evidence": {
-        "metadata.json": {
-          "data": {
-            "dataset_stats": {
-              "ectsum": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 2425,
-                "valid": 2425
-              },
-              "finance_r1": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 1225,
-                "valid": 1225
-              },
-              "finer": {
-                "duplicates": 186,
-                "skipped": 0,
-                "total": 3220,
-                "valid": 3034
-              },
-              "finqa": {
-                "duplicates": 63,
-                "skipped": 0,
-                "total": 8207,
-                "valid": 8144
-              },
-              "finred": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 4359,
-                "valid": 4359
-              },
-              "finsen": {
-                "duplicates": 18,
-                "skipped": 0,
-                "total": 3000,
-                "valid": 2982
-              },
-              "fiqa": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 822,
-                "valid": 822
-              },
-              "tatqa": {
-                "duplicates": 0,
-                "skipped": 0,
-                "total": 16543,
-                "valid": 16543
-              }
-            },
-            "safe_limit": 2020,
-            "total_samples": 39534,
-            "version": "v2"
-          },
-          "path": "metadata.json",
-          "sha256": "103f885ee219872c054fc0c720a91acca6ac706240aa0a972e3cddb523667aa6",
-          "size_bytes": 953
-        },
-        "split_manifest.json": {
-          "data": {
-            "cot_source": "finance_r1",
-            "counts": {
-              "cot_train": 979,
-              "test": 3956,
-              "train": 30641,
-              "val": 3958
-            },
-            "ratios": {
-              "test": 0.1,
-              "train": 0.8,
-              "val": 0.1
-            },
-            "seed": 42,
-            "sources": {
-              "ectsum": {
-                "groups": 2425,
-                "test": 243,
-                "train": 1939,
-                "val": 243
-              },
-              "finance_r1": {
-                "groups": 1225,
-                "test": 123,
-                "train": 979,
-                "val": 123
-              },
-              "finer": {
-                "groups": 3034,
-                "test": 304,
-                "train": 2426,
-                "val": 304
-              },
-              "finqa": {
-                "groups": 3131,
-                "test": 815,
-                "train": 6514,
-                "val": 815
-              },
-              "finred": {
-                "groups": 4359,
-                "test": 436,
-                "train": 3487,
-                "val": 436
-              },
-              "finsen": {
-                "groups": 2982,
-                "test": 298,
-                "train": 2385,
-                "val": 299
-              },
-              "fiqa": {
-                "groups": 822,
-                "test": 82,
-                "train": 657,
-                "val": 83
-              },
-              "tatqa": {
-                "groups": 2808,
-                "test": 1655,
-                "train": 13233,
-                "val": 1655
-              }
-            }
-          },
-          "path": "split_manifest.json",
-          "sha256": "b70a150a272332af6b826091031733a67cc08c9846421fa831af26464a4cc021",
-          "size_bytes": 1042
-        },
-        "supervised_token_report.json": {
-          "data": {
-            "assistant_tokens": 2490537,
-            "count": 39534,
-            "sources": {
-              "ectsum": {
-                "assistant_avg": 76.23,
-                "assistant_max": 400,
-                "assistant_p50": 64,
-                "assistant_p95": 180,
-                "assistant_token_share": 0.07422214566577409,
-                "assistant_tokens": 184853,
-                "count": 2425,
-                "user_tokens": 3345135
-              },
-              "finance_r1": {
-                "assistant_avg": 1505.72,
-                "assistant_max": 1956,
-                "assistant_p50": 1564,
-                "assistant_p95": 1888,
-                "assistant_token_share": 0.7406065438899322,
-                "assistant_tokens": 1844508,
-                "count": 1225,
-                "user_tokens": 40417
-              },
-              "finer": {
-                "assistant_avg": 38.13,
-                "assistant_max": 212,
-                "assistant_p50": 34,
-                "assistant_p95": 94,
-                "assistant_token_share": 0.046455443143386344,
-                "assistant_tokens": 115699,
-                "count": 3034,
-                "user_tokens": 195936
-              },
-              "finqa": {
-                "assistant_avg": 3.32,
-                "assistant_max": 107,
-                "assistant_p50": 3,
-                "assistant_p95": 5,
-                "assistant_token_share": 0.010861914518836701,
-                "assistant_tokens": 27052,
-                "count": 8144,
-                "user_tokens": 6220550
-              },
-              "finred": {
-                "assistant_avg": 37.49,
-                "assistant_max": 270,
-                "assistant_p50": 30,
-                "assistant_p95": 79,
-                "assistant_token_share": 0.06562319692500052,
-                "assistant_tokens": 163437,
-                "count": 4359,
-                "user_tokens": 403779
-              },
-              "finsen": {
-                "assistant_avg": 2.0,
-                "assistant_max": 2,
-                "assistant_p50": 2,
-                "assistant_p95": 2,
-                "assistant_token_share": 0.0023946642832449387,
-                "assistant_tokens": 5964,
-                "count": 2982,
-                "user_tokens": 105745
-              },
-              "fiqa": {
-                "assistant_avg": 26.01,
-                "assistant_max": 41,
-                "assistant_p50": 26,
-                "assistant_p95": 31,
-                "assistant_token_share": 0.008584092506957335,
-                "assistant_tokens": 21379,
-                "count": 822,
-                "user_tokens": 43625
-              },
-              "tatqa": {
-                "assistant_avg": 7.72,
-                "assistant_max": 161,
-                "assistant_p50": 4,
-                "assistant_p95": 29,
-                "assistant_token_share": 0.051251999066867907,
-                "assistant_tokens": 127645,
-                "count": 16543,
-                "user_tokens": 8875948
-              }
-            }
-          },
-          "path": "supervised_token_report.json",
-          "sha256": "69a0ccc42ff21ca7dd24851f220fd988dbfaa9315494f575c6aad38f31b01d08",
-          "size_bytes": 2229
-        }
+        "metadata.json": null,
+        "split_manifest.json": null,
+        "supervised_token_report.json": null
       },
       "sft_data_file_hashes": {
         "cot_train.jsonl": {

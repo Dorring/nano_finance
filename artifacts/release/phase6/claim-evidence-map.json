@@ -7,7 +7,7 @@
       "claim": "The model is a GPT-2 style Transformer with 24 layers, 12 heads, 1536 embedding dimension, and approximately 1.4B parameters.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_architecture"}
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_architecture", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["model_card", "readme", "resume"]
     },
@@ -16,8 +16,8 @@
       "claim": "The tokenizer uses byte-level BPE with a vocabulary size of 65000.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/vocab_size"},
-        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/algorithm"}
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/vocab_size", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/algorithm", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["model_card", "tokenizer_card", "readme", "resume"]
     },
@@ -26,37 +26,39 @@
       "claim": "The tokenizer has 9 special tokens and pad is not a special token.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/special_tokens"}
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/special_tokens", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["tokenizer_card", "model_card"]
     },
     {
       "id": "pretraining_step_28000",
       "claim": "Pretraining completed at step 28000 with validation BPB of 0.7626.",
-      "status": "verified",
+      "status": "unverified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_checkpoints"},
-        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/1/final_step"}
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/base_checkpoints", "verification_status": "historical_unavailable"},
+        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/1/final_step", "verification_status": "historical_self_reported"}
       ],
-      "allowed_surfaces": ["model_card", "readme", "resume"]
+      "allowed_surfaces": [],
+      "note": "Checkpoint content hash not available (historical_unavailable); training-runs.json is self-reported. Step and val_bpb values are historical, not independently verified from current server artifacts."
     },
     {
       "id": "sft_step_150",
       "claim": "SFT V2 lr010 checkpoint at step 150 has validation BPB of 0.5558.",
-      "status": "verified",
+      "status": "unverified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/sft_checkpoints"},
-        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/2/best_step"}
+        {"artifact": "artifacts/release/phase6/checkpoint-manifest.json", "json_pointer": "/sft_checkpoints", "verification_status": "historical_unavailable"},
+        {"artifact": "artifacts/release/phase6/training-runs.json", "json_pointer": "/runs/2/best_step", "verification_status": "historical_self_reported"}
       ],
-      "allowed_surfaces": ["model_card", "evaluation_card"]
+      "allowed_surfaces": [],
+      "note": "Checkpoint content hash not available (historical_unavailable); step 150 is a failed experiment (smoke checkpoint), not a release model."
     },
     {
       "id": "sft_total_samples_39534",
       "claim": "SFT dataset contains 39534 total samples from 8 data sources.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/total_samples"},
-        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources"}
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/total_samples", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["sft_data_card", "model_card"]
     },
@@ -65,27 +67,28 @@
       "claim": "SFT data includes 1225 finance_r1 style explicit reasoning samples.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources/finance_r1/count"}
+        {"artifact": "artifacts/release/phase6/sft-data-manifest.json", "json_pointer": "/sources/finance_r1/count", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["sft_data_card"]
     },
     {
       "id": "model_lineage_base_to_sft",
       "claim": "The SFT checkpoint is derived from the base pretraining checkpoint at step 28000.",
-      "status": "verified",
+      "status": "unverified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/lineage_type"},
-        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/parent_checkpoint_sha256"}
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/lineage_type", "verification_status": "historical_self_reported"},
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/parent_identity_digest", "verification_status": "historical_self_reported"}
       ],
-      "allowed_surfaces": ["model_card", "readme"]
+      "allowed_surfaces": [],
+      "note": "Lineage uses identity_digest (string-based SHA256), not checkpoint content hash. Parent-child weight content lineage is not independently verified."
     },
     {
       "id": "tokenizer_sha256_linked",
       "claim": "The tokenizer SHA256 is linked in the model lineage.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/tokenizer_sha256"},
-        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/storage"}
+        {"artifact": "artifacts/release/phase6/model-lineage.json", "json_pointer": "/tokenizer_sha256", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/tokenizer-manifest.json", "json_pointer": "/storage", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["tokenizer_card", "model_card"]
     },
@@ -94,8 +97,8 @@
       "claim": "Phase 5 evaluation uses synthetic held-out data classified as synthetic_held_out, not a real sealed evaluation.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/data_classification"},
-        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/is_real_sealed_evaluation"}
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/data_classification", "verification_status": "verified_local"},
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/is_real_sealed_evaluation", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["evaluation_card"],
       "is_quality_metric": false,
@@ -106,7 +109,7 @@
       "claim": "Phase 5 synthetic held-out evaluation resulted in 0/54 strict pass rate, which is NOT a quality metric.",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/strict_pass_result"}
+        {"artifact": "artifacts/release/phase6/evaluation-evidence.json", "json_pointer": "/strict_pass_result", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["evaluation_card"],
       "is_quality_metric": false,
@@ -117,7 +120,7 @@
       "claim": "The base project code is licensed under MIT (Copyright 2025 Andrej Karpathy).",
       "status": "verified",
       "evidence": [
-        {"artifact": "artifacts/release/phase6/license-inventory.json", "json_pointer": "/project_license"}
+        {"artifact": "artifacts/release/phase6/license-inventory.json", "json_pointer": "/project_license", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["model_card", "readme"]
     },
@@ -126,7 +129,7 @@
       "claim": "The RAG system uses Dense + BM25 retrieval with RRF fusion, reranker, context builder, calculator, answerability checking, generation, and validation.",
       "status": "verified",
       "evidence": [
-        {"artifact": "docs/release/rag-system-card.md", "json_pointer": "/"}
+        {"artifact": "docs/release/rag-system-card.md", "json_pointer": "/", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["rag_system_card", "readme"]
     },
@@ -135,7 +138,7 @@
       "claim": "The model does NOT support native function calling; RAG calculator is system orchestration, not model capability.",
       "status": "verified",
       "evidence": [
-        {"artifact": "docs/release/model-card.md", "json_pointer": "/"}
+        {"artifact": "docs/release/model-card.md", "json_pointer": "/", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["model_card", "rag_system_card"]
     },
@@ -144,7 +147,7 @@
       "claim": "The validation pipeline reduces but does NOT eliminate hallucinations.",
       "status": "verified",
       "evidence": [
-        {"artifact": "docs/release/limitations-and-risks.md", "json_pointer": "/"}
+        {"artifact": "docs/release/limitations-and-risks.md", "json_pointer": "/", "verification_status": "verified_local"}
       ],
       "allowed_surfaces": ["model_card", "limitations"]
     },
@@ -217,24 +220,14 @@
       "evidence_artifacts": ["artifacts/release/phase6/tokenizer-manifest.json"]
     },
     {
-      "claim": "Pretraining completed at step 28000 with validation BPB of 0.7626.",
-      "evidence": "artifacts/release/phase6/training-runs.json",
-      "evidence_artifacts": ["artifacts/release/phase6/training-runs.json", "artifacts/release/phase6/checkpoint-manifest.json"]
-    },
-    {
-      "claim": "SFT V2 lr010 checkpoint at step 150 has validation BPB of 0.5558.",
-      "evidence": "artifacts/release/phase6/training-runs.json",
-      "evidence_artifacts": ["artifacts/release/phase6/training-runs.json", "artifacts/release/phase6/checkpoint-manifest.json"]
-    },
-    {
       "claim": "SFT dataset contains 39534 total samples from 8 data sources.",
       "evidence": "artifacts/release/phase6/sft-data-manifest.json",
       "evidence_artifacts": ["artifacts/release/phase6/sft-data-manifest.json"]
     },
     {
-      "claim": "The SFT checkpoint is derived from the base pretraining checkpoint at step 28000.",
+      "claim": "The tokenizer SHA256 is linked in the model lineage.",
       "evidence": "artifacts/release/phase6/model-lineage.json",
-      "evidence_artifacts": ["artifacts/release/phase6/model-lineage.json"]
+      "evidence_artifacts": ["artifacts/release/phase6/model-lineage.json", "artifacts/release/phase6/tokenizer-manifest.json"]
     },
     {
       "claim": "Phase 5 evaluation uses synthetic held-out data classified as synthetic_held_out, not a real sealed evaluation.",
@@ -253,6 +246,18 @@
     }
   ],
   "unverified_claims": [
+    {
+      "claim": "Pretraining completed at step 28000 with validation BPB of 0.7626.",
+      "note": "historical_unavailable; checkpoint content hash not available, training-runs.json is self-reported"
+    },
+    {
+      "claim": "SFT V2 lr010 checkpoint at step 150 has validation BPB of 0.5558.",
+      "note": "historical_unavailable; checkpoint content hash not available, step 150 is a smoke checkpoint (failed experiment)"
+    },
+    {
+      "claim": "The SFT checkpoint is derived from the base pretraining checkpoint at step 28000.",
+      "note": "historical_self_reported; lineage uses identity_digest (string hash), not checkpoint content hash"
+    },
     {
       "claim": "Historical self-reported total pretraining token pool of 17.68B is not independently verifiable from current server artifacts.",
       "note": "historical_self_reported; source data no longer fully available for independent verification"
